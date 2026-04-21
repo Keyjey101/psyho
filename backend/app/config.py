@@ -1,4 +1,5 @@
 import os
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -22,6 +23,7 @@ class Settings(BaseSettings):
 
     ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
 
+    ADMIN_EMAILS: str = ""
     RATE_LIMIT_CHAT: str = "30/minute"
     RATE_LIMIT_AUTH: str = "5/minute"
 
@@ -30,9 +32,20 @@ class Settings(BaseSettings):
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
+    @field_validator("SECRET_KEY")
+    @classmethod
+    def secret_key_must_be_strong(cls, v: str) -> str:
+        if v == "change-me-to-a-long-random-secret-key-in-production" and os.getenv("ENVIRONMENT") == "production":
+            raise ValueError("SECRET_KEY must be changed in production")
+        return v
+
     @property
     def cors_origins(self) -> list[str]:
         return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
+
+    @property
+    def admin_emails_list(self) -> list[str]:
+        return [e.strip().lower() for e in self.ADMIN_EMAILS.split(",") if e.strip()]
 
 
 @lru_cache()

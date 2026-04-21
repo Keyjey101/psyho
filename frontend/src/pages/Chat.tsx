@@ -8,7 +8,7 @@ import MessageList from "@/components/chat/MessageList";
 import InputBar from "@/components/chat/InputBar";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Message } from "@/types";
-import { Menu } from "lucide-react";
+import { Menu, AlertCircle } from "lucide-react";
 
 export default function Chat() {
   const { sessionId } = useParams<{ sessionId?: string }>();
@@ -16,7 +16,7 @@ export default function Chat() {
   const { user, logout } = useAuth();
   const queryClient = useQueryClient();
   const { data: sessions } = useSessions();
-  const { data: currentSession } = useSession(sessionId);
+  const { data: currentSession, isError } = useSession(sessionId);
   const createSession = useCreateSession();
   const deleteSession = useDeleteSession();
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
@@ -41,6 +41,12 @@ export default function Chat() {
       setLocalMessages(currentSession.messages);
     }
   }, [currentSession]);
+
+  useEffect(() => {
+    if (isError && sessionId) {
+      navigate("/chat", { replace: true });
+    }
+  }, [isError, sessionId, navigate]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -86,6 +92,7 @@ export default function Chat() {
       <Sidebar
         sessions={sessions || []}
         activeSessionId={sessionId}
+        activeSessionSummary={currentSession?.summary}
         onNewChat={handleNewChat}
         onSelectSession={(id) => navigate(`/chat/${id}`)}
         onDeleteSession={handleDeleteSession}

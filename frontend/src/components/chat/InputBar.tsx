@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, CornerDownLeft } from "lucide-react";
+import VoiceInput from "./VoiceInput";
 
 interface InputBarProps {
   onSend: (content: string) => void;
@@ -53,6 +54,7 @@ export default function InputBar({ onSend, disabled }: InputBarProps) {
               <CornerDownLeft className="h-3 w-3" />
             </div>
           </div>
+          <VoiceInput onTranscript={(text) => setContent((prev) => prev ? prev + " " + text : text)} disabled={disabled} />
           <button
             onClick={handleSubmit}
             disabled={disabled || !content.trim()}

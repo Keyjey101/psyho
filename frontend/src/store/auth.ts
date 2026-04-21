@@ -18,35 +18,25 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
 
   login: async (email, password) => {
-    const { data } = await api.post("/auth/login", { email, password });
-    localStorage.setItem("access_token", data.access_token);
-    localStorage.setItem("refresh_token", data.refresh_token);
+    await api.post("/auth/login", { email, password });
     set({ isAuthenticated: true, isLoading: false });
   },
 
   register: async (email, password, name) => {
-    const { data } = await api.post("/auth/register", {
+    await api.post("/auth/register", {
       email,
       password,
       name,
     });
-    localStorage.setItem("access_token", data.access_token);
-    localStorage.setItem("refresh_token", data.refresh_token);
     set({ isAuthenticated: true, isLoading: false });
   },
 
   logout: () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
+    api.post("/auth/logout").catch(() => {});
     set({ user: null, isAuthenticated: false, isLoading: false });
   },
 
   checkAuth: async () => {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      set({ isLoading: false, isAuthenticated: false });
-      return;
-    }
     try {
       const { data } = await api.get("/user/me");
       set({ user: data, isAuthenticated: true, isLoading: false });

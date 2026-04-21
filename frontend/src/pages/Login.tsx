@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -28,6 +29,11 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen">
+      <Helmet>
+        <title>Вход — PsyHo</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
+
       <div className="hidden flex-1 items-center justify-center bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900 lg:flex">
         <div className="max-w-md px-12 text-white">
           <div className="mb-8 text-6xl font-bold">

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 
 export default function Register() {
   const [name, setName] = useState("");
@@ -16,14 +17,18 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (password.length < 6) {
-      setError("Пароль должен быть не менее 6 символов");
+    if (password.length < 8) {
+      setError("Пароль должен быть не менее 8 символов и содержать хотя бы одну цифру");
+      return;
+    }
+    if (!/\d/.test(password)) {
+      setError("Пароль должен содержать хотя бы одну цифру");
       return;
     }
     setLoading(true);
     try {
       await register(email, password, name);
-      navigate("/chat");
+      navigate("/onboarding");
     } catch {
       setError("Ошибка регистрации. Возможно, email уже занят");
     } finally {
@@ -33,6 +38,11 @@ export default function Register() {
 
   return (
     <div className="flex min-h-screen">
+      <Helmet>
+        <title>Регистрация — PsyHo</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
+
       <div className="hidden flex-1 items-center justify-center bg-gradient-to-br from-warm-500 via-warm-600 to-warm-800 lg:flex">
         <div className="max-w-md px-12 text-white">
           <div className="mb-8 text-6xl font-bold">
@@ -119,9 +129,9 @@ export default function Register() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="input-field pl-10 pr-10"
-                  placeholder="Минимум 6 символов"
+                  placeholder="Минимум 8 символов, 1 цифра"
                   required
-                  minLength={6}
+                  minLength={8}
                 />
                 <button
                   type="button"

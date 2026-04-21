@@ -1,4 +1,5 @@
 import json
+import structlog
 from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,6 +8,7 @@ from app.agents.base import client
 from app.config import get_settings
 
 settings = get_settings()
+logger = structlog.get_logger()
 
 
 async def maybe_compress_context(db: AsyncSession, session_id: str):
@@ -46,6 +48,8 @@ async def maybe_compress_context(db: AsyncSession, session_id: str):
     await db.execute(delete(Message).where(Message.id.in_(old_ids)))
     await db.commit()
 
+    return True
+
 
 async def generate_session_title(first_message: str) -> str:
     try:
@@ -62,7 +66,8 @@ async def generate_session_title(first_message: str) -> str:
         )
         title = response.choices[0].message.content.strip().strip('"').strip("'")
         return title[:100]
-    except Exception:
+    except Exception as e:
+        logger.warning("Failed to generate session title", error=str(e))
         words = first_message.split()[:5]
         return " ".join(words) + ("..." if len(first_message.split()) > 5 else "")
 
@@ -84,10 +89,11 @@ async def _generate_summary(formatted_messages: str) -> str:
             messages=[
                 {
                     "role": "user",
-                    "content": f"Сожми историю психологической беседы в краткое резюме. Укажи ключевые темы, эмоции,_insайты и прогресс.\n\nИстория:\n{formatted_messages}",
+                    "content": f"Сожми историю психологической беседы в краткое резюме. Укажи ключевые темы, эмоции, инсайты и прогресс.\n\nИстория:\n{formatted_messages}",
                 }
             ],
         )
         return response.choices[0].message.content.strip()
-    except Exception:
+    except Exception as e:
+        logger.warning("Failed to generate context summary", error=str(e))
         return "Резюме недоступно."

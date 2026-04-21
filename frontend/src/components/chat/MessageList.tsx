@@ -1,5 +1,6 @@
 import type { Message } from "@/types";
 import MessageItem from "./MessageItem";
+import ThinkingIndicator from "./ThinkingIndicator";
 import { Bot } from "lucide-react";
 
 interface MessageListProps {
@@ -55,18 +56,7 @@ export default function MessageList({
         )}
 
         {isStreaming && !streamingContent && (
-          <div className="flex gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100">
-              <div className="flex gap-1">
-                <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary-400" style={{ animationDelay: "0ms" }} />
-                <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary-400" style={{ animationDelay: "150ms" }} />
-                <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary-400" style={{ animationDelay: "300ms" }} />
-              </div>
-            </div>
-            <div className="rounded-2xl rounded-tl-md bg-surface-100 px-4 py-3 text-sm text-surface-500">
-              Думаю...
-            </div>
-          </div>
+          <ThinkingIndicator agents={agentsUsed} />
         )}
       </div>
     </div>

@@ -1,4 +1,5 @@
 import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 import type { Message } from "@/types";
 import { getAgentInfo } from "@/types";
 import AgentBadge from "./AgentBadge";
@@ -39,7 +40,7 @@ export default function MessageItem({ message, isStreaming }: MessageItemProps) 
       <div className="max-w-[85%] min-w-0">
         <div className="rounded-2xl rounded-tl-md bg-white px-5 py-3 shadow-sm ring-1 ring-surface-100">
           <div className="markdown-content text-sm leading-relaxed text-surface-800">
-            <ReactMarkdown>{message.content}</ReactMarkdown>
+            <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{message.content}</ReactMarkdown>
           </div>
           {isStreaming && (
             <span className="inline-block h-4 w-0.5 animate-pulse bg-primary-500" />

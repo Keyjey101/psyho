@@ -146,6 +146,7 @@ class Orchestrator:
         message: str,
         history: list[dict],
         session_summary: str = "",
+        preferred_style: str = "balanced",
     ):
         if _check_crisis(message):
             for word in CRISIS_RESPONSE.split():
@@ -175,7 +176,7 @@ class Orchestrator:
 
         yield {"type": "agents_used", "agents": agent_names if agent_names else ["orchestrator"]}
 
-        async for token in self._synthesize(message, history, perspectives, session_summary):
+        async for token in self._synthesize(message, history, perspectives, session_summary, preferred_style):
             yield token
 
     async def _synthesize(
@@ -184,6 +185,7 @@ class Orchestrator:
         history: list[dict],
         perspectives: dict[str, str],
         session_summary: str,
+        preferred_style: str = "balanced",
     ):
         perspectives_text = ""
         if perspectives:
@@ -224,6 +226,13 @@ class Orchestrator:
 Синтезируй единый тёплый, профессиональный и эмпатичный ответ, органично интегрируя наиболее полезные инсайты от экспертов. Ответ должен звучать естественно, как от одного заботливого терапевта."""
 
         messages = [{"role": "system", "content": self.system_prompt}]
+        if preferred_style and preferred_style != "balanced":
+            style_instructions = {
+                "direct": "\n\n## Стиль общения пользователя\nПользователь предпочитает прямой, структурированный стиль. Давай чёткие шаги и конкретные техники, меньше воды.",
+                "gentle": "\n\n## Стиль общения пользователя\nПользователь предпочитает мягкий, поддерживающий стиль. Будь особенно тёплым и эмпатичным, избегай директивности.",
+            }
+            if preferred_style in style_instructions:
+                messages[0]["content"] += style_instructions[preferred_style]
         if history:
             messages.extend(history[-10:])
         messages.append({"role": "user", "content": user_content})

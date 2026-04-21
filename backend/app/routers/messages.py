@@ -1,11 +1,12 @@
 import json
+import structlog
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db, async_session
-from app.models.models import ChatSession, Message, User
+from app.models.models import ChatSession, Message, User, UserProfile
 from app.schemas.message import MessageResponse, MessageListResponse
 from app.middleware.auth import get_current_user
 from app.services.auth import decode_token
@@ -21,7 +22,8 @@ orchestrator = Orchestrator()
 async def list_messages(
     session_id: str,
     offset: int = 0,
-    limit: int = 100,
+    limit: int = 50,
+    before_id: str | None = None,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -36,20 +38,26 @@ async def list_messages(
     )
     total = count_result.scalar() or 0
 
-    msg_result = await db.execute(
+    q = (
         select(Message)
         .where(Message.session_id == session_id)
-        .order_by(Message.created_at)
-        .offset(offset)
-        .limit(limit)
+        .order_by(Message.created_at.desc())
     )
-    messages = list(msg_result.scalars().all())
+    if before_id:
+        sub = select(Message.created_at).where(Message.id == before_id).limit(1)
+        sub_result = await db.execute(sub)
+        before_time = sub_result.scalar_one_or_none()
+        if before_time:
+            q = q.where(Message.created_at < before_time)
+
+    msg_result = await db.execute(q.offset(offset).limit(limit))
+    messages = list(reversed(msg_result.scalars().all()))
     return MessageListResponse(messages=messages, total=total)
 
 
 @router.websocket("/{session_id}/chat")
 async def websocket_chat(websocket: WebSocket, session_id: str):
-    token = websocket.query_params.get("token")
+    token = websocket.query_params.get("token") or websocket.cookies.get("access_token")
     if not token:
         await websocket.close(code=4001, reason="Missing token")
         return
@@ -70,6 +78,12 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
             await websocket.close(code=4004, reason="Session not found")
             return
 
+        profile_result = await db.execute(
+            select(UserProfile).where(UserProfile.user_id == user_id)
+        )
+        profile = profile_result.scalar_one_or_none()
+        preferred_style = profile.preferred_style if profile else "balanced"
+
     await websocket.accept()
 
     try:
@@ -80,6 +94,10 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
 
             content = data.get("content", "").strip()
             if not content:
+                continue
+
+            if len(content) > 10000:
+                await websocket.send_json({"type": "error", "message": "Сообщение слишком длинное (максимум 10000 символов)"})
                 continue
 
             async with async_session() as db:
@@ -109,7 +127,7 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
             full_response = ""
 
             try:
-                async for event in orchestrator.process(content, history_dicts, summary_text):
+                async for event in orchestrator.process(content, history_dicts, summary_text, preferred_style):
                     if event["type"] == "token":
                         await websocket.send_json({"type": "token", "content": event["content"]})
                         full_response += event["content"]
@@ -119,10 +137,9 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                     elif event["type"] == "error":
                         await websocket.send_json({"type": "error", "message": event["message"]})
             except Exception as e:
-                import structlog
                 structlog.get_logger().error("Orchestrator error", error=str(e))
-                await websocket.send_json({"type": "error", "message": "An error occurred. Please try again."})
-                continue
+                await websocket.send_json({"type": "error", "message": "Произошла ошибка. Попробуй ещё раз."})
+                break
 
             async with async_session() as db:
                 assistant_msg = Message(
@@ -145,7 +162,9 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                 await db.commit()
                 await db.refresh(assistant_msg)
 
-                await maybe_compress_context(db, session_id)
+                compressed = await maybe_compress_context(db, session_id)
+                if compressed:
+                    await websocket.send_json({"type": "context_compressed"})
 
                 await websocket.send_json({"type": "done", "message_id": assistant_msg.id})
 

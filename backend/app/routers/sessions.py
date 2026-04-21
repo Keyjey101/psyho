@@ -76,3 +76,51 @@ async def delete_session(session_id: str, user: User = Depends(get_current_user)
 
     await db.delete(session)
     await db.commit()
+
+
+@router.get("/{session_id}/insights")
+async def get_session_insights(
+    session_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ChatSession).where(ChatSession.id == session_id, ChatSession.user_id == user.id)
+    )
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    msg_result = await db.execute(
+        select(Message)
+        .where(Message.session_id == session_id, Message.role == "assistant")
+        .order_by(Message.created_at)
+    )
+    messages = list(msg_result.scalars().all())
+
+    if not messages:
+        return {"insights": "Пока недостаточно данных для инсайтов."}
+
+    combined = "\n".join([m.content[:500] for m in messages[-10:]])
+
+    from app.agents.base import client
+    from app.config import get_settings
+    settings = get_settings()
+
+    try:
+        response = await client.chat.completions.create(
+            model=settings.ZAI_SMALL_MODEL,
+            max_tokens=500,
+            temperature=0.3,
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Проанализируй ответы ИИ-терапевта из сессии и выдели краткие инсайты: ключевые темы, эмоциональные паттерны, прогресс и рекомендации. Пиши на русском, кратко.\n\nОтветы терапевта:\n{combined}",
+                }
+            ],
+        )
+        insights = response.choices[0].message.content.strip()
+    except Exception:
+        insights = "Не удалось сгенерировать инсайты."
+
+    return {"insights": insights, "session_title": session.title}

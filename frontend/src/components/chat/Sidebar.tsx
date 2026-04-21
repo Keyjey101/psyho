@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, LogOut, MessageSquare } from "lucide-react";
+import { Plus, Trash2, X, LogOut, MessageSquare, Settings } from "lucide-react";
 import type { Session } from "@/types";
+import { useNavigate } from "react-router-dom";
 
 interface SidebarProps {
   sessions: Session[];
   activeSessionId?: string;
+  activeSessionSummary?: string | null;
   onNewChat: () => void;
   onSelectSession: (id: string) => void;
   onDeleteSession: (id: string) => void;
@@ -18,6 +20,7 @@ interface SidebarProps {
 export default function Sidebar({
   sessions,
   activeSessionId,
+  activeSessionSummary,
   onNewChat,
   onSelectSession,
   onDeleteSession,
@@ -27,6 +30,7 @@ export default function Sidebar({
   onClose,
 }: SidebarProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const sidebar = (
     <div className="flex h-full flex-col bg-surface-900">
@@ -62,24 +66,34 @@ export default function Sidebar({
               onMouseEnter={() => setHoveredId(session.id)}
               onMouseLeave={() => setHoveredId(null)}
               onClick={() => onSelectSession(session.id)}
-              className={`group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-                activeSessionId === session.id
-                  ? "bg-surface-800 text-white"
-                  : "text-surface-400 hover:bg-surface-800 hover:text-surface-200"
-              }`}
+              className="group relative cursor-pointer"
             >
-              <MessageSquare className="h-4 w-4 shrink-0" />
-              <span className="flex-1 truncate">{session.title || "Новый разговор"}</span>
-              {hoveredId === session.id && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteSession(session.id);
-                  }}
-                  className="shrink-0 rounded-md p-1 text-surface-500 hover:bg-red-900/30 hover:text-red-400"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+              <div
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+                  activeSessionId === session.id
+                    ? "bg-surface-800 text-white"
+                    : "text-surface-400 hover:bg-surface-800 hover:text-surface-200"
+                }`}
+              >
+                <MessageSquare className="h-4 w-4 shrink-0" />
+                <span className="flex-1 truncate">{session.title || "Новый разговор"}</span>
+                {hoveredId === session.id && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteSession(session.id);
+                    }}
+                    className="shrink-0 rounded-md p-1 text-surface-500 hover:bg-red-900/30 hover:text-red-400"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+              {hoveredId === session.id && session.summary && (
+                <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-surface-600 bg-surface-800 p-3 text-xs leading-relaxed text-surface-300 shadow-lg">
+                  {session.summary.slice(0, 200)}
+                  {session.summary.length > 200 ? "..." : ""}
+                </div>
               )}
             </div>
           ))}
@@ -93,13 +107,22 @@ export default function Sidebar({
           </div>
           <span className="truncate text-sm font-medium text-surface-300">{userName}</span>
         </div>
-        <button
-          onClick={onLogout}
-          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-surface-400 transition-colors hover:bg-surface-800 hover:text-red-400"
-        >
-          <LogOut className="h-4 w-4" />
-          Выйти
-        </button>
+        <div className="space-y-1">
+          <button
+            onClick={() => navigate("/profile")}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-surface-400 transition-colors hover:bg-surface-800 hover:text-primary-400"
+          >
+            <Settings className="h-4 w-4" />
+            Профиль
+          </button>
+          <button
+            onClick={onLogout}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-surface-400 transition-colors hover:bg-surface-800 hover:text-red-400"
+          >
+            <LogOut className="h-4 w-4" />
+            Выйти
+          </button>
+        </div>
       </div>
     </div>
   );

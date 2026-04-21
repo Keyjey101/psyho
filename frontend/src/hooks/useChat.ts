@@ -13,15 +13,15 @@ export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
   const [isStreaming, setIsStreaming] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const agentsUsedRef = useRef<string[]>([]);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const token = localStorage.getItem("access_token");
-    if (!token || !sessionId) return;
+    if (!sessionId) return;
 
-    const wsBase = import.meta.env.VITE_WS_URL || `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws`;
-    const wsUrl = `${wsBase}/api/sessions/${sessionId}/chat?token=${token}`;
+    const wsBase = import.meta.env.VITE_WS_URL || `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`;
+    const wsUrl = `${wsBase}/api/sessions/${sessionId}/chat`;
 
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
@@ -49,6 +49,7 @@ export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
 
       setStreamingContent("");
       setAgentsUsed([]);
+      agentsUsedRef.current = [];
       setIsStreaming(true);
 
       const tempHandler = (event: MessageEvent) => {
@@ -60,6 +61,7 @@ export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
             break;
           case "agents_used":
             setAgentsUsed(data.agents);
+            agentsUsedRef.current = data.agents;
             break;
           case "done":
             setIsStreaming(false);
@@ -69,7 +71,7 @@ export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
               session_id: sessionId,
               role: "assistant",
               content: "",
-              agents_used: agentsUsed.length > 0 ? JSON.stringify(agentsUsed) : null,
+              agents_used: agentsUsedRef.current.length > 0 ? JSON.stringify(agentsUsedRef.current) : null,
               created_at: new Date().toISOString(),
             });
             break;
@@ -84,7 +86,7 @@ export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
       wsRef.current.addEventListener("message", tempHandler);
       wsRef.current.send(JSON.stringify({ type: "message", content }));
     },
-    [sessionId, onMessageComplete, agentsUsed]
+    [sessionId, onMessageComplete]
   );
 
   const disconnect = useCallback(() => {
