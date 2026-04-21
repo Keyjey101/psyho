@@ -131,7 +131,7 @@ export default function Chat() {
         />
         <div ref={messagesEndRef} />
 
-        <InputBar onSend={handleSend} disabled={!sessionId || isStreaming} />
+        <InputBar onSend={handleSend} disabled={isStreaming} />
       </div>
     </div>
   );
