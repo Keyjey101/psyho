@@ -1,5 +1,6 @@
 import json
 import structlog
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
 from sqlalchemy import select, func
@@ -158,9 +159,11 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                     select(ChatSession).where(ChatSession.id == session_id)
                 )
                 sess = result2.scalar_one_or_none()
-                if sess and not sess.title:
-                    title = await generate_session_title(content)
-                    sess.title = title
+                if sess:
+                    sess.updated_at = datetime.now(timezone.utc)
+                    if not sess.title:
+                        title = await generate_session_title(content)
+                        sess.title = title
 
                 await db.commit()
                 await db.refresh(assistant_msg)

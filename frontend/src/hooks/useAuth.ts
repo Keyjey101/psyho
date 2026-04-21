@@ -1,13 +1,8 @@
-import { useEffect } from "react";
 import { useAuthStore } from "@/store/auth";
 
 export function useAuth() {
-  const { user, isLoading, isAuthenticated, login, register, logout, checkAuth } =
+  const { user, isLoading, isAuthenticated, login, register, logout } =
     useAuthStore();
-
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
 
   return { user, isLoading, isAuthenticated, login, register, logout };
 }

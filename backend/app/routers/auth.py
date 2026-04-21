@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -76,7 +77,7 @@ async def login(body: LoginRequest, response: Response, db: AsyncSession = Depen
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(request: Request, response: Response):
+async def refresh(request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     body = await request.json() if request.headers.get("content-type") else {}
     refresh_token = body.get("refresh_token") or request.cookies.get("refresh_token")
     if not refresh_token:
@@ -86,6 +87,12 @@ async def refresh(request: Request, response: Response):
     if payload is None or payload.get("type") != "refresh":
         raise HTTPException(status_code=401, detail="Invalid refresh token")
     user_id = payload.get("sub")
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+
     access = create_access_token({"sub": user_id})
     new_refresh = create_refresh_token({"sub": user_id})
     _set_token_cookies(response, access, new_refresh)

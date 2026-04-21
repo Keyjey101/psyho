@@ -149,9 +149,8 @@ class Orchestrator:
         preferred_style: str = "balanced",
     ):
         if _check_crisis(message):
-            for word in CRISIS_RESPONSE.split():
-                yield {"type": "token", "content": word + " "}
             yield {"type": "agents_used", "agents": ["crisis"]}
+            yield {"type": "token", "content": CRISIS_RESPONSE}
             return
 
         topics = await self._classify_topics(message, history)
