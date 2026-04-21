@@ -1,5 +1,3 @@
-import json
-
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,9 +14,14 @@ router = APIRouter()
 async def get_me(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(UserProfile).where(UserProfile.user_id == user.id))
     profile = result.scalar_one_or_none()
-    resp = UserMeResponse.model_validate(user)
-    resp.profile = UserProfileResponse.model_validate(profile) if profile else None
-    return resp
+    return UserMeResponse(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        is_active=user.is_active,
+        created_at=user.created_at,
+        profile=UserProfileResponse.model_validate(profile) if profile else None,
+    )
 
 
 @router.patch("/me", response_model=UserMeResponse)
@@ -44,6 +47,11 @@ async def update_me(
     await db.commit()
     await db.refresh(profile)
 
-    resp = UserMeResponse.model_validate(user)
-    resp.profile = UserProfileResponse.model_validate(profile)
-    return resp
+    return UserMeResponse(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        is_active=user.is_active,
+        created_at=user.created_at,
+        profile=UserProfileResponse.model_validate(profile),
+    )
