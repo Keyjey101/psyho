@@ -1,9 +1,10 @@
-import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.models.models import ChatSession, Message, User
@@ -35,16 +36,13 @@ async def create_session(body: SessionCreate, user: User = Depends(get_current_u
 @router.get("/{session_id}", response_model=SessionDetailResponse)
 async def get_session(session_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
-        select(ChatSession).where(ChatSession.id == session_id, ChatSession.user_id == user.id)
+        select(ChatSession)
+        .where(ChatSession.id == session_id, ChatSession.user_id == user.id)
+        .options(selectinload(ChatSession.messages))
     )
     session = result.scalar_one_or_none()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-
-    msg_result = await db.execute(
-        select(Message).where(Message.session_id == session_id).order_by(Message.created_at)
-    )
-    session.messages = list(msg_result.scalars().all())
     return session
 
 
