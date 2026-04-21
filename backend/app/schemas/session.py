@@ -1,5 +1,7 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from datetime import datetime
+
+from app.schemas.message import MessageResponse
 
 
 class SessionCreate(BaseModel):
@@ -25,6 +27,7 @@ class SessionListResponse(BaseModel):
     title: str | None
     created_at: datetime
     updated_at: datetime
+    summary: str | None
 
     model_config = {"from_attributes": True}
 
@@ -35,6 +38,6 @@ class SessionDetailResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     summary: str | None
-    messages: list["MessageResponse"] = []
+    messages: list[MessageResponse] = []
 
     model_config = {"from_attributes": True}

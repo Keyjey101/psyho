@@ -53,11 +53,16 @@ export interface WSErrorMessage {
   message: string;
 }
 
+export interface WSContextCompressed {
+  type: "context_compressed";
+}
+
 export type WSMessage =
   | WSTokenMessage
   | WS_agents_used
   | WSDoneMessage
-  | WSErrorMessage;
+  | WSErrorMessage
+  | WSContextCompressed;
 
 export interface AgentInfo {
   id: string;

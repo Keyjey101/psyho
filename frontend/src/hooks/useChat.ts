@@ -80,6 +80,8 @@ export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
             setStreamingContent((prev) => prev + "\n\n[Ошибка: " + data.message + "]");
             wsRef.current?.removeEventListener("message", tempHandler);
             break;
+          case "context_compressed":
+            break;
         }
       };
 
