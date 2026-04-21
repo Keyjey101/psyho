@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.models import User
-from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, RefreshRequest, UserResponse
+from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, RefreshRequest
 from app.services.auth import (
     hash_password,
     authenticate_user,

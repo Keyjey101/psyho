@@ -121,7 +121,11 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                     for m in all_messages
                 ]
 
-                summary_text = session.summary or ""
+                sess_result = await db.execute(
+                    select(ChatSession).where(ChatSession.id == session_id)
+                )
+                fresh_session = sess_result.scalar_one_or_none()
+                summary_text = fresh_session.summary if fresh_session else ""
 
             agents_used_list = []
             full_response = ""
@@ -150,14 +154,13 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                 )
                 db.add(assistant_msg)
 
-                if not session.title:
-                    result2 = await db.execute(
-                        select(ChatSession).where(ChatSession.id == session_id)
-                    )
-                    sess = result2.scalar_one_or_none()
-                    if sess and not sess.title:
-                        title = await generate_session_title(content)
-                        sess.title = title
+                result2 = await db.execute(
+                    select(ChatSession).where(ChatSession.id == session_id)
+                )
+                sess = result2.scalar_one_or_none()
+                if sess and not sess.title:
+                    title = await generate_session_title(content)
+                    sess.title = title
 
                 await db.commit()
                 await db.refresh(assistant_msg)
