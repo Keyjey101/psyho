@@ -1,11 +1,18 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from datetime import datetime
 
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=8, max_length=100, pattern=r"^(?=.*\d).+$")
+    password: str = Field(min_length=8, max_length=100)
     name: str = Field(min_length=1, max_length=100)
+
+    @field_validator("password")
+    @classmethod
+    def password_must_contain_digit(cls, v: str) -> str:
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Пароль должен содержать хотя бы одну цифру")
+        return v
 
 
 class LoginRequest(BaseModel):
