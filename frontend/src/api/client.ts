@@ -15,13 +15,16 @@ api.interceptors.response.use(
     const isAuthEndpoint = url.includes("/auth/");
     const onAuthPage = window.location.pathname === "/login" || window.location.pathname === "/register";
 
+    const publicPages = ["/", "/login", "/register"];
+    const onPublicPage = publicPages.includes(window.location.pathname);
+
     if (error.response?.status === 401 && !error.config._retry && !isAuthEndpoint) {
       error.config._retry = true;
       try {
         await api.post("/auth/refresh", {});
         return api(error.config);
       } catch {
-        if (!onAuthPage) {
+        if (!onAuthPage && !onPublicPage) {
           window.location.href = "/login";
         }
       }
