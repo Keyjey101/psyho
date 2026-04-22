@@ -7,6 +7,8 @@ class UserProfileResponse(BaseModel):
     therapy_goals: str | None
     preferred_style: str
     crisis_plan: str | None
+    memory_enabled: bool = True
+    long_term_memory: str | None = None
     updated_at: datetime
 
     model_config = {"from_attributes": True}
@@ -16,6 +18,7 @@ class UserProfileUpdate(BaseModel):
     therapy_goals: str | None = None
     preferred_style: str | None = Field(None, pattern="^(direct|gentle|balanced)$")
     crisis_plan: str | None = None
+    memory_enabled: bool | None = None
 
 
 class UserMeResponse(BaseModel):

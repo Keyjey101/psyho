@@ -13,6 +13,7 @@ from app.middleware.auth import get_current_user
 from app.services.auth import decode_token
 from app.agents.orchestrator import Orchestrator
 from app.services.context import maybe_compress_context, generate_session_title
+from app.services.memory_service import extract_and_update_memory
 
 router = APIRouter()
 
@@ -84,8 +85,74 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
         )
         profile = profile_result.scalar_one_or_none()
         preferred_style = profile.preferred_style if profile else "balanced"
+        long_term_memory = profile.long_term_memory if (profile and profile.memory_enabled) else ""
+
+        continuation_context = session.continuation_context
+        existing_msg_result = await db.execute(
+            select(func.count()).where(Message.session_id == session_id)
+        )
+        existing_count = existing_msg_result.scalar() or 0
 
     await websocket.accept()
+
+    if continuation_context and existing_count == 0:
+        try:
+            ctx = json.loads(continuation_context)
+            insights = ctx.get("insights", "")
+            prev_title = ctx.get("previous_title", "нашу предыдущую сессию")
+        except Exception:
+            insights = ""
+            prev_title = "нашу предыдущую сессию"
+
+        if insights:
+            continuation_prompt = f"""КОНТЕКСТ ДЛЯ НИКА (не показывать пользователю):
+Это продолжение предыдущей сессии «{prev_title}».
+Инсайты и итоги прошлой работы:
+{insights}
+
+ЗАДАЧА: Начни новую сессию естественно. Поприветствуй пользователя,
+кратко напомни о чём говорили (не перечисляй всё — выбери главное),
+спроси как он/она себя чувствует после того разговора,
+и мягко предложи продолжить работу или попробовать что-то новое.
+Говори как Ника — тепло, без официоза."""
+
+            greeting_content = ""
+            try:
+                from app.agents.base import client as ai_client
+                from app.config import get_settings
+                settings = get_settings()
+
+                stream = await ai_client.chat.completions.create(
+                    model=settings.ZAI_MODEL,
+                    max_tokens=512,
+                    temperature=0.7,
+                    messages=[
+                        {"role": "system", "content": orchestrator.system_prompt},
+                        {"role": "user", "content": continuation_prompt},
+                    ],
+                    stream=True,
+                )
+                await websocket.send_json({"type": "agents_used", "agents": ["orchestrator"]})
+                async for chunk in stream:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        token_content = chunk.choices[0].delta.content
+                        greeting_content += token_content
+                        await websocket.send_json({"type": "token", "content": token_content})
+            except Exception as e:
+                structlog.get_logger().error("Continuation greeting error", error=str(e))
+
+            if greeting_content:
+                async with async_session() as db:
+                    greeting_msg = Message(
+                        session_id=session_id,
+                        role="assistant",
+                        content=greeting_content,
+                        agents_used=json.dumps(["orchestrator"]),
+                    )
+                    db.add(greeting_msg)
+                    await db.commit()
+                    await db.refresh(greeting_msg)
+                    await websocket.send_json({"type": "done", "message_id": greeting_msg.id})
 
     try:
         while True:
@@ -118,7 +185,7 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                 all_messages = list(msg_result.scalars().all())
 
                 history_dicts = [
-                    {"role": m.role, "content": m.content}
+                    {"role": m.role, "content": m.content, "agents_used": m.agents_used}
                     for m in all_messages
                 ]
 
@@ -132,7 +199,7 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
             full_response = ""
 
             try:
-                async for event in orchestrator.process(content, history_dicts, summary_text, preferred_style):
+                async for event in orchestrator.process(content, history_dicts, summary_text, preferred_style, long_term_memory):
                     if event["type"] == "token":
                         await websocket.send_json({"type": "token", "content": event["content"]})
                         full_response += event["content"]
@@ -173,6 +240,18 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                     await websocket.send_json({"type": "context_compressed"})
 
                 await websocket.send_json({"type": "done", "message_id": assistant_msg.id})
+
+            if profile and profile.memory_enabled and full_response:
+                try:
+                    async with async_session() as mem_db:
+                        await extract_and_update_memory(
+                            profile.long_term_memory,
+                            history_dicts,
+                            mem_db,
+                            user_id,
+                        )
+                except Exception as e:
+                    structlog.get_logger().error("Memory update error", error=str(e))
 
     except WebSocketDisconnect:
         pass

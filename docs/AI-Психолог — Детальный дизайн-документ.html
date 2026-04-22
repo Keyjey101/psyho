@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<!-- saved from url=(0073)file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html -->
+<html lang="ru"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI-Психолог — Детальный дизайн-документ</title>
+<style>
+/* ============ RESET ============ */
+body { margin: 0; padding: 0; font-family: 'DejaVu Sans', Arial, sans-serif; color: #3d3530; line-height: 1.65; font-size: 11pt; text-align: justify; text-align-last: left; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ============ PAGED.JS ============ */
+@page { size: A4; margin: 2.2cm 2cm; @top-center { content: string(doctitle); font-size: 9pt; color: #a0958a; } @bottom-center { content: counter(page); font-size: 9pt; color: #a0958a; } }
+@page :first { margin: 0; @top-center { content: none; } @bottom-center { content: none; } }
+@page cover { margin: 0; @top-center { content: none; } @bottom-center { content: none; } }
+@page toc { @top-center { content: none; } }
+body { string-set: doctitle ""; }
+h1 { string-set: doctitle content(); }
+
+/* ============ COVER ============ */
+.cover { page: cover; width: 210mm; height: 297mm; margin: 0; position: relative; overflow: hidden; page-break-after: always; background: linear-gradient(155deg, #faf6f2 0%, #f3ebe3 35%, #ece2d6 70%, #e5d8ca 100%); }
+.cover::before { content: ''; position: absolute; top: -100px; right: -150px; width: 450px; height: 450px; background: rgba(194, 164, 130, 0.12); border-radius: 50%; }
+.cover::after { content: ''; position: absolute; bottom: -80px; left: -100px; width: 350px; height: 350px; background: rgba(178, 148, 118, 0.10); border-radius: 50%; }
+.cover-deco1 { position: absolute; top: 100px; left: 60px; width: 70px; height: 70px; border: 2px solid rgba(160, 130, 100, 0.18); border-radius: 14px; transform: rotate(18deg); }
+.cover-deco2 { position: absolute; top: 180px; right: 100px; width: 50px; height: 50px; background: rgba(195, 165, 130, 0.15); border-radius: 50%; }
+.cover-deco3 { position: absolute; bottom: 160px; right: 140px; width: 90px; height: 90px; border: 2px solid rgba(170, 140, 110, 0.13); border-radius: 50%; }
+.cover-deco4 { position: absolute; bottom: 220px; left: 100px; width: 35px; height: 35px; background: rgba(188, 158, 128, 0.18); border-radius: 8px; transform: rotate(-12deg); }
+.cover-deco5 { position: absolute; top: 300px; left: 120px; width: 20px; height: 20px; background: rgba(165, 135, 105, 0.2); border-radius: 50%; }
+.cover-line { position: absolute; left: 35px; top: 60px; bottom: 60px; width: 3px; background: linear-gradient(to bottom, transparent, rgba(150, 120, 90, 0.2), transparent); }
+.cover-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: 78%; z-index: 1; }
+.cover-tag { display: inline-block; padding: 7px 24px; background: rgba(165, 130, 95, 0.1); border-radius: 20px; font-size: 9.5pt; color: #9a8a7a; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 35px; border: 1px solid rgba(165, 130, 95, 0.15); }
+.cover-title { font-family: 'DejaVu Serif', Georgia, serif; font-size: 34pt; font-weight: 700; color: #4a4038; margin-bottom: 14px; line-height: 1.2; }
+.cover-subtitle { font-family: 'DejaVu Serif', Georgia, serif; font-size: 15pt; font-weight: 400; color: #8a7a6a; margin-bottom: 55px; line-height: 1.5; }
+.cover-meta { font-size: 10.5pt; color: #9a8e85; line-height: 2; }
+
+/* ============ TOC ============ */
+.toc-page { page: toc; page-break-after: always; padding-top: 1cm; }
+.toc-title { font-family: 'DejaVu Serif', Georgia, serif; font-size: 22pt; font-weight: 700; color: #4a4038; margin-bottom: 35px; padding-bottom: 14px; border-bottom: 2px solid #d8cdc0; }
+.toc { list-style: none; }
+.toc li { margin-bottom: 11px; }
+.toc a { color: #4a4038; text-decoration: none; font-size: 11.5pt; display: flex; justify-content: space-between; }
+.toc a::after { content: leader('.') target-counter(attr(href url), page); color: #a0958a; }
+.toc-l1 { font-weight: 600; font-size: 12pt; }
+.toc-l2 { padding-left: 22px; font-weight: 400; font-size: 11pt; color: #5a5048; }
+
+/* ============ HEADINGS ============ */
+h1 { font-family: 'DejaVu Serif', Georgia, serif; font-size: 21pt; font-weight: 700; color: #4a4038; margin: 45px 0 18px 0; padding-bottom: 10px; border-bottom: 2px solid #d8cdc0; page-break-after: avoid; }
+h2 { font-family: 'DejaVu Serif', Georgia, serif; font-size: 15pt; font-weight: 600; color: #5a5048; margin: 32px 0 14px 0; padding-left: 14px; border-left: 3px solid #c4a882; page-break-after: avoid; }
+h3 { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 12.5pt; font-weight: 600; color: #5a5048; margin: 24px 0 10px 0; page-break-after: avoid; }
+h4 { font-size: 11.5pt; font-weight: 600; color: #5a5048; margin: 18px 0 8px 0; page-break-after: avoid; }
+p { margin-bottom: 11px; }
+
+/* ============ UTILITY ============ */
+.page-break { page-break-after: always; }
+.section-divider { height: 2px; background: linear-gradient(to right, #d8cdc0, transparent); margin: 35px 0; }
+
+/* ============ COLOR SWATCHES ============ */
+.palette { display: flex; gap: 14px; margin: 14px 0 18px 0; flex-wrap: wrap; }
+.color-swatch { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.color-box { width: 68px; height: 68px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+.color-label { font-size: 8.5pt; color: #6a6058; text-align: center; max-width: 80px; line-height: 1.3; }
+.color-hex { font-size: 7.5pt; color: #9a9088; font-family: 'DejaVu Sans Mono', monospace; }
+
+/* ============ TABLES ============ */
+table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 10pt; page-break-inside: avoid; }
+thead { display: table-header-group; }
+th { background: #f5ede4; padding: 10px 12px; text-align: left; font-weight: 600; color: #4a4038; border-top: 2.5px solid #8a7a6a; border-bottom: 2px solid #8a7a6a; font-size: 10pt; }
+td { padding: 10px 12px; border-bottom: 1px solid #e0d5c8; vertical-align: top; }
+tr { page-break-inside: avoid; }
+tbody tr:nth-child(even) { background: #faf7f3; }
+
+/* ============ MOOD / INFO BOXES ============ */
+.mood-box { background: #faf6f1; border-left: 4px solid #c4a882; padding: 14px 18px; margin: 14px 0; border-radius: 0 10px 10px 0; page-break-inside: avoid; }
+.mood-box-title { font-weight: 600; color: #5a5048; margin-bottom: 6px; font-size: 11pt; }
+.mood-box p { margin: 0; font-size: 10.5pt; color: #5a5048; }
+
+.tip-box { background: #f5f0e8; border: 1px solid #e0d5c8; padding: 14px 18px; margin: 14px 0; border-radius: 10px; page-break-inside: avoid; }
+.tip-box-title { font-weight: 600; color: #7a6a58; margin-bottom: 6px; font-size: 11pt; }
+.tip-box p { margin: 0; font-size: 10.5pt; color: #5a5048; }
+
+/* ============ SCREEN CARDS ============ */
+.screen-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
+.screen-card { background: #faf7f3; padding: 14px; border-radius: 10px; page-break-inside: avoid; }
+.screen-card h4 { font-family: 'DejaVu Serif', Georgia, serif; font-size: 11.5pt; font-weight: 600; color: #5a5048; margin: 0 0 8px 0; }
+.screen-card p { font-size: 10pt; color: #5a5048; margin: 0; line-height: 1.55; }
+.screen-card ul { margin: 0; padding-left: 18px; font-size: 10pt; color: #5a5048; }
+.screen-card li { margin-bottom: 4px; }
+
+/* ============ COMPONENT SHOWCASE ============ */
+.comp-row { display: flex; gap: 14px; margin: 14px 0; flex-wrap: wrap; }
+.comp-item { flex: 1; min-width: 130px; background: #faf7f3; padding: 14px; border-radius: 10px; text-align: center; page-break-inside: avoid; }
+.comp-preview { padding: 14px; border-radius: 10px; margin-bottom: 10px; display: inline-flex; align-items: center; justify-content: center; min-height: 50px; }
+.comp-label { font-size: 9.5pt; color: #5a5048; font-weight: 500; }
+
+/* ============ BUTTON SAMPLES ============ */
+.btn-row { display: flex; gap: 12px; margin: 14px 0; flex-wrap: wrap; align-items: center; }
+.btn-item { padding: 10px 22px; border-radius: 25px; font-size: 10.5pt; font-weight: 500; text-align: center; min-width: 110px; }
+
+/* ============ TEXT SAMPLE ============ */
+.type-sample { background: #faf7f3; padding: 14px 18px; border-radius: 10px; margin: 14px 0; page-break-inside: avoid; }
+.type-h { font-family: 'DejaVu Serif', Georgia, serif; font-size: 16pt; color: #4a4038; margin-bottom: 8px; }
+.type-b { font-size: 11pt; color: #5a5048; line-height: 1.6; }
+.type-c { font-size: 9pt; color: #9a8e85; margin-top: 8px; }
+
+/* ============ COPY EXAMPLES ============ */
+.copy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
+.copy-card { background: #faf7f3; padding: 14px; border-radius: 10px; page-break-inside: avoid; }
+.copy-card h5 { font-size: 10.5pt; font-weight: 600; color: #7a6a58; margin: 0 0 8px 0; }
+.copy-card .copy-text { font-family: 'DejaVu Serif', Georgia, serif; font-size: 11.5pt; color: #4a4038; margin: 0 0 6px 0; line-height: 1.4; }
+.copy-card .copy-note { font-size: 9.5pt; color: #9a8e85; margin: 0; }
+
+/* ============ FLOWCHART (simplified) ============ */
+.flow-step { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
+.flow-box { background: #f5ede4; padding: 10px 16px; border-radius: 10px; font-size: 10pt; color: #5a5048; border: 1px solid #e0d5c8; min-width: 140px; text-align: center; }
+.flow-arrow { color: #c4a882; font-size: 16pt; }
+
+/* ============ ANATOMY DIAGRAM ============ */
+.anatomy-box { background: #faf7f3; border: 1px solid #e0d5c8; border-radius: 12px; padding: 18px; margin: 14px 0; page-break-inside: avoid; }
+.anatomy-row { display: flex; align-items: center; margin: 6px 0; font-size: 10pt; }
+.anatomy-dot { width: 14px; height: 14px; border-radius: 50%; margin-right: 10px; flex-shrink: 0; }
+.anatomy-label { font-weight: 600; color: #5a5048; min-width: 110px; }
+.anatomy-desc { color: #7a7068; }
+
+/* ============ STATE TABLE ============ */
+.state-grid { display: grid; grid-template-columns: 100px 1fr 1fr 1fr; gap: 8px; margin: 14px 0; font-size: 10pt; }
+.state-header { font-weight: 600; color: #5a5048; padding: 8px; background: #f5ede4; border-radius: 6px; }
+.state-cell { padding: 8px; background: #faf7f3; border-radius: 6px; color: #5a5048; }
+
+/* ============ OVERFLOW PREVENTION ============ */
+pre, table, figure, img, svg, blockquote { max-width: 100%; box-sizing: border-box; }
+figure img, figure svg { max-width: 80%; max-height: 40vh; height: auto; }
+a { word-break: break-all; }
+tr { page-break-inside: avoid; }
+
+/* ============ FOOTER ============ */
+.footer-note { margin-top: 35px; padding-top: 18px; border-top: 1px solid #e0d5c8; font-size: 10pt; color: #9a8e85; text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- ===== COVER ===== -->
+<div class="cover">
+    <div class="cover-line"></div>
+    <div class="cover-deco1"></div>
+    <div class="cover-deco2"></div>
+    <div class="cover-deco3"></div>
+    <div class="cover-deco4"></div>
+    <div class="cover-deco5"></div>
+    <div class="cover-content">
+        <div class="cover-tag">Дизайн-документ v1.0</div>
+        <div class="cover-title">AI-Психолог</div>
+        <div class="cover-subtitle">Гибридная концепция «Мел и тепло»<br>Детальная проработка интерфейса</div>
+        <div class="cover-meta">
+            <p>Меловая эстетика + тёплый уют</p>
+            <p>Апрель 2026</p>
+        </div>
+    </div>
+</div>
+
+<!-- ===== TOC ===== -->
+<div class="toc-page">
+    <h2 class="toc-title">Содержание</h2>
+    <ul class="toc">
+        <li class="toc-l1"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#philosophy">1. Философия гибридной концепции</a></li>
+        <li class="toc-l1"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#colors">2. Цветовая система</a></li>
+        <li class="toc-l2"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#color-primary">2.1 Основная палитра</a></li>
+        <li class="toc-l2"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#color-functional">2.2 Функциональные цвета</a></li>
+        <li class="toc-l2"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#color-semantic">2.3 Семантические цвета</a></li>
+        <li class="toc-l1"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#typography">3. Типографика</a></li>
+        <li class="toc-l2"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#type-scale">3.1 Масштаб шрифтов</a></li>
+        <li class="toc-l2"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#type-usage">3.2 Правила применения</a></li>
+        <li class="toc-l1"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#components">4. Компоненты интерфейса</a></li>
+        <li class="toc-l2"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#comp-buttons">4.1 Кнопки</a></li>
+        <li class="toc-l2"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#comp-inputs">4.2 Поля ввода</a></li>
+        <li class="toc-l2"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#comp-cards">4.3 Карточки</a></li>
+        <li class="toc-l2"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#comp-bubbles">4.4 Пузыри сообщений</a></li>
+        <li class="toc-l1"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#screens">5. Макеты экранов</a></li>
+        <li class="toc-l2"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#scr-landing">5.1 Лендинг</a></li>
+        <li class="toc-l2"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#scr-auth">5.2 Авторизация / Регистрация</a></li>
+        <li class="toc-l2"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#scr-chat">5.3 Чат с AI</a></li>
+        <li class="toc-l2"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#scr-history">5.4 История сессий</a></li>
+        <li class="toc-l2"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#scr-profile">5.5 Профиль</a></li>
+        <li class="toc-l1"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#illustrations">6. Иллюстрации и иконки</a></li>
+        <li class="toc-l1"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#animation">7. Принципы анимации</a></li>
+        <li class="toc-l1"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#copy">8. Микротекст и копирайт</a></li>
+        <li class="toc-l1"><a href="file:///C:/Users/kjkjkjkj/Downloads/Telegram%20Desktop/hybrid_design.html#implementation">9. Рекомендации по внедрению</a></li>
+    </ul>
+</div>
+
+<!-- ===== 1. PHILOSOPHY ===== -->
+<h1 id="philosophy">1. Философия гибридной концепции</h1>
+
+<p>Гибридная концепция <strong>«Мел и тепло»</strong> объединяет две эмоциональные силы: меловую эстетику с её наивной искренностью и тёплый уют с его физической ощутимостью. Результат — интерфейс, который одновременно уникален и универсален.</p>
+
+<div class="mood-box">
+    <div class="mood-box-title">Концептуальная формула</div>
+    <p>Меловой стиль (искренность, ручная работа, уникальность) + тёплая палитра (терракота, карамель, крем) + адаптированные иллюстрации (наивные, но не детские) = безопасное пространство для женщины любого возраста</p>
+</div>
+
+<h3>Что остаётся от «Меловой гавани»</h3>
+
+<ul style="margin: 10px 0; padding-left: 22px; font-size: 10.5pt;">
+    <li style="margin-bottom: 5px;">Меловая текстура как акцент (не доминанта) — лёгкий эффект доски на ключевых экранах</li>
+    <li style="margin-bottom: 5px;">«Нарисовано от руки» стиль иллюстраций — толстые линии, неровные края</li>
+    <li style="margin-bottom: 5px;">Сюжеты иллюстраций: чашки, цветы, окна, книги — взрослый наивный стиль, а не детские игрушки</li>
+    <li style="margin-bottom: 5px;">Ощущение ручной работы и персональной заботы</li>
+</ul>
+
+<h3>Что привносит «Тёплый плед»</h3>
+
+<ul style="margin: 10px 0; padding-left: 22px; font-size: 10.5pt;">
+    <li style="margin-bottom: 5px;">Тёплая цветовая палитра вместо холодного зелёного доски — терракота, карамель, крем</li>
+    <li style="margin-bottom: 5px;">Плавные, округлые формы всех UI-элементов — никаких острых углов</li>
+    <li style="margin-bottom: 5px;">Универсальность для аудитории 28–55 лет</li>
+    <li style="margin-bottom: 5px;">Физическая ощутимость уюта через цвет и форму</li>
+</ul>
+
+<div class="tip-box">
+    <div class="tip-box-title">Ключевое отличие от чисто «меловой» версии</div>
+    <p>В гибриде мел — это <em>стиль иллюстраций</em>, а не цветовая доминанта. Доска зелёного цвета уходит на второй план, уступая место тёплому кремовому фону. Мел остаётся как текстурный акцент: лёгкая «досочная» структура на боковых панелях, в header'е, в декоративных элементах.</p>
+</div>
+
+<h3>Эмоциональный профиль</h3>
+
+<table>
+    <thead>
+        <tr><th>Качество</th><th>Как передаётся в дизайне</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Безопасность</td><td>Мягкие формы, тёплые тона, отсутствие резких контрастов</td></tr>
+        <tr><td>Искренность</td><td>Меловой стиль иллюстраций, «ручная работа»</td></tr>
+        <tr><td>Простота</td><td>Минимум элементов, чистая композиция, интуитивность</td></tr>
+        <tr><td>Тепло</td><td>Терракотовые и карамельные акценты, кремовый фон</td></tr>
+        <tr><td>Забота</td><td>Микротекст («Войти тихонько»), плавные анимации</td></tr>
+        <tr><td>Надежда</td><td>Сюжеты иллюстраций: росток, рассвет, открытое окно</td></tr>
+    </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ===== 2. COLOR SYSTEM ===== -->
+<h1 id="colors">2. Цветовая система</h1>
+
+<p>Цветовая система построена на тёплых природных тонах с меловыми акцентами. Каждый цвет несёт эмоциональную функцию.</p>
+
+<h2 id="color-primary">2.1 Основная палитра</h2>
+
+<div class="palette">
+    <div class="color-swatch">
+        <div class="color-box" style="background: #faf6f1;"></div>
+        <div class="color-label">Фон страницы</div>
+        <div class="color-hex">#FAF6F1</div>
+    </div>
+    <div class="color-swatch">
+        <div class="color-box" style="background: #ffffff; border: 1px solid #e0d5c8;"></div>
+        <div class="color-label">Карточки</div>
+        <div class="color-hex">#FFFFFF</div>
+    </div>
+    <div class="color-swatch">
+        <div class="color-box" style="background: #c4a882;"></div>
+        <div class="color-label">Песочный мел</div>
+        <div class="color-hex">#C4A882</div>
+    </div>
+    <div class="color-swatch">
+        <div class="color-box" style="background: #b8785a;"></div>
+        <div class="color-label">Терракота</div>
+        <div class="color-hex">#B8785A</div>
+    </div>
+    <div class="color-swatch">
+        <div class="color-box" style="background: #d4a574;"></div>
+        <div class="color-label">Карамель</div>
+        <div class="color-hex">#D4A574</div>
+    </div>
+    <div class="color-swatch">
+        <div class="color-box" style="background: #5a5048;"></div>
+        <div class="color-label">Текст основной</div>
+        <div class="color-hex">#5A5048</div>
+    </div>
+</div>
+
+<h3>Описание основных цветов</h3>
+
+<table>
+    <thead>
+        <tr><th>Цвет</th><th>HEX</th><th>Назначение</th><th>Эмоциональная роль</th></tr>
+    </thead>
+    <tbody>
+        <tr><td style="background:#faf6f1;"></td><td>#FAF6F1</td><td>Фон всего приложения</td><td>Нейтральная теплота, как старая бумага</td></tr>
+        <tr><td style="background:#ffffff;border:1px solid #e0d5c8;"></td><td>#FFFFFF</td><td>Карточки, панели, пузыри AI</td><td>Чистота, воздух, простор</td></tr>
+        <tr><td style="background:#c4a882;"></td><td>#C4A882</td><td>Акцентный, мел, иллюстрации</td><td>Меловой цвет, ручная работа, тепло</td></tr>
+        <tr><td style="background:#b8785a;"></td><td>#B8785A</td><td>Primary, CTA-кнопки, активные элементы</td><td>Терракотовое тепло, уверенность</td></tr>
+        <tr><td style="background:#d4a574;"></td><td>#D4A574</td><td>Вторичный акцент, hover-состояния</td><td>Карамельный комфорт</td></tr>
+        <tr><td style="background:#5a5048;"></td><td>#5A5048</td><td>Основной текст</td><td>Тёплый тёмный, не чёрный</td></tr>
+    </tbody>
+</table>
+
+<h2 id="color-functional">2.2 Функциональные цвета</h2>
+
+<div class="palette">
+    <div class="color-swatch">
+        <div class="color-box" style="background: #f5ede4;"></div>
+        <div class="color-label">Фон карточек</div>
+        <div class="color-hex">#F5EDE4</div>
+    </div>
+    <div class="color-swatch">
+        <div class="color-box" style="background: #e8ddd0;"></div>
+        <div class="color-label">Разделители</div>
+        <div class="color-hex">#E8DDD0</div>
+    </div>
+    <div class="color-swatch">
+        <div class="color-box" style="background: #8a7a6a;"></div>
+        <div class="color-label">Вторичный текст</div>
+        <div class="color-hex">#8A7A6A</div>
+    </div>
+    <div class="color-swatch">
+        <div class="color-box" style="background: #b8a898;"></div>
+        <div class="color-label">Placeholder</div>
+        <div class="color-hex">#B8A898</div>
+    </div>
+    <div class="color-swatch">
+        <div class="color-box" style="background: #d8cdc0;"></div>
+        <div class="color-label">Границы</div>
+        <div class="color-hex">#D8CDC0</div>
+    </div>
+    <div class="color-swatch">
+        <div class="color-box" style="background: #f0e6d6;"></div>
+        <div class="color-label">Hover-фон</div>
+        <div class="color-hex">#F0E6D6</div>
+    </div>
+</div>
+
+<h2 id="color-semantic">2.3 Семантические цвета</h2>
+
+<table>
+    <thead>
+        <tr><th>Состояние</th><th>Цвет</th><th>HEX</th><th>Применение</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Успех</td><td style="background:#7a9a7a;"></td><td>#7A9A7A</td><td>Сохранено, отправлено, завершено</td></tr>
+        <tr><td>Внимание</td><td style="background:#d4a574;"></td><td>#D4A574</td><td>Напоминание, подсказка</td></tr>
+        <tr><td>Ошибка</td><td style="background:#c4786a;"></td><td>#C4786A</td><td>Невалидный ввод, проблема — мягкий красный</td></tr>
+        <tr><td>Информация</td><td style="background:#8a9ab0;"></td><td>#8A9AB0</td><td>Справка, подсказка — приглушённый синий</td></tr>
+        <tr><td>Инсайт</td><td style="background:#c4a882;"></td><td>#C4A882</td><td>Особое состояние для кнопки инсайта</td></tr>
+    </tbody>
+</table>
+
+<div class="tip-box">
+    <div class="tip-box-title">Принцип использования цвета</div>
+    <p>Терракота (#B8785A) используется <strong>скупо</strong> — только для главных CTA и активных состояний. Основной визуальный вес несут кремовый фон (#FAF6F1) и песочный мел (#C4A882). Это создаёт тёплую атмосферу без агрессии.</p>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ===== 3. TYPOGRAPHY ===== -->
+<h1 id="typography">3. Типографика</h1>
+
+<p>Типографика поддерживает двойственную природу концепции: заголовочный шрифт с засечками передаёт литературность и теплоту, а гротеск для тела текста обеспечивает читаемость и современность.</p>
+
+<h2 id="type-scale">3.1 Масштаб шрифтов</h2>
+
+<table>
+    <thead>
+        <tr><th>Уровень</th><th>Размер</th><th>Жирность</th><th>Использование</th><th>Шрифт</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>H1</td><td>28px / 1.75rem</td><td>700</td><td>Заголовок экрана</td><td>С засечками</td></tr>
+        <tr><td>H2</td><td>22px / 1.375rem</td><td>600</td><td>Раздел экрана</td><td>С засечками</td></tr>
+        <tr><td>H3</td><td>18px / 1.125rem</td><td>600</td><td>Подзаголовок</td><td>С засечками</td></tr>
+        <tr><td>H4</td><td>16px / 1rem</td><td>600</td><td>Карточка, заголовок чата</td><td>С засечками</td></tr>
+        <tr><td>Body</td><td>15px / 0.9375rem</td><td>400</td><td>Основной текст</td><td>Гротеск</td></tr>
+        <tr><td>Body Small</td><td>13px / 0.8125rem</td><td>400</td><td>Вторичный текст</td><td>Гротеск</td></tr>
+        <tr><td>Caption</td><td>12px / 0.75rem</td><td>400</td><td>Время, метки</td><td>Гротеск</td></tr>
+        <tr><td>Button</td><td>15px / 0.9375rem</td><td>500</td><td>Текст кнопки</td><td>Гротеск</td></tr>
+    </tbody>
+</table>
+
+<h2 id="type-usage">3.2 Правила применения</h2>
+
+<h3>Заголовочный шрифт (с засечками)</h3>
+<div class="type-sample">
+    <div class="type-h" style="font-size: 18pt;">Тепло, которое помогает расти</div>
+    <div class="type-c">Georgia, Noto Serif, или Literata — мягкие засечки, литературный характер</div>
+</div>
+
+<p><strong>Применение:</strong> Заголовки экранов, названия разделов, приветствия от AI, ключевые фразы на лендинге. Шрифт с засечками создаёт ощущение «человеческого» текста — как в хорошей книге или письме от близкого человека.</p>
+
+<h3>Шрифт тела (гротеск)</h3>
+<div class="type-sample">
+    <div class="type-b">Это основной текст интерфейса. Он должен быть лёгким для чтения, ненавязчивым, но достаточно выразительным, чтобы передать заботу и внимание к деталям.</div>
+    <div class="type-c">Inter, Noto Sans, или Open Sans — круглые формы, отличная читаемость</div>
+</div>
+
+<p><strong>Применение:</strong> Весь интерфейсный текст — сообщения в чате, подписи к полям, описания, подсказки. Интерлиньяж: 1.6 для Body, 1.4 для Body Small.</p>
+
+<h3>Микротекст и специальные случаи</h3>
+
+<table>
+    <thead>
+        <tr><th>Сценарий</th><th>Стиль</th><th>Пример</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Сообщение от AI</td><td>Body 15px, гротеск</td><td>«Я рядом. Расскажи, что на душе»</td></tr>
+        <tr><td>Приветствие на лендинге</td><td>H1 28px, с засечками</td><td>«Поговорим?»</td></tr>
+        <tr><td>Кнопка CTA</td><td>Button 15px, гротеск 500</td><td>«Начать разговор»</td></tr>
+        <tr><td>Метка времени</td><td>Caption 12px, цвет #B8A898</td><td>«14:32»</td></tr>
+        <tr><td>Подсказка в поле</td><td>Body Small 13px, цвет #B8A898</td><td>«Ваш email...»</td></tr>
+        <tr><td>Текст ошибки</td><td>Body Small 13px, цвет #C4786A</td><td>«Что-то пошло не так, попробуем ещё раз?»</td></tr>
+    </tbody>
+</table>
+
+<div class="mood-box">
+    <div class="mood-box-title">Принцип «никакого крика»</div>
+    <p>Во всей типографике — мягкие контрасты. Никакого чисто чёрного (#000000) текста. Никакого ALL CAPS для кнопок. Никакого жирного шрифта в сообщениях. Текст должен шептать, а не кричать.</p>
+</div>
+
+<div class="page-break"></div>
+
+
+
+
+<h1 id="components">4. Компоненты интерфейса</h1>
+
+<p>Все компоненты следуют принципу мягкости: скруглённые углы, тёплые тени, плавные переходы. Ни один элемент не создаёт визуального давления.</p>
+
+<h2 id="comp-buttons">4.1 Кнопки</h2>
+
+<h3>Анатомия кнопки</h3>
+
+<div class="anatomy-box">
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#b8785a;"></div><span class="anatomy-label">Фон</span><span class="anatomy-desc">Терракота для Primary, кремовый для Secondary</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#ffffff;"></div><span class="anatomy-label">Текст</span><span class="anatomy-desc">Белый на Primary, #5A5048 на Secondary</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#d4a574;"></div><span class="anatomy-label">Скругление</span><span class="anatomy-desc">border-radius: 24px (pill-форма)</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#e8ddd0;"></div><span class="anatomy-label">Padding</span><span class="anatomy-desc">14px 28px — воздушная, не тесная</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#f0e6d6;"></div><span class="anatomy-label">Тень</span><span class="anatomy-desc">0 2px 8px rgba(90,80,72,0.08) — мягкая, тёплая</span></div>
+</div>
+
+<h3>Варианты кнопок</h3>
+
+<div class="btn-row">
+    <div class="btn-item" style="background:#b8785a; color:#ffffff;">Primary</div>
+    <div class="btn-item" style="background:#f5ede4; color:#5a5048; border:1px solid #d8cdc0;">Secondary</div>
+    <div class="btn-item" style="background:#faf6f1; color:#8a7a6a; border:1px solid #e8ddd0;">Tertiary</div>
+    <div class="btn-item" style="background:#c4a882; color:#ffffff;">Инсайт</div>
+</div>
+
+<table>
+    <thead>
+        <tr><th>Вариант</th><th>Фон</th><th>Текст</th><th>Тень</th><th>Когда использовать</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Primary</td><td>#B8785A</td><td>#FFFFFF</td><td>Мягкая</td><td>Главное действие: «Начать», «Отправить», «Сохранить»</td></tr>
+        <tr><td>Secondary</td><td>#F5EDE4</td><td>#5A5048</td><td>Нет</td><td>Альтернативное действие: «Позже», «Отмена»</td></tr>
+        <tr><td>Tertiary</td><td>transparent</td><td>#8A7A6A</td><td>Нет</td><td>Текстовая кнопка: «Забыли пароль?»</td></tr>
+        <tr><td>Инсайт</td><td>#C4A882</td><td>#FFFFFF</td><td>Мягкая золотистая</td><td>Специальная кнопка получения инсайта</td></tr>
+        <tr><td>Disabled</td><td>#E8DDD0</td><td>#B8A898</td><td>Нет</td><td>Недоступное состояние</td></tr>
+    </tbody>
+</table>
+
+<h3>Состояния кнопок</h3>
+
+<table>
+    <thead>
+        <tr><th>Состояние</th><th>Визуальное изменение</th><th>Токен</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Default</td><td>Базовый вид</td><td>—</td></tr>
+        <tr><td>Hover</td><td>Фон светлее на 8%, тень чуть сильнее</td><td>background + 8% L</td></tr>
+        <tr><td>Active / Press</td><td>Масштаб 0.97, тень исчезает</td><td>transform: scale(0.97)</td></tr>
+        <tr><td>Loading</td><td>Спиннер вместо текста, фон приглушён</td><td>opacity: 0.8</td></tr>
+        <tr><td>Success</td><td>Иконка галочки, фон зеленеет</td><td>#7A9A7A</td></tr>
+    </tbody>
+</table>
+
+<h2 id="comp-inputs">4.2 Поля ввода</h2>
+
+<h3>Анатомия поля ввода</h3>
+
+<div class="anatomy-box">
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#ffffff;"></div><span class="anatomy-label">Фон</span><span class="anatomy-desc">Белый (#FFFFFF) на кремовом фоне страницы</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#d8cdc0;"></div><span class="anatomy-label">Граница</span><span class="anatomy-desc">1px #D8CDC0, скругление 14px</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#5a5048;"></div><span class="anatomy-label">Текст</span><span class="anatomy-desc">#5A5048, 15px</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#b8a898;"></div><span class="anatomy-label">Placeholder</span><span class="anatomy-desc">#B8A898, курсивный стиль через тон</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#b8785a;"></div><span class="anatomy-label">Фокус</span><span class="anatomy-desc">Граница #B8785A, мягкое свечение 0 0 0 3px rgba(184,120,90,0.15)</span></div>
+</div>
+
+<h3>Состояния полей</h3>
+
+<table>
+    <thead>
+        <tr><th>Состояние</th><th>Граница</th><th>Фон</th><th>Дополнительно</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Default</td><td>#D8CDC0</td><td>#FFFFFF</td><td>—</td></tr>
+        <tr><td>Hover</td><td>#C4B8A8</td><td>#FFFFFF</td><td>Граница темнеет</td></tr>
+        <tr><td>Focus</td><td>#B8785A</td><td>#FFFFFF</td><td>Свечение терракотовое</td></tr>
+        <tr><td>Error</td><td>#C4786A</td><td>#FDF5F3</td><td>Текст ошибки под полем</td></tr>
+        <tr><td>Success</td><td>#7A9A7A</td><td>#F6FAF6</td><td>Иконка галочки справа</td></tr>
+        <tr><td>Disabled</td><td>#E8DDD0</td><td>#F5EDE4</td><td>Текст #B8A898</td></tr>
+    </tbody>
+</table>
+
+<div class="tip-box">
+    <div class="tip-box-title">Текст ошибки — мягкий</div>
+    <p>Вместо резкого «Неверный пароль» используем: <em>«Пароль не подошёл, попробуем ещё раз?»</em> или <em>«Что-то пошло не так. Мы рядом, попробуйте снова»</em>. Тон — поддерживающий, а не обвиняющий.</p>
+</div>
+
+<h2 id="comp-cards">4.3 Карточки</h2>
+
+<p>Карточки — основной контейнер для контента. Все карточки имеют мягкие скругления, тёплые тени и лёгкий светлый фон.</p>
+
+<h3>Анатомия карточки</h3>
+
+<div class="anatomy-box">
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#ffffff;"></div><span class="anatomy-label">Фон</span><span class="anatomy-desc">#FFFFFF — чистый, но на кремовом фоне выглядит тёплым</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#e8ddd0;"></div><span class="anatomy-label">Скругление</span><span class="anatomy-desc">border-radius: 16px</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#f0e6d6;"></div><span class="anatomy-label">Тень</span><span class="anatomy-desc">0 2px 12px rgba(90,80,72,0.06)</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#f5ede4;"></div><span class="anatomy-label">Padding</span><span class="anatomy-desc">20px — воздушно, без тесноты</span></div>
+</div>
+
+<h3>Варианты карточек</h3>
+
+<div class="comp-row">
+    <div class="comp-item">
+        <div class="comp-preview" style="background:#ffffff; box-shadow: 0 2px 12px rgba(90,80,72,0.06); border-radius: 16px; width: 100%;">
+            <span style="color:#5a5048; font-size: 10pt;">Стандартная<br>карточка</span>
+        </div>
+        <div class="comp-label">Default</div>
+    </div>
+    <div class="comp-item">
+        <div class="comp-preview" style="background:#f5ede4; border-radius: 16px; width: 100%;">
+            <span style="color:#5a5048; font-size: 10pt;">Карточка<br>с фоном</span>
+        </div>
+        <div class="comp-label">Filled</div>
+    </div>
+    <div class="comp-item">
+        <div class="comp-preview" style="background:#ffffff; border: 1px solid #d8cdc0; border-radius: 16px; width: 100%;">
+            <span style="color:#5a5048; font-size: 10pt;">Карточка<br>с обводкой</span>
+        </div>
+        <div class="comp-label">Outlined</div>
+    </div>
+    <div class="comp-item">
+        <div class="comp-preview" style="background:#ffffff; box-shadow: 0 4px 20px rgba(90,80,72,0.08); border-radius: 16px; width: 100%;">
+            <span style="color:#5a5048; font-size: 10pt;">Приподнятая<br>карточка</span>
+        </div>
+        <div class="comp-label">Elevated</div>
+    </div>
+</div>
+
+<h2 id="comp-bubbles">4.4 Пузыри сообщений</h2>
+
+<p>Пузыри — ключевой элемент чата. Они должны чётко различать сообщения AI и пользователя, оставаясь мягкими и тёплыми.</p>
+
+<h3>Пузырь AI</h3>
+
+<div class="anatomy-box">
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#ffffff;"></div><span class="anatomy-label">Фон</span><span class="anatomy-desc">#FFFFFF — чистый, воздушный</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#d8cdc0;"></div><span class="anatomy-label">Обводка</span><span class="anatomy-desc">1px #D8CDC0, тонкая</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#e8ddd0;"></div><span class="anatomy-label">Скругление</span><span class="anatomy-desc">18px, левый нижний 4px (хвостик)</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#5a5048;"></div><span class="anatomy-label">Текст</span><span class="anatomy-desc">#5A5048, 15px</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#c4a882;"></div><span class="anatomy-label">Акцент</span><span class="anatomy-desc">Меловой хвостик слева, цвет #C4A882</span></div>
+</div>
+
+<h3>Пузырь пользователя</h3>
+
+<div class="anatomy-box">
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#b8785a;"></div><span class="anatomy-label">Фон</span><span class="anatomy-desc">#B8785A — терракотовый</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#b8785a;"></div><span class="anatomy-label">Обводка</span><span class="anatomy-desc">Нет</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#e8ddd0;"></div><span class="anatomy-label">Скругление</span><span class="anatomy-desc">18px, правый нижний 4px (хвостик)</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#ffffff;"></div><span class="anatomy-label">Текст</span><span class="anatomy-desc">#FFFFFF, 15px</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#d4a574;"></div><span class="anatomy-label">Акцент</span><span class="anatomy-desc">Тёплый терракотовый хвостик справа</span></div>
+</div>
+
+<div class="comp-row">
+    <div class="comp-item" style="flex: 2;">
+        <div style="background:#faf6f1; padding: 16px; border-radius: 12px;">
+            <div style="background:#ffffff; border: 1px solid #d8cdc0; border-radius: 18px; border-bottom-left-radius: 4px; padding: 12px 16px; margin-bottom: 10px; display: inline-block; max-width: 85%;">
+                <span style="color:#5a5048; font-size: 11pt;">Привет. Я здесь, чтобы выслушать. Что тебя беспокоит сегодня?</span>
+            </div>
+            <div style="text-align: right;">
+                <div style="background:#b8785a; border-radius: 18px; border-bottom-right-radius: 4px; padding: 12px 16px; display: inline-block; max-width: 85%;">
+                    <span style="color:#ffffff; font-size: 11pt;">Мне тяжело. На работе давят, дома никто не понимает...</span>
+                </div>
+            </div>
+        </div>
+        <div class="comp-label">Диалог в чате</div>
+    </div>
+</div>
+
+<h3>Системные сообщения</h3>
+
+<table>
+    <thead>
+        <tr><th>Тип</th><th>Оформление</th><th>Пример</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Метка времени</td><td>Caption 12px, #B8A898, по центру</td><td>«Сегодня, 14:32»</td></tr>
+        <tr><td>Статус отправки</td><td>Caption 11px, #B8A898</td><td>«Отправлено», «Доставлено»</td></tr>
+        <tr><td>Уведомление</td><td>Карточка #F5EDE4, текст #7A6A58</td><td>«Новый инсайт доступен»</td></tr>
+        <tr><td>Состояние печати</td><td>Три точки анимации, меловой цвет</td><td>«Печатает...»</td></tr>
+    </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ===== 5. SCREENS ===== -->
+<h1 id="screens">5. Макеты экранов</h1>
+
+<p>Каждый экран проработан отдельно: структура, элементы, цвета, микротекст и поведение. Все экраны делят общую базу: фон #FAF6F1, текст #5A5048, акценты терракота и песочный мел.</p>
+
+<h2 id="scr-landing">5.1 Лендинг</h2>
+
+<h3>Цель экрана</h3>
+<p>За 3 секунды передать: здесь безопасно, здесь тепло, здесь можно поговорить. И побудить нажать единственную кнопку.</p>
+
+<h3>Структура</h3>
+
+<table>
+    <thead>
+        <tr><th>Блок</th><th>Содержание</th><th>Оформление</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Фон</td><td>Градиент #FAF6F1 → #F3EBE3 + лёгкая меловая текстура (5% opacity)</td><td>Full-screen, фиксированный</td></tr>
+        <tr><td>Иллюстрация</td><td>Центральная меловая иллюстрация: чашка чая, цветы, окно</td><td>280×280px, центр экрана, margin-top 15vh</td></tr>
+        <tr><td>Заголовок</td><td>«Поговорим?» или «Тебя готовы выслушать»</td><td>H1 28px, с засечками, #4A4038, центр</td></tr>
+        <tr><td>Подзаголовок</td><td>«Безопасное пространство, где вас услышат и поймут»</td><td>Body 15px, #8A7A6A, центр, max-width 320px</td></tr>
+        <tr><td>Кнопка CTA</td><td>«Начать разговор»</td><td>Primary, pill-forma, центр, margin-top 32px</td></tr>
+        <tr><td>Вторичная ссылка</td><td>«У меня уже есть аккаунт» → вход</td><td>Tertiary, центр, margin-top 16px</td></tr>
+        <tr><td>Микро-текст внизу</td><td>«Бесплатная первая сессия. Без карты. Без обязательств.»</td><td>Caption 12px, #B8A898, центр, bottom 24px</td></tr>
+    </tbody>
+</table>
+
+<h3>Альтернативные заголовки для тестирования</h3>
+
+<div class="copy-grid">
+    <div class="copy-card">
+        <h5>Вариант А: Нежный</h5>
+        <div class="copy-text">«Поговорим?»</div>
+        <div class="copy-note">Короткий, интимный, как вопрос подруги</div>
+    </div>
+    <div class="copy-card">
+        <h5>Вариант Б: Приглашающий</h5>
+        <div class="copy-text">«Тебя готовы выслушать»</div>
+        <div class="copy-note">Акцент на активном слушании</div>
+    </div>
+    <div class="copy-card">
+        <h5>Вариант В: Описательный</h5>
+        <div class="copy-text">«Место, где можно быть собой»</div>
+        <div class="copy-note">Акцент на аутентичности</div>
+    </div>
+    <div class="copy-card">
+        <h5>Вариант Г: Действие</h5>
+        <div class="copy-text">«Начни заботиться о себе сегодня»</div>
+        <div class="copy-note">Мотивирующий, для сознательных</div>
+    </div>
+</div>
+
+<h3>Адаптивность</h3>
+
+<table>
+    <thead>
+        <tr><th>Breakpoint</th><th>Изменения</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Mobile (&lt;480px)</td><td>Иллюстрация 200×200px, заголовок 24px, кнопка full-width с padding 16px</td></tr>
+        <tr><td>Tablet (480–768px)</td><td>Иллюстрация 260×260px, две колонки для контента не используются — центр</td></tr>
+        <tr><td>Desktop (&gt;768px)</td><td>Иллюстрация 320×320px, max-width контента 480px центрировано</td></tr>
+    </tbody>
+</table>
+
+<div class="mood-box">
+    <div class="mood-box-title">Принцип лендинга</div>
+    <p>Один экран — одно действие. Ни скролла, ни выбора. Только иллюстрация, текст и кнопка. Минимум когнитивной нагрузки в момент, когда пользовательница может быть уязвимой.</p>
+</div>
+
+<h2 id="scr-auth">5.2 Авторизация / Регистрация</h2>
+
+<h3>Цель экрана</h3>
+<p>Максимально просто и без трения получить пользователя внутрь. Два варианта входа: email и Google. Никакой лишней информации.</p>
+
+<h3>Структура — Вход</h3>
+
+<table>
+    <thead>
+        <tr><th>Блок</th><th>Содержание</th><th>Оформление</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Header</td><td>Маленькая меловая иллюстрация (цветок или чашка)</td><td>80×80px, центр, margin-top 8vh</td></tr>
+        <tr><td>Заголовок</td><td>«Войти тихонько»</td><td>H2 22px, с засечками, центр</td></tr>
+        <tr><td>Подзаголовок</td><td>«Мы рады вас видеть снова»</td><td>Body Small 13px, #8A7A6A, центр</td></tr>
+        <tr><td>Кнопка Google</td><td>«Войти через Google»</td><td>Outlined карточка, иконка Google, full-width</td></tr>
+        <tr><td>Разделитель</td><td>«или»</td><td>Горизонтальная линия #E8DDD0 + текст по центру</td></tr>
+        <tr><td>Поле email</td><td>placeholder: «Ваш email»</td><td>Стандартное поле ввода, full-width</td></tr>
+        <tr><td>Поле пароль</td><td>placeholder: «Пароль», иконка глаза</td><td>Стандартное поле ввода, full-width</td></tr>
+        <tr><td>Кнопка входа</td><td>«Войти»</td><td>Primary, full-width</td></tr>
+        <tr><td>Забыли пароль</td><td>«Забыли пароль?»</td><td>Tertiary, центр</td></tr>
+        <tr><td>Футер</td><td>«Ещё нет аккаунта? Создать»</td><td>Body Small, центр, «Создать» — цвет #B8785A</td></tr>
+    </tbody>
+</table>
+
+<h3>Структура — Регистрация</h3>
+
+<table>
+    <thead>
+        <tr><th>Блок</th><th>Содержание</th><th>Оформление</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Header</td><td>Маленькая меловая иллюстрация (росток)</td><td>80×80px, центр</td></tr>
+        <tr><td>Заголовок</td><td>«Начни свой путь»</td><td>H2 22px, с засечками, центр</td></tr>
+        <tr><td>Подзаголовок</td><td>«Это займёт меньше минуты»</td><td>Body Small, #8A7A6A, центр</td></tr>
+        <tr><td>Кнопка Google</td><td>«Зарегистрироваться через Google»</td><td>Outlined карточка, full-width</td></tr>
+        <tr><td>Разделитель</td><td>«или»</td><td>Линия + текст</td></tr>
+        <tr><td>Поле имя</td><td>placeholder: «Как к вам обращаться?»</td><td>Опционально, но рекомендуется</td></tr>
+        <tr><td>Поле email</td><td>placeholder: «Email»</td><td>Стандартное</td></tr>
+        <tr><td>Поле пароль</td><td>placeholder: «Придумайте пароль»</td><td>С индикатором сложности</td></tr>
+        <tr><td>Кнопка</td><td>«Создать аккаунт»</td><td>Primary, full-width</td></tr>
+        <tr><td>Футер</td><td>«Уже есть аккаунт? Войти»</td><td>Body Small, центр</td></tr>
+    </tbody>
+</table>
+
+<h3>Состояния и ошибки</h3>
+
+<table>
+    <thead>
+        <tr><th>Ситуация</th><th>Текст ошибки</th><th>Оформление</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Неверный пароль</td><td>«Пароль не подошёл, попробуем ещё раз?»</td><td>Error-поле + мягкий текст</td></tr>
+        <tr><td>Email не найден</td><td>«Не нашли такой email. Может, опечатка?»</td><td>Error-поле + подсказка</td></tr>
+        <tr><td>Нет интернета</td><td>«Связь потерялась. Проверьте интернет и попробуйте снова»</td><td>Карточка-уведомление</td></tr>
+        <tr><td>Слишком простой пароль</td><td>«Пароль слишком простой. Добавьте цифру или символ»</td><td>Поле + текст под ним</td></tr>
+        <tr><td>Успешная регистрация</td><td>«Добро пожаловать! Начнём?» → редирект в чат</td><td>Успешная карточка + редирект</td></tr>
+    </tbody>
+</table>
+
+<div class="tip-box">
+    <div class="tip-box-title">Микрокопия авторизации</div>
+    <p>Все тексты ошибок пишутся в поддерживающем тоне. Нет слова «Ошибка» нигде. Вместо «Неверный формат email» — «Похоже, в email опечатка. Проверьте?».</p>
+</div>
+
+<h2 id="scr-chat">5.3 Чат с AI</h2>
+
+<h3>Цель экрана</h3>
+<p>Главный экран приложения. Безопасное пространство для разговора, где пользовательница чувствует себя услышанной и понятой.</p>
+
+<h3>Структура</h3>
+
+<table>
+    <thead>
+        <tr><th>Блок</th><th>Содержание</th><th>Оформление</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Header</td><td>Аватар AI (меловой цветок) + имя «Тёпа» + статус «Онлайн»</td><td>Фиксированный, высота 56px, фон #FAF6F1 с blur</td></tr>
+        <tr><td>Область сообщений</td><td>История переписки, scrollable</td><td>Фон #FAF6F1, padding 16px, gap 12px</td></tr>
+        <tr><td>Приветствие (первый вход)</td><td>Сообщение от AI с приветствием</td><td>Пузырь AI + иллюстрация сверху</td></tr>
+        <tr><td>Панель действий</td><td>Кнопки: «Инсайт», «Практика», «Дневник»</td><td>Горизонтальный скролл, под input</td></tr>
+        <tr><td>Поле ввода</td><td>Placeholder + иконка микрофона + иконка отправки</td><td>Фиксированное снизу, скруглённое поле</td></tr>
+    </tbody>
+</table>
+
+<h3>Header чата</h3>
+
+<div class="anatomy-box">
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#faf6f1;"></div><span class="anatomy-label">Фон</span><span class="anatomy-desc">#FAF6F1 + backdrop-filter: blur(12px)</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#e8ddd0;"></div><span class="anatomy-label">Нижняя граница</span><span class="anatomy-desc">1px #E8DDD0, тонкая</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#c4a882;"></div><span class="anatomy-label">Аватар AI</span><span class="anatomy-desc">40×40px, меловая иллюстрация цветка, круглая</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#5a5048;"></div><span class="anatomy-label">Имя AI</span><span class="anatomy-desc">«Тёпа», Body 15px 600, #5A5048</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#7a9a7a;"></div><span class="anatomy-label">Статус</span><span class="anatomy-desc">Зелёная точка 6px + «Онлайн» Caption 12px #8A7A6A</span></div>
+</div>
+
+<h3>Приветственное сообщение (первый вход)</h3>
+
+<div class="copy-grid">
+    <div class="copy-card" style="grid-column: 1 / -1;">
+        <h5>Текст приветствия от AI</h5>
+        <div class="copy-text">«Привет. Я Тёпа — твой спутник в заботе о себе. Здесь можно говорить о чём угодно: о тревоге, усталости, отношениях или просто о том, как прошёл день. Я рядом. С чего начнём?»</div>
+        <div class="copy-note">Тон: тёплый, но не навязчивый. Даёт пространство для выбора темы.</div>
+    </div>
+</div>
+
+<h3>Панель быстрых действий</h3>
+
+<p>Под полем ввода — горизонтально скроллящаяся панель с кнопками действий:</p>
+
+<div class="comp-row">
+    <div class="comp-item">
+        <div class="comp-preview" style="background:#c4a882; color:#fff; border-radius: 20px;">💡 Инсайт</div>
+        <div class="comp-label">Получить инсайт</div>
+    </div>
+    <div class="comp-item">
+        <div class="comp-preview" style="background:#f5ede4; color:#5a5048; border-radius: 20px;">🌬 Дыхание</div>
+        <div class="comp-label">Дыхательная практика</div>
+    </div>
+    <div class="comp-item">
+        <div class="comp-preview" style="background:#f5ede4; color:#5a5048; border-radius: 20px;">📝 Дневник</div>
+        <div class="comp-label">Запись в дневник</div>
+    </div>
+    <div class="comp-item">
+        <div class="comp-preview" style="background:#f5ede4; color:#5a5048; border-radius: 20px;">🎯 Упражнение</div>
+        <div class="comp-label">CBT-упражнение</div>
+    </div>
+</div>
+
+<h3>Поле ввода сообщения</h3>
+
+<div class="anatomy-box">
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#ffffff;"></div><span class="anatomy-label">Фон</span><span class="anatomy-desc">#FFFFFF</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#d8cdc0;"></div><span class="anatomy-label">Граница</span><span class="anatomy-desc">1px #D8CDC0, скругление 24px (pill)</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#b8a898;"></div><span class="anatomy-label">Placeholder</span><span class="anatomy-desc">«Напишите что угодно...» 14px #B8A898</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#b8785a;"></div><span class="anatomy-label">Кнопка отправки</span><span class="anatomy-desc">Иконка стрелки в круге 36px, #B8785A, активна при наличии текста</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#8a7a6a;"></div><span class="anatomy-label">Микрофон</span><span class="anhema-desc">Иконка микрофона слева, #8A7A6A, для голосового ввода</span></div>
+</div>
+
+<h3>Поведение при скролле</h3>
+
+<table>
+    <thead>
+        <tr><th>Состояние</th><th>Поведение</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Новое сообщение AI</td><td>Автоскролл вниз с плавной анимацией 300ms</td></tr>
+        <tr><td>Пользователь скроллит вверх</td><td>Автоскролл отключается, появляется кнопка «↓ Новое сообщение»</td></tr>
+        <tr><td>Пользователь пишет</td><td>Индикатор «Печатает...» в пузыре AI с тремя точками-анимацией</td></tr>
+        <tr><td>Долгий ответ AI</td><td>Скелетон-заглушка в стиле меловых линий (3-4 волнистые линии)</td></tr>
+    </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<h2 id="scr-history">5.4 История сессий</h2>
+
+<h3>Цель экрана</h3>
+<p>Позволить пользовательнице видеть свой путь, возвращаться к важным моментам разговоров и отслеживать прогресс. Экран создаёт ощущение kontinuiteta и развития.</p>
+
+<h3>Структура</h3>
+
+<table>
+    <thead>
+        <tr><th>Блок</th><th>Содержание</th><th>Оформление</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Header</td><td>«История» + иконка поиска</td><td>Фиксированный, как в чате</td></tr>
+        <tr><td>Статистика (опционально)</td><td>Количество сессий, дней подряд, инсайтов</td><td>Горизонтальная панель из 3 карточек</td></tr>
+        <tr><td>Список сессий</td><td>Карточки предыдущих разговоров</td><td>Вертикальный список, grouped by date</td></tr>
+        <tr><td>Пустое состояние</td><td>Иллюстрация + текст для новых пользователей</td><td>Центр экрана</td></tr>
+        <tr><td>Tab Bar</td><td>Чат | История | Профиль</td><td>Фиксированный снизу</td></tr>
+    </tbody>
+</table>
+
+<h3>Карточка сессии</h3>
+
+<div class="anatomy-box">
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#ffffff;"></div><span class="anatomy-label">Фон</span><span class="anatomy-desc">#FFFFFF, скругление 14px</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#e8ddd0;"></div><span class="anatomy-label">Тень</span><span class="anatomy-desc">0 1px 6px rgba(90,80,72,0.05)</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#5a5048;"></div><span class="anatomy-label">Тема</span><span class="anatomy-desc">H4 16px, #5A5048 — первая фраза или сгенерированная тема</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#8a7a6a;"></div><span class="anatomy-label">Дата</span><span class="anatomy-desc">Caption 12px, #8A7A6A — «Вчера, 19:30»</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#c4a882;"></div><span class="anatomy-label">Инсайт-badge</span><span class="anatomy-desc">Если была кнопка инсайта — маленькая иконка лампочки #C4A882</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#d8cdc0;"></div><span class="anatomy-label">Preview</span><span class="anatomy-desc">Первая фраза пользователя, обрезанная, #8A7A6A</span></div>
+</div>
+
+<h3>Группировка по дате</h3>
+
+<table>
+    <thead>
+        <tr><th>Группа</th><th>Заголовок</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Сегодня</td><td>«Сегодня»</td></tr>
+        <tr><td>Вчера</td><td>«Вчера»</td></tr>
+        <tr><td>Текущая неделя</td><td>«На этой неделе»</td></tr>
+        <tr><td>Прошлая неделя</td><td>«На прошлой неделе»</td></tr>
+        <tr><td>Ранее</td><td>«Ранее в [Месяц]»</td></tr>
+    </tbody>
+</table>
+
+<h3>Пустое состояние</h3>
+
+<div class="copy-grid">
+    <div class="copy-card" style="grid-column: 1 / -1;">
+        <h5>Текст пустого состояния</h5>
+        <div class="copy-text">«Здесь появится история ваших разговоров. Каждый разговор — шаг вперёд.»</div>
+        <div class="copy-note">Иллюстрация: меловой рисунок пустой тетради или чистой страницы</div>
+    </div>
+</div>
+
+<h2 id="scr-profile">5.5 Профиль</h2>
+
+<h3>Цель экрана</h3>
+<p>Управление аккаунтом, настройки, доступ к дополнительным функциям. Минималистичный, без перегрузки опциями.</p>
+
+<h3>Структура</h3>
+
+<table>
+    <thead>
+        <tr><th>Блок</th><th>Содержание</th><th>Оформление</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Header</td><td>«Профиль»</td><td>Фиксированный</td></tr>
+        <tr><td>Аватар + имя</td><td>Буква имени в кружке или фото + имя + email</td><td>Центр, крупный аватар 80px</td></tr>
+        <tr><td>Секция «Мой путь»</td><td>Статистика: дней в приложении, сессий, инсайтов</td><td>Горизонтальные карточки</td></tr>
+        <tr><td>Секция «Настройки»</td><td>Уведомления, звук, тема</td><td>Список строк с toggle/стрелкой</td></tr>
+        <tr><td>Секция «О приложении»</td><td>Версия, обратная связь, политика</td><td>Список строк</td></tr>
+        <tr><td>Выход</td><td>«Выйти из аккаунта»</td><td>Текст #C4786A, без фона</td></tr>
+        <tr><td>Tab Bar</td><td>Чат | История | Профиль</td><td>Фиксированный снизу</td></tr>
+    </tbody>
+</table>
+
+<h3>Список настроек (строка)</h3>
+
+<div class="anatomy-box">
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#faf6f1;"></div><span class="anatomy-label">Фон</span><span class="anatomy-desc">#FFFFFF, нижняя граница 1px #F0E6D6</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#5a5048;"></div><span class="anatomy-label">Иконка</span><span class="anatomy-desc">24×24px, цвет #C4A882 (меловой)</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#5a5048;"></div><span class="anatomy-label">Текст</span><span class="anatomy-desc">Body 15px, #5A5048</span></div>
+    <div class="anatomy-row"><div class="anatomy-dot" style="background:#8a7a6a;"></div><span class="anatomy-label">Стрелка/Toggle</span><span class="anatomy-desc">#8A7A6A или терракотовый toggle</span></div>
+</div>
+
+<h3>Tab Bar (нижняя навигация)</h3>
+
+<div class="comp-row">
+    <div class="comp-item">
+        <div class="comp-preview" style="background:#faf6f1; color:#b8785a; border-radius: 12px;">💬<br><span style="font-size:9pt;">Чат</span></div>
+        <div class="comp-label">Активный</div>
+    </div>
+    <div class="comp-item">
+        <div class="comp-preview" style="background:#faf6f1; color:#8a7a6a; border-radius: 12px;">📜<br><span style="font-size:9pt;">История</span></div>
+        <div class="comp-label">Неактивный</div>
+    </div>
+    <div class="comp-item">
+        <div class="comp-preview" style="background:#faf6f1; color:#8a7a6a; border-radius: 12px;">👤<br><span style="font-size:9pt;">Профиль</span></div>
+        <div class="comp-label">Неактивный</div>
+    </div>
+</div>
+
+<table>
+    <thead>
+        <tr><th>Состояние</th><th>Иконка</th><th>Текст</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Активный</td><td>Залитая, #B8785A</td><td>#B8785A, 500</td></tr>
+        <tr><td>Неактивный</td><td>Outline, #8A7A6A</td><td>#8A7A6A, 400</td></tr>
+        <tr><td>Бейдж (новое)</td><td>Красная точка 8px над иконкой</td><td>—</td></tr>
+    </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ===== 6. ILLUSTRATIONS ===== -->
+<h1 id="illustrations">6. Иллюстрации и иконки</h1>
+
+<p>Иллюстрации — эмоциональный якорь всего приложения. Они должны быть узнаваемыми, тёплыми, «нарисованными от руки».</p>
+
+<h3>Стиль иллюстраций</h3>
+
+<div class="mood-box">
+    <div class="mood-box-title">Формула стиля</div>
+    <p>Мел + толстые линии + неровные края + тёплые песочные тона на прозрачном или кремовом фоне. Без идеальной геометрии. Без цифровой чистоты. Каждый элемент должен выглядеть так, будто его только что нарисовали мелом на доске.</p>
+</div>
+
+<h3>Ключевые иллюстрации</h3>
+
+<table>
+    <thead>
+        <tr><th>Экран</th><th>Иллюстрация</th><th>Сюжет</th><th>Размер</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Лендинг</td><td>Главная, центральная</td><td>Чашка чая на подоконнике, рядом цветы, солнце за окном</td><td>280×280px</td></tr>
+        <tr><td>Авторизация — вход</td><td>Маленькая декоративная</td><td>Чашка с паром или раскрытая книга</td><td>80×80px</td></tr>
+        <tr><td>Авторизация — регистрация</td><td>Маленькая декоративная</td><td>Росток в горшке или распускающийся цветок</td><td>80×80px</td></tr>
+        <tr><td>Чат — аватар AI</td><td>Постоянная, узнаваемая</td><td>Меловой цветок (ромашка или подсолнух)</td><td>40×40px круг</td></tr>
+        <tr><td>Чат — приветствие</td><td>Сопровождающая</td><td>Руки, держащие чашку, или открытое окно</td><td>200×120px</td></tr>
+        <tr><td>История — пустое</td><td>Пустое состояние</td><td>Чистая тетрадь с карандашом рядом</td><td>200×200px</td></tr>
+        <tr><td>Ошибка сети</td><td>Состояние ошибки</td><td>Облачко с тремя точками или спящий кот</td><td>160×160px</td></tr>
+        <tr><td>Профиль</td><td>Декоративный элемент</td><td>Маленькие цветы по углам или веточка</td><td>Варьируется</td></tr>
+    </tbody>
+</table>
+
+<h3>Технические параметры</h3>
+
+<table>
+    <thead>
+        <tr><th>Параметр</th><th>Значение</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Формат</td><td>PNG с прозрачностью или SVG</td></tr>
+        <tr><td>Цветовая схема</td><td>Монохромный песочный (#C4A882) + оттенки на прозрачном фоне</td></tr>
+        <tr><td>Линии</td><td>Толщина 3-5px, неровные, «ручные»</td></tr>
+        <tr><td>Фон иллюстрации</td><td>Прозрачный (накладывается на #FAF6F1)</td></tr>
+        <tr><td>Анимация</td><td>Мягкое появление (fade-in 400ms) при входе на экран</td></tr>
+        <tr><td>Размер файла</td><td>Не более 50KB для маленьких, 150KB для больших</td></tr>
+    </tbody>
+</table>
+
+<h3>Иконки</h3>
+
+<p>Иконки в интерфейсе используются в двух стилях:</p>
+
+<ul style="margin: 10px 0; padding-left: 22px; font-size: 10.5pt;">
+    <li style="margin-bottom: 6px;"><strong>Навигационные</strong> (Tab Bar, Header): stroke-стиль, 24px, толщина 2px, цвет активной #B8785A, неактивной #8A7A6A</li>
+    <li style="margin-bottom: 6px;"><strong>Функциональные</strong> (кнопки действий, настройки): filled-стиль, 20px, цвет #C4A882 или #5A5048 в зависимости от контекста</li>
+</ul>
+
+<p>Рекомендуемый набор иконок: Lucide или Feather Icons — они имеют мягкие, округлые формы, хорошо сочетающиеся с меловой эстетикой. Кастомные иконки рисуются в том же меловом стиле, что и иллюстрации.</p>
+
+<h3>Чего избегать в иллюстрациях</h3>
+
+<table>
+    <thead>
+        <tr><th>Не делать</th><th>Почему</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Детские игрушки, мишки, кубики</td><td>Ассоциация с детским садом, не подходит для 35+</td></tr>
+        <tr><td>Идеально ровные линии</td><td>Убивают «ручной» характер</td></tr>
+        <tr><td>Холодные цвета (синий, фиолетовый)</td><td>Ломают тёплую палитру</td></tr>
+        <tr><td>Слишком детализированные рисунки</td><td>Утяжеляют интерфейс, теряется простота</td></tr>
+        <tr><td>Фотографии вместо иллюстраций</td><td>Разрушают единый визуальный язык</td></tr>
+    </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ===== 7. ANIMATION ===== -->
+<h1 id="animation">7. Принципы анимации</h1>
+
+<p>Анимация в приложении — это не украшение, а инструмент заботы. Плавные переходы создают ощущение бережности, а резкие — вызывают тревогу.</p>
+
+<div class="mood-box">
+    <div class="mood-box-title">Золотое правило анимации</div>
+    <p>Всё движется мягко, как будто под водой. Никаких резких скачков, никакого мгновенного появления. Каждый переход — дышит.</p>
+</div>
+
+<h3>Базовые параметры</h3>
+
+<table>
+    <thead>
+        <tr><th>Параметр</th><th>Значение</th><th>Обоснование</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Стандартная длительность</td><td>300ms</td><td>Достаточно быстро, чтобы не раздражать, достаточно медленно, чтобы быть мягкой</td></tr>
+        <tr><td>Длительность появления</td><td>400ms</td><td>Чуть дольше — создаёт ощущение «разворачивания»</td></tr>
+        <tr><td>Длительность скрытия</td><td>200ms</td><td>Быстрее — пользователь не ждёт ухода элемента</td></tr>
+        <tr><td>Easing (стандарт)</td><td>cubic-bezier(0.4, 0, 0.2, 1)</td><td>Мягкое ускорение-замедление</td></tr>
+        <tr><td>Easing (пружина)</td><td>cubic-bezier(0.34, 1.56, 0.64, 1)</td><td>Лёгкое «пружинное» закругление для кнопок</td></tr>
+        <tr><td>Easing (fade)</td><td>ease-in-out</td><td>Симметричный для прозрачности</td></tr>
+    </tbody>
+</table>
+
+<h3>Анимации по сценариям</h3>
+
+<table>
+    <thead>
+        <tr><th>Сценарий</th><th>Анимация</th><th>Параметры</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Переход между экранами</td><td>Slide-in справа + fade</td><td>300ms, ease-out</td></tr>
+        <tr><td>Появление модалки</td><td>Scale 0.95→1 + fade</td><td>250ms, spring easing</td></tr>
+        <tr><td>Нажатие кнопки</td><td>Scale 0.96</td><td>100ms, ease-in</td></tr>
+        <tr><td>Отправка сообщения</td><td>Пузырь появляется снизу + slide-up</td><td>300ms, spring easing</td></tr>
+        <tr><td>Сообщение AI (появление)</td><td>Fade-in + slide-up 12px</td><td>400ms, ease-out</td></tr>
+        <tr><td>Индикатор печати</td><td>Три точки пульсируют по очереди</td><td>Бесконечный цикл, 400ms каждая</td></tr>
+        <tr><td>Появление инсайта</td><td>Scale 0.9→1 + glow-эффект #C4A882</td><td>400ms, spring easing</td></tr>
+        <tr><td>Pull-to-refresh</td><td>Меловой цветок крутится</td><td>360° за 1200ms</td></tr>
+        <tr><td>Скелетон-загрузка</td><td>3-4 меловые линии пульсируют</td><td>Opacity 0.3→0.6, 800ms</td></tr>
+        <tr><td>Пустое состояние</td><td>Иллюстрация fade-in + float (лёгкое покачивание)</td><td>Fade 400ms, float 3s infinite</td></tr>
+    </tbody>
+</table>
+
+<h3>Микро-анимации</h3>
+
+<h4>Пузырь сообщения при отправке</h4>
+<ol style="margin: 8px 0; padding-left: 22px; font-size: 10.5pt;">
+    <li style="margin-bottom: 4px;">Пользователь нажимает отправить</li>
+    <li style="margin-bottom: 4px;">Пузырь появляется снизу за 200ms (slide-up 20px + fade)</li>
+    <li style="margin-bottom: 4px;">Поле ввода очищается с fade-out 150ms</li>
+    <li style="margin-bottom: 4px;">Индикатор «Печатает...» появляется у AI с fade-in 300ms</li>
+    <li style="margin-bottom: 4px;">Ответ AI появляется с slide-up 16px + fade-in 400ms</li>
+</ol>
+
+<h4>Кнопка «Инсайт»</h4>
+<ol style="margin: 8px 0; padding-left: 22px; font-size: 10.5pt;">
+    <li style="margin-bottom: 4px;">Нажатие: scale 0.95 за 100ms</li>
+    <li style="margin-bottom: 4px;">Отпускание: scale 1.0 за 200ms с spring easing</li>
+    <li style="margin-bottom: 4px;">Появление инсайта: карточка scale 0.92→1 + fade 300ms</li>
+    <li style="margin-bottom: 4px;">Меловой «блик» проходит по карточке сверху вниз 400ms</li>
+</ol>
+
+<h4>Плавная смена экранов</h4>
+
+<p>При переходе между экранами через Tab Bar:</p>
+<ul style="margin: 8px 0; padding-left: 22px; font-size: 10.5pt;">
+    <li style="margin-bottom: 4px;">Уходящий экран: fade-out + slide-left 30px, 200ms</li>
+    <li style="margin-bottom: 4px;">Приходящий экран: fade-in + slide-from-right 30px, 300ms</li>
+    <li style="margin-bottom: 4px;">Иконка таба: плавная смена цвета 200ms</li>
+</ul>
+
+<div class="tip-box">
+    <div class="tip-box-title">Производительность</div>
+    <p>Все анимации должны работать при 60fps. Используйте только transform и opacity — свойства, которые не вызывают reflow. Избегайте анимации width, height, margin, padding.</p>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ===== 8. COPY ===== -->
+<h1 id="copy">8. Микротекст и копирайт</h1>
+
+<p>Текст в интерфейсе — не функциональная надпись, а разговор. Каждое слово должно создавать ощущение, что за приложением стоит заботливый человек, а не безликая система.</p>
+
+<h3>Принципы микротекста</h3>
+
+<table>
+    <thead>
+        <tr><th>Принцип</th><th>Пример «до»</th><th>Пример «после»</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Никакого ALL CAPS</td><td>«ОТПРАВИТЬ»</td><td>«Отправить»</td></tr>
+        <tr><td>Никакого технического жаргона</td><td>«Ошибка 500»</td><td>«Что-то пошло не так. Мы уже разбираемся»</td></tr>
+        <tr><td>Вопрос вместо приказа</td><td>«Введите email»</td><td>«Какой у вас email?»</td></tr>
+        <tr><td>Поддержка вместо осуждения</td><td>«Неверный пароль»</td><td>«Пароль не подошёл, попробуем ещё раз?»</td></tr>
+        <tr><td>Человеческий масштаб</td><td>«Сессия завершена»</td><td>«Поговорили хорошо. До встречи»</td></tr>
+        <tr><td>Мягкие глаголы</td><td>«Удалить аккаунт»</td><td>«Попрощаться с аккаунтом»</td></tr>
+    </tbody>
+</table>
+
+<h3>Тексты для ключевых экранов</h3>
+
+<h4>Лендинг</h4>
+<div class="copy-grid">
+    <div class="copy-card" style="grid-column: 1 / -1;">
+        <div class="copy-text">«Поговорим?» — «Тебя готовы выслушать» — «Место, где можно быть собой»</div>
+        <div class="copy-note">Кнопка: «Начать разговор» или «Попробовать бесплатно»</div>
+        <div class="copy-note">Футер: «Бесплатная первая сессия. Без карты. Без обязательств.»</div>
+    </div>
+</div>
+
+<h4>Авторизация</h4>
+<div class="copy-grid">
+    <div class="copy-card" style="grid-column: 1 / -1;">
+        <div class="copy-text">Вход: «Войти тихонько» — «Мы рады вас видеть снова»</div>
+        <div class="copy-note">Регистрация: «Начни свой путь» — «Это займёт меньше минуты»</div>
+        <div class="copy-note">Ошибки: «Пароль не подошёл», «Не нашли такой email»</div>
+    </div>
+</div>
+
+<h4>Чат — приветствие AI</h4>
+<div class="copy-grid">
+    <div class="copy-card" style="grid-column: 1 / -1;">
+        <div class="copy-text">«Привет. Я Тёпа — твой спутник в заботе о себе. Здесь можно говорить о чём угодно: о тревоге, усталости, отношениях или просто о том, как прошёл день. Я рядом. С чего начнём?»</div>
+        <div class="copy-note">Альтернативы: «Расскажи, что на душе?», «Как ты себя чувствуешь сегодня?»</div>
+    </div>
+</div>
+
+<h4>Кнопки действий</h4>
+<div class="copy-grid">
+    <div class="copy-card">
+        <h5>Инсайт</h5>
+        <div class="copy-text">«Получить инсайт»</div>
+        <div class="copy-note">Альтернатива: «Что это значит?», «Помоги понять»</div>
+    </div>
+    <div class="copy-card">
+        <h5>Дыхание</h5>
+        <div class="copy-text">«Подышим вместе»</div>
+        <div class="copy-note">Альтернатива: «Дыхательная практика», «Сделаем паузу»</div>
+    </div>
+    <div class="copy-card">
+        <h5>Дневник</h5>
+        <div class="copy-text">«Записать мысль»</div>
+        <div class="copy-note">Альтернатива: «В дневник», «Сохранить размышление»</div>
+    </div>
+    <div class="copy-card">
+        <h5>Упражнение</h5>
+        <div class="copy-text">«Попробуем упражнение»</div>
+        <div class="copy-note">Альтернатива: «Практика», «Сделаем вместе»</div>
+    </div>
+</div>
+
+<h4>Пустые состояния</h4>
+<div class="copy-grid">
+    <div class="copy-card">
+        <h5>История (пусто)</h5>
+        <div class="copy-text">«Здесь появится история ваших разговоров. Каждый разговор — шаг вперёд.»</div>
+    </div>
+    <div class="copy-card">
+        <h5>Нет интернета</h5>
+        <div class="copy-text">«Связь потерялась. Проверьте интернет и попробуйте снова. Мы подождём.»</div>
+    </div>
+    <div class="copy-card">
+        <h5>Ошибка загрузки</h5>
+        <div class="copy-text">«Что-то пошло не так. Не переживайте, попробуем ещё раз.»</div>
+    </div>
+    <div class="copy-card">
+        <h5>Выход из аккаунта</h5>
+        <div class="copy-text">«Выйти из аккаунта? Мы будем скучать. Все данные сохранятся.»</div>
+    </div>
+</div>
+
+<h3>Тон голоса AI</h3>
+
+<table>
+    <thead>
+        <tr><th>Качество</th><th>Пример</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Тёплый</td><td>«Я рядом», «Ты не одна», «Давай разберёмся вместе»</td></tr>
+        <tr><td>Без осуждения</td><td>«Это нормально чувствовать себя так» вместо «Не переживай»</td></tr>
+        <tr><td>Ненавязчивый</td><td>«Хочешь поговорить об этом?» вместо «Расскажи»</td></tr>
+        <tr><td>Поддерживающий</td><td>«Это большой шаг — признать это себе»</td></tr>
+        <tr><td>Профессиональный, но не клинический</td><td>«Тревога может проявляться так» вместо «У вас тревожное расстройство»</td></tr>
+        <tr><td>Персональный</td><td>Использует имя, помнит контекст, ссылается на прошлые разговоры</td></tr>
+    </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ===== 9. IMPLEMENTATION ===== -->
+<h1 id="implementation">9. Рекомендации по внедрению</h1>
+
+<h3>Порядок разработки интерфейса</h3>
+
+<table>
+    <thead>
+        <tr><th>Этап</th><th>Что делать</th><th>Срок (оценочно)</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>1. Дизайн-токены</td><td>Цвета, шрифты, отступы, скругления, тени — в CSS-переменных</td><td>1 день</td></tr>
+        <tr><td>2. Компоненты</td><td>Кнопки, поля, карточки, пузыри — как React-компоненты</td><td>2-3 дня</td></tr>
+        <tr><td>3. Лендинг</td><td>Первый экран — лицо приложения</td><td>1-2 дня</td></tr>
+        <tr><td>4. Авторизация</td><td>Вход + регистрация + Google OAuth</td><td>2 дня</td></tr>
+        <tr><td>5. Чат</td><td>Главный экран — сообщения, пузыри, панель действий</td><td>3-5 дней</td></tr>
+        <tr><td>6. История + Профиль</td><td>Второстепенные экраны</td><td>2-3 дня</td></tr>
+        <tr><td>7. Иллюстрации</td><td>Генерация всех меловых иллюстраций в едином стиле</td><td>2-3 дня</td></tr>
+        <tr><td>8. Анимации</td><td>Переходы, микро-анимации, состояния загрузки</td><td>2 дня</td></tr>
+        <tr><td>9. Полировка</td><td>Микротекст, edge cases, адаптивность</td><td>2 дня</td></tr>
+    </tbody>
+</table>
+
+<h3>Чек-лист перед запуском</h3>
+
+<table>
+    <thead>
+        <tr><th>Категория</th><th>Проверка</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Визуал</td><td>Все иллюстрации в едином стиле, нет «битых» цветов</td></tr>
+        <tr><td>Типографика</td><td>Читаемость на 320px экране, нет обрезания шрифтов</td></tr>
+        <tr><td>Анимации</td><td>60fps на среднем Android, нет тормозов</td></tr>
+        <tr><td>Микротекст</td><td>Все ошибки мягкие, нет технических терминов</td></tr>
+        <tr><td>Доступность</td><td>Контраст 4.5:1 для текста, поддержка screen reader</td></tr>
+        <tr><td>Адаптивность</td><td>Работает на 320px–1920px, portrait и landscape</td></tr>
+        <tr><td>Производительность</td><td>LCP &lt; 2.5s, FID &lt; 100ms, CLS &lt; 0.1</td></tr>
+        <tr><td>Эмоциональный</td><td>Тест на фокус-группе: «Что вы чувствуете, видя этот экран?»</td></tr>
+    </tbody>
+</table>
+
+
+
+
+</body></html>

@@ -43,6 +43,8 @@ async def update_me(
         profile.preferred_style = body.preferred_style
     if body.crisis_plan is not None:
         profile.crisis_plan = body.crisis_plan
+    if body.memory_enabled is not None:
+        profile.memory_enabled = body.memory_enabled
 
     await db.commit()
     await db.refresh(profile)

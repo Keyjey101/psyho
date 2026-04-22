@@ -61,3 +61,20 @@ export function useRenameSession() {
     },
   });
 }
+
+export function useContinueSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (sessionId: string) => {
+      const { data } = await api.post<{
+        new_session_id: string;
+        previous_title: string;
+        insights_preview: string;
+      }>(`/sessions/${sessionId}/continue`);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sessions"] });
+    },
+  });
+}

@@ -1,14 +1,30 @@
 import { useRef, useEffect } from "react";
-import type { Message } from "@/types";
+import { motion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
+import type { Message, Session } from "@/types";
 import MessageItem from "./MessageItem";
 import ThinkingIndicator from "./ThinkingIndicator";
-import { Bot } from "lucide-react";
 
 interface MessageListProps {
   messages: Message[];
   streamingContent: string;
   agentsUsed: string[];
   isStreaming: boolean;
+  previousSession?: Session | null;
+  onContinueSession?: () => void;
+  isContinuing?: boolean;
+}
+
+function makeWelcomeMessage(): Message {
+  return {
+    id: "welcome",
+    session_id: "",
+    role: "assistant",
+    content:
+      "Привет. Я Ника — твой компаньон в заботе о себе.\n\nЗдесь можно говорить обо всём: тревоге, усталости, отношениях или просто о том, как прошёл день.\n\nЯ здесь. С чего начнём?",
+    agents_used: null,
+    created_at: new Date().toISOString(),
+  };
 }
 
 export default function MessageList({
@@ -16,6 +32,9 @@ export default function MessageList({
   streamingContent,
   agentsUsed,
   isStreaming,
+  previousSession,
+  onContinueSession,
+  isContinuing,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -25,24 +44,51 @@ export default function MessageList({
 
   if (messages.length === 0 && !isStreaming) {
     return (
-      <div className="flex flex-1 items-center justify-center px-6">
-        <div className="text-center">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-primary-100 to-primary-200">
-            <Bot className="h-10 w-10 text-primary-600" />
-          </div>
-          <h2 className="mb-2 text-xl font-bold text-surface-900">
-            Привет! Я PsyHo
-          </h2>
-          <p className="max-w-sm text-surface-500">
-            Расскажи, что тебя беспокоит, и я подберу подходящий терапевтический подход именно для тебя.
-          </p>
+      <div className="flex-1 overflow-y-auto bg-[#FAF6F1] px-4 py-6">
+        <div className="mx-auto max-w-3xl space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="flex justify-center"
+          >
+            <img
+              src="/illustrations/chat_welcome.png"
+              alt=""
+              className="h-auto w-[200px] object-contain sm:w-[240px]"
+            />
+          </motion.div>
+          <MessageItem message={makeWelcomeMessage()} />
+          {previousSession && onContinueSession && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className="flex justify-center"
+            >
+              <button
+                onClick={onContinueSession}
+                disabled={isContinuing}
+                className="btn-secondary gap-2 px-5 py-2.5 text-sm"
+              >
+                {isContinuing ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#B8A898] border-t-[#B8785A]" />
+                ) : (
+                  <>
+                    <ArrowRight className="h-4 w-4" />
+                    Продолжить сессию
+                  </>
+                )}
+              </button>
+            </motion.div>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-6 lg:px-6">
+    <div className="flex-1 overflow-y-auto bg-[#FAF6F1] px-4 py-6 lg:px-6">
       <div className="mx-auto max-w-3xl space-y-6">
         {messages.map((msg) => (
           <MessageItem key={msg.id} message={msg} />
@@ -62,9 +108,7 @@ export default function MessageList({
           />
         )}
 
-        {isStreaming && !streamingContent && (
-          <ThinkingIndicator agents={agentsUsed} />
-        )}
+        {isStreaming && !streamingContent && <ThinkingIndicator agents={agentsUsed} />}
         <div ref={bottomRef} />
       </div>
     </div>

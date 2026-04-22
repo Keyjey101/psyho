@@ -1,34 +1,48 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useSessions, useSession, useCreateSession, useDeleteSession } from "@/hooks/useSessions";
+import { useSessions, useSession, useCreateSession, useDeleteSession, useContinueSession } from "@/hooks/useSessions";
 import { useChat } from "@/hooks/useChat";
 import Sidebar from "@/components/chat/Sidebar";
 import MessageList from "@/components/chat/MessageList";
 import InputBar from "@/components/chat/InputBar";
+import ActionPanel from "@/components/chat/ActionPanel";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Message } from "@/types";
-import { Menu, AlertCircle } from "lucide-react";
+import { Menu, Brain } from "lucide-react";
+import api from "@/api/client";
 
 export default function Chat() {
   const { sessionId } = useParams<{ sessionId?: string }>();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const queryClient = useQueryClient();
   const { data: sessions } = useSessions();
   const { data: currentSession, isError } = useSession(sessionId);
   const createSession = useCreateSession();
   const deleteSession = useDeleteSession();
+  const continueSession = useContinueSession();
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const memoryEnabled = (user as any)?.profile?.memory_enabled ?? true;
+
+  const toggleMemory = async () => {
+    try {
+      await api.patch("/user/me", { memory_enabled: !memoryEnabled });
+      refreshUser();
+    } catch {
+      // ignore
+    }
+  };
 
   const handleMessageComplete = useCallback(
     (msg: Message) => {
       queryClient.invalidateQueries({ queryKey: ["session", sessionId] });
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
     },
-    [sessionId, queryClient]
+    [sessionId, queryClient],
   );
 
   const { streamingContent, agentsUsed, isStreaming, sendMessage, isConnected } = useChat({
@@ -84,6 +98,17 @@ export default function Chat() {
     sendMessage(content);
   };
 
+  const handleAction = (action: string) => {
+    const actionMessages: Record<string, string> = {
+      insight: "Хочу получить инсайт о себе",
+      breathe: "Помоги мне подышать",
+      write: "Хочу записать одну мысль",
+      exercise: "Дай мне упражнение",
+    };
+    const msg = actionMessages[action];
+    if (msg) handleSend(msg);
+  };
+
   const handleNewChat = async () => {
     navigate("/chat");
   };
@@ -100,8 +125,17 @@ export default function Chat() {
     navigate("/");
   };
 
+  const previousSession =
+    !sessionId && sessions && sessions.length > 0 ? sessions[0] : null;
+
+  const handleContinueSession = async () => {
+    if (!previousSession) return;
+    const result = await continueSession.mutateAsync(previousSession.id);
+    navigate(`/chat/${result.new_session_id}`);
+  };
+
   return (
-    <div className="flex h-screen bg-surface-50">
+    <div className="flex h-screen bg-[#FAF6F1]">
       <Sidebar
         sessions={sessions || []}
         activeSessionId={sessionId}
@@ -116,23 +150,38 @@ export default function Chat() {
       />
 
       <div className="flex flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-surface-100 bg-white px-4 py-3 lg:px-6">
+        <header className="flex items-center gap-3 bg-[#FAF6F1]/90 px-4 py-3 backdrop-blur-sm border-b border-[#E8DDD0]">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="rounded-lg p-2 text-surface-500 hover:bg-surface-100 lg:hidden"
+            className="rounded-lg p-2 text-[#8A7A6A] hover:bg-[#F5EDE4] lg:hidden"
           >
             <Menu className="h-5 w-5" />
           </button>
-          <h1 className="text-sm font-semibold text-surface-900">
-            {currentSession?.title || "Новый разговор"}
-          </h1>
-          <div className="ml-auto flex items-center gap-2">
+
+          <div className="flex h-10 w-10 shrink-0 overflow-hidden rounded-full">
+            <img src="/illustrations/ai_avatar.png" alt="Ника" className="h-full w-full object-cover" />
+          </div>
+
+          <div>
+            <p className="text-[15px] font-semibold leading-none text-[#5A5048]">Ника</p>
             {isConnected && (
-              <div className="flex items-center gap-1.5 text-xs text-emerald-600">
-                <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                Онлайн
+              <div className="mt-0.5 flex items-center gap-1.5">
+                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <span className="text-[12px] text-[#8A7A6A]">Онлайн</span>
               </div>
             )}
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={toggleMemory}
+              title={memoryEnabled ? "Память включена" : "Память выключена"}
+              className="rounded-full p-2 transition-colors hover:bg-[#F5EDE4]"
+            >
+              <Brain
+                className={`h-4 w-4 ${memoryEnabled ? "text-[#B8785A]" : "text-[#B8A898]"}`}
+              />
+            </button>
           </div>
         </header>
 
@@ -141,8 +190,12 @@ export default function Chat() {
           streamingContent={streamingContent}
           agentsUsed={agentsUsed}
           isStreaming={isStreaming}
+          previousSession={previousSession}
+          onContinueSession={handleContinueSession}
+          isContinuing={continueSession.isPending}
         />
 
+        <ActionPanel onAction={handleAction} disabled={isStreaming} />
         <InputBar onSend={handleSend} disabled={isStreaming} />
       </div>
     </div>

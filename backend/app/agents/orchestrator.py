@@ -25,9 +25,9 @@ CRISIS_KEYWORDS_EN = [
     "no reason to live", "better off dead",
 ]
 
-CRISIS_RESPONSE = """Я замечаю, что ты говоришь о очень серьёзных вещах. Мне важно, чтобы ты был(а) в безопасности прямо сейчас.
+CRISIS_RESPONSE = """Я здесь, и я слышу тебя. То, о чём ты говоришь, очень важно, и я не оставлю это без внимания.
 
-Пожалуйста, обратись за помощью — ты не должен(на) справляться с этим в одиночку:
+Пожалуйста, обратись за помощью — тебе не нужно справляться с этим одной:
 
 **Россия:**
 - Единый телефон доверия: **8-800-333-44-34** (бесплатно)
@@ -37,7 +37,7 @@ CRISIS_RESPONSE = """Я замечаю, что ты говоришь о очен
 **Международный:**
 - Befrienders Worldwide: **befrienders.org**
 
-Ты важен(на). Пожалуйста, свяжись с профессионалами, которые могут помочь прямо сейчас."""
+Ты важна. Пожалуйста, свяжись с профессионалами, которые могут помочь прямо сейчас."""
 
 TOPIC_AGENT_MAP: dict[str, list[str]] = {
     "anxiety": ["cbt", "somatic"],
@@ -137,7 +137,7 @@ class Orchestrator:
     def _format_history_for_classify(self, history: list[dict]) -> str:
         lines = []
         for m in history:
-            role = "Пользователь" if m["role"] == "user" else "Терапевт"
+            role = "Пользователь" if m["role"] == "user" else "Ника"
             lines.append(f"{role}: {m['content'][:200]}")
         return "\n".join(lines)
 
@@ -147,6 +147,7 @@ class Orchestrator:
         history: list[dict],
         session_summary: str = "",
         preferred_style: str = "balanced",
+        long_term_memory: str = "",
     ):
         if _check_crisis(message):
             yield {"type": "agents_used", "agents": ["crisis"]}
@@ -175,7 +176,7 @@ class Orchestrator:
 
         yield {"type": "agents_used", "agents": agent_names if agent_names else ["orchestrator"]}
 
-        async for token in self._synthesize(message, history, perspectives, session_summary, preferred_style):
+        async for token in self._synthesize(message, history, perspectives, session_summary, preferred_style, long_term_memory):
             yield token
 
     async def _synthesize(
@@ -185,6 +186,7 @@ class Orchestrator:
         perspectives: dict[str, str],
         session_summary: str,
         preferred_style: str = "balanced",
+        long_term_memory: str = "",
     ):
         perspectives_text = ""
         if perspectives:
@@ -201,10 +203,24 @@ class Orchestrator:
                 parts.append(f"[{agent_name_map.get(name, name)}]\n{text}")
             perspectives_text = "\n\n".join(parts)
 
+        name_map_agents = {
+            "cbt": "КПТ", "jungian": "Юнг", "act": "ACT",
+            "ifs": "IFS", "narrative": "Нарратив", "somatic": "Соматика",
+        }
+
         history_text = ""
         for m in history[-10:]:
-            role = "Пользователь" if m["role"] == "user" else "Терапевт"
-            history_text += f"{role}: {m['content']}\n"
+            role = "Пользователь" if m["role"] == "user" else "Ника"
+            agents_note = ""
+            if m.get("agents_used"):
+                try:
+                    agents_list = json.loads(m["agents_used"]) if isinstance(m["agents_used"], str) else m["agents_used"]
+                    if agents_list:
+                        readable = [name_map_agents.get(a, a) for a in agents_list]
+                        agents_note = f" [через {', '.join(readable)}]"
+                except Exception:
+                    pass
+            history_text += f"{role}{agents_note}: {m['content']}\n"
 
         summary_section = ""
         if session_summary:
@@ -225,13 +241,18 @@ class Orchestrator:
 Синтезируй единый тёплый, профессиональный и эмпатичный ответ, органично интегрируя наиболее полезные инсайты от экспертов. Ответ должен звучать естественно, как от одного заботливого терапевта."""
 
         messages = [{"role": "system", "content": self.system_prompt}]
+
+        if long_term_memory:
+            messages[0]["content"] += f"\n\n## Что я знаю об этом человеке\n{long_term_memory}"
+
         if preferred_style and preferred_style != "balanced":
             style_instructions = {
                 "direct": "\n\n## Стиль общения пользователя\nПользователь предпочитает прямой, структурированный стиль. Давай чёткие шаги и конкретные техники, меньше воды.",
-                "gentle": "\n\n## Стиль общения пользователя\nПользователь предпочитает мягкий, поддерживающий стиль. Будь особенно тёплым и эмпатичным, избегай директивности.",
+                "gentle": "\n\n## Стиль общения пользователя\nПользователь предпочитает мягкий, поддерживающий стиль. Будь особенно тёплой и эмпатичной, избегай директивности.",
             }
             if preferred_style in style_instructions:
                 messages[0]["content"] += style_instructions[preferred_style]
+
         if history:
             messages.extend(history[-10:])
         messages.append({"role": "user", "content": user_content})

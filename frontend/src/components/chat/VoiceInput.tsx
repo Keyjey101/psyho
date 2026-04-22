@@ -47,10 +47,10 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
     <button
       onClick={toggleListen}
       disabled={disabled}
-      className={`flex items-center justify-center rounded-lg p-2 transition-all ${
+      className={`flex items-center justify-center rounded-full p-2 transition-all ${
         isListening
-          ? "bg-red-100 text-red-600 hover:bg-red-200"
-          : "text-surface-400 hover:bg-surface-100 hover:text-surface-600"
+          ? "bg-[#FDF5F3] text-[#C4786A]"
+          : "text-[#8A7A6A] hover:text-[#B8785A]"
       } disabled:opacity-40`}
       title={isListening ? "Остановить запись" : "Голосовой ввод"}
     >

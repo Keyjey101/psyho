@@ -38,6 +38,7 @@ class ChatSession(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
     summary: Mapped[str | None] = mapped_column(Text)
+    continuation_context: Mapped[str | None] = mapped_column(Text)
 
     user = relationship("User", back_populates="sessions")
     messages = relationship("Message", back_populates="session", cascade="all, delete-orphan", order_by="Message.created_at")
@@ -63,6 +64,8 @@ class UserProfile(Base):
     therapy_goals: Mapped[str | None] = mapped_column(Text)
     preferred_style: Mapped[str] = mapped_column(String(20), default="balanced")
     crisis_plan: Mapped[str | None] = mapped_column(Text)
+    memory_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    long_term_memory: Mapped[str | None] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
     user = relationship("User", back_populates="profile")

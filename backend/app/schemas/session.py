@@ -18,6 +18,7 @@ class SessionResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     summary: str | None
+    continuation_context: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -28,6 +29,7 @@ class SessionListResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     summary: str | None
+    continuation_context: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -38,6 +40,7 @@ class SessionDetailResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     summary: str | None
+    continuation_context: str | None = None
     messages: list[MessageResponse] = []
 
     model_config = {"from_attributes": True}

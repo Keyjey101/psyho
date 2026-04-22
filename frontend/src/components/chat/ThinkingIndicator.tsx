@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
 import { getAgentInfo } from "@/types";
-import { Bot } from "lucide-react";
 
 interface ThinkingIndicatorProps {
   agents: string[];
@@ -10,15 +9,20 @@ export default function ThinkingIndicator({ agents }: ThinkingIndicatorProps) {
   if (agents.length === 0) {
     return (
       <div className="flex gap-3">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100">
-          <div className="flex gap-1">
-            <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary-400" style={{ animationDelay: "0ms" }} />
-            <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary-400" style={{ animationDelay: "150ms" }} />
-            <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary-400" style={{ animationDelay: "300ms" }} />
-          </div>
+        <div className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full">
+          <img src="/illustrations/ai_avatar.png" alt="Ника" className="h-full w-full object-cover" />
         </div>
-        <div className="rounded-2xl rounded-tl-md bg-surface-100 px-4 py-3 text-sm text-surface-500">
-          Думаю...
+        <div className="flex items-center gap-1.5 rounded-[18px] rounded-bl-[4px] border border-[#D8CDC0] bg-white px-4 py-3">
+          {[0, 160, 320].map((delay) => (
+            <div
+              key={delay}
+              className="h-2 w-2 rounded-full bg-[#C4A882]"
+              style={{
+                animation: "dotPulse 1200ms ease-in-out infinite",
+                animationDelay: `${delay}ms`,
+              }}
+            />
+          ))}
         </div>
       </div>
     );
@@ -26,12 +30,12 @@ export default function ThinkingIndicator({ agents }: ThinkingIndicatorProps) {
 
   return (
     <div className="flex gap-3">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100">
-        <Bot className="h-4 w-4 text-primary-600" />
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#B8785A] text-sm font-semibold text-white">
+        Н
       </div>
       <div className="flex flex-col gap-2">
-        <div className="rounded-2xl rounded-tl-md bg-surface-100 px-4 py-3 text-sm text-surface-500">
-          Подключаю специалистов...
+        <div className="rounded-[18px] rounded-bl-[4px] border border-[#D8CDC0] bg-white px-4 py-3 text-sm text-[#8A7A6A]">
+          Подключаю подходы...
         </div>
         <div className="flex flex-wrap gap-1.5">
           {agents.map((agentId) => {
@@ -47,9 +51,13 @@ export default function ThinkingIndicator({ agents }: ThinkingIndicatorProps) {
                 <span>{info.emoji}</span>
                 {info.name}
                 <div className="ml-1 flex gap-0.5">
-                  <div className="h-1 w-1 animate-pulse rounded-full bg-current" style={{ animationDelay: "0ms" }} />
-                  <div className="h-1 w-1 animate-pulse rounded-full bg-current" style={{ animationDelay: "200ms" }} />
-                  <div className="h-1 w-1 animate-pulse rounded-full bg-current" style={{ animationDelay: "400ms" }} />
+                  {[0, 200, 400].map((delay) => (
+                    <div
+                      key={delay}
+                      className="h-1 w-1 animate-pulse rounded-full bg-current"
+                      style={{ animationDelay: `${delay}ms` }}
+                    />
+                  ))}
                 </div>
               </motion.span>
             );

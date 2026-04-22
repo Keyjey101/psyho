@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, CornerDownLeft } from "lucide-react";
+import { Send } from "lucide-react";
 import VoiceInput from "./VoiceInput";
 
 interface InputBarProps {
@@ -35,30 +35,30 @@ export default function InputBar({ onSend, disabled }: InputBarProps) {
     }
   };
 
+  const hasContent = content.trim().length > 0;
+
   return (
-    <div className="border-t border-surface-100 bg-white px-4 py-4 lg:px-6">
+    <div className="border-t border-[#E8DDD0] bg-white px-4 py-4 lg:px-6">
       <div className="mx-auto max-w-3xl">
-        <div className="flex items-end gap-3">
-          <div className="relative flex-1">
-            <textarea
-              ref={textareaRef}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Напиши, что тебя беспокоит..."
-              disabled={disabled}
-              rows={1}
-              className="input-field resize-none pr-10 py-3 max-h-40"
-            />
-            <div className="absolute right-3 bottom-2.5 flex items-center gap-1 text-xs text-surface-400">
-              <CornerDownLeft className="h-3 w-3" />
-            </div>
-          </div>
-          <VoiceInput onTranscript={(text) => setContent((prev) => prev ? prev + " " + text : text)} disabled={disabled} />
+        <div className="flex items-end gap-2 rounded-[24px] border border-[#D8CDC0] bg-white px-4 py-2">
+          <VoiceInput
+            onTranscript={(text) => setContent((prev) => (prev ? prev + " " + text : text))}
+            disabled={disabled}
+          />
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Напиши что угодно..."
+            disabled={disabled}
+            rows={1}
+            className="flex-1 resize-none border-0 bg-transparent py-1 text-sm text-[#5A5048] placeholder:italic placeholder:text-[#B8A898] focus:outline-none focus:ring-0 max-h-40"
+          />
           <button
             onClick={handleSubmit}
-            disabled={disabled || !content.trim()}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-600 text-white shadow-sm transition-all hover:bg-primary-700 hover:shadow-md active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
+            disabled={disabled || !hasContent}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#B8785A] text-white transition-all duration-200 hover:bg-[#9E6349] active:scale-[0.96] disabled:opacity-0 disabled:pointer-events-none"
           >
             <Send className="h-4 w-4" />
           </button>

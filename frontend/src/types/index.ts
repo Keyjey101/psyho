@@ -4,6 +4,17 @@ export interface User {
   name: string;
   is_active: boolean;
   created_at: string;
+  profile?: UserProfile | null;
+}
+
+export interface UserProfile {
+  user_id: string;
+  therapy_goals: string | null;
+  preferred_style: string;
+  crisis_plan: string | null;
+  memory_enabled: boolean;
+  long_term_memory: string | null;
+  updated_at: string;
 }
 
 export interface Session {
@@ -12,6 +23,7 @@ export interface Session {
   created_at: string;
   updated_at: string;
   summary: string | null;
+  continuation_context?: string | null;
 }
 
 export interface SessionDetail extends Session {
@@ -77,57 +89,57 @@ export const AGENTS: AgentInfo[] = [
     id: "cbt",
     name: "КПТ",
     emoji: "🧠",
-    color: "text-blue-600",
-    bgColor: "bg-blue-50",
+    color: "text-chalk-800",
+    bgColor: "bg-chalk-50",
   },
   {
     id: "jungian",
-    name: "Юнгианский",
+    name: "Юнг",
     emoji: "🌙",
-    color: "text-purple-600",
-    bgColor: "bg-purple-50",
+    color: "text-warm-800",
+    bgColor: "bg-warm-50",
   },
   {
     id: "act",
     name: "ACT",
     emoji: "🧭",
-    color: "text-emerald-600",
-    bgColor: "bg-emerald-50",
+    color: "text-primary-800",
+    bgColor: "bg-primary-50",
   },
   {
     id: "ifs",
     name: "IFS",
     emoji: "🎭",
-    color: "text-amber-600",
-    bgColor: "bg-amber-50",
+    color: "text-chalk-700",
+    bgColor: "bg-chalk-50",
   },
   {
     id: "narrative",
-    name: "Нарративный",
+    name: "Нарратив",
     emoji: "📖",
-    color: "text-rose-600",
-    bgColor: "bg-rose-50",
+    color: "text-warm-700",
+    bgColor: "bg-warm-50",
   },
   {
     id: "somatic",
-    name: "Соматический",
+    name: "Соматика",
     emoji: "🌿",
-    color: "text-teal-600",
-    bgColor: "bg-teal-50",
+    color: "text-surface-700",
+    bgColor: "bg-surface-50",
   },
   {
     id: "orchestrator",
-    name: "Терапевт",
-    emoji: "💚",
-    color: "text-primary-600",
-    bgColor: "bg-primary-50",
+    name: "Ника",
+    emoji: "🌸",
+    color: "text-[#B8785A]",
+    bgColor: "bg-[#FAF6F1]",
   },
   {
     id: "crisis",
     name: "Кризисная поддержка",
     emoji: "🆘",
-    color: "text-red-600",
-    bgColor: "bg-red-50",
+    color: "text-[#C4786A]",
+    bgColor: "bg-[#FDF5F3]",
   },
 ];
 

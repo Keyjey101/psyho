@@ -33,17 +33,15 @@ export default function Sidebar({
   const navigate = useNavigate();
 
   const sidebar = (
-    <div className="flex h-full flex-col bg-surface-900">
-      <div className="flex items-center justify-between border-b border-surface-700 px-4 py-4">
+    <div className="flex h-full flex-col bg-white">
+      <div className="flex items-center justify-between border-b border-[#E8DDD0] bg-[#FAF6F1] px-4 py-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 text-sm font-bold text-white">
-            P
+          <div className="flex h-8 w-8 overflow-hidden rounded-full">
+            <img src="/illustrations/ai_avatar.png" alt="Ника" className="h-full w-full object-cover" />
           </div>
-          <span className="font-bold text-white">
-            Psy<span className="text-primary-400">Ho</span>
-          </span>
+          <span className="font-serif text-xl font-bold text-[#5A5048]">Ника</span>
         </div>
-        <button onClick={onClose} className="rounded-lg p-1.5 text-surface-400 hover:bg-surface-800 lg:hidden">
+        <button onClick={onClose} className="rounded-lg p-1.5 text-[#8A7A6A] hover:bg-[#FAF6F1] lg:hidden">
           <X className="h-5 w-5" />
         </button>
       </div>
@@ -51,7 +49,7 @@ export default function Sidebar({
       <div className="p-3">
         <button
           onClick={onNewChat}
-          className="flex w-full items-center gap-2 rounded-xl border border-dashed border-surface-600 px-4 py-3 text-sm font-medium text-surface-300 transition-colors hover:border-primary-500 hover:bg-surface-800 hover:text-primary-400"
+          className="flex w-full items-center gap-2 rounded-pill border border-dashed border-[#D8CDC0] px-4 py-3 text-sm font-medium text-[#8A7A6A] transition-colors hover:border-[#B8785A] hover:bg-[#FAF6F1] hover:text-[#B8785A]"
         >
           <Plus className="h-4 w-4" />
           Новый разговор
@@ -71,8 +69,8 @@ export default function Sidebar({
               <div
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
                   activeSessionId === session.id
-                    ? "bg-surface-800 text-white"
-                    : "text-surface-400 hover:bg-surface-800 hover:text-surface-200"
+                    ? "bg-[#F5EDE4] text-[#B8785A]"
+                    : "text-[#5A5048] hover:bg-[#FAF6F1]"
                 }`}
               >
                 <MessageSquare className="h-4 w-4 shrink-0" />
@@ -83,14 +81,14 @@ export default function Sidebar({
                       e.stopPropagation();
                       onDeleteSession(session.id);
                     }}
-                    className="shrink-0 rounded-md p-1 text-surface-500 hover:bg-red-900/30 hover:text-red-400"
+                    className="shrink-0 rounded-md p-1 text-[#B8A898] hover:bg-[#FDF5F3] hover:text-[#C4786A]"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
               {hoveredId === session.id && session.summary && (
-                <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-surface-600 bg-surface-800 p-3 text-xs leading-relaxed text-surface-300 shadow-lg">
+                <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-[#E8DDD0] bg-white p-3 text-xs leading-relaxed text-[#8A7A6A] shadow-lg">
                   {session.summary.slice(0, 200)}
                   {session.summary.length > 200 ? "..." : ""}
                 </div>
@@ -100,24 +98,24 @@ export default function Sidebar({
         </div>
       </div>
 
-      <div className="border-t border-surface-700 p-4">
+      <div className="border-t border-[#E8DDD0] p-4">
         <div className="mb-3 flex items-center gap-3 px-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-600 text-xs font-bold text-white">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#B8785A] text-xs font-bold text-white">
             {(userName || "U")[0].toUpperCase()}
           </div>
-          <span className="truncate text-sm font-medium text-surface-300">{userName}</span>
+          <span className="truncate text-sm font-medium text-[#5A5048]">{userName}</span>
         </div>
         <div className="space-y-1">
           <button
             onClick={() => navigate("/profile")}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-surface-400 transition-colors hover:bg-surface-800 hover:text-primary-400"
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A]"
           >
             <Settings className="h-4 w-4" />
             Профиль
           </button>
           <button
             onClick={onLogout}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-surface-400 transition-colors hover:bg-surface-800 hover:text-red-400"
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FDF5F3] hover:text-[#C4786A]"
           >
             <LogOut className="h-4 w-4" />
             Выйти
