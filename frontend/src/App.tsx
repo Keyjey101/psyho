@@ -45,15 +45,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route
-        path="/chat"
-        element={
-          <ProtectedRoute>
-            <Chat />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/chat/:sessionId"
+        path="/chat/:sessionId?"
         element={
           <ProtectedRoute>
             <Chat />

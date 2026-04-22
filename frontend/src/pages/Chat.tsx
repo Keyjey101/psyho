@@ -20,6 +20,7 @@ export default function Chat() {
   const createSession = useCreateSession();
   const deleteSession = useDeleteSession();
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -49,11 +50,28 @@ export default function Chat() {
   }, [isError, sessionId, navigate]);
 
   useEffect(() => {
+    if (!isConnected || !pendingMessage || !sessionId) return;
+    const msg = pendingMessage;
+    setPendingMessage(null);
+    const optimisticMsg: Message = {
+      id: `temp-${Date.now()}`,
+      session_id: sessionId,
+      role: "user",
+      content: msg,
+      agents_used: null,
+      created_at: new Date().toISOString(),
+    };
+    setLocalMessages((prev) => [...prev, optimisticMsg]);
+    sendMessage(msg);
+  }, [isConnected, pendingMessage, sessionId, sendMessage]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [localMessages, streamingContent]);
 
   const handleSend = async (content: string) => {
     if (!sessionId) {
+      setPendingMessage(content);
       const newSession = await createSession.mutateAsync(undefined);
       navigate(`/chat/${newSession.id}`);
       return;
