@@ -65,7 +65,7 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-surface-50 p-6 lg:p-10">
       <Helmet>
-        <title>Админ-панель — PsyHo</title>
+        <title>Админ-панель — Ника</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <div className="mx-auto max-w-5xl">

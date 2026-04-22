@@ -12,10 +12,10 @@ export default function ExportChat({ messages, sessionTitle }: ExportChatProps) 
 
   const exportTXT = () => {
     const lines = messages.map((m) => {
-      const role = m.role === "user" ? "Вы" : "PsyHo";
+      const role = m.role === "user" ? "Вы" : "Ника";
       return `[${new Date(m.created_at).toLocaleString("ru-RU")}] ${role}:\n${m.content}\n`;
     });
-    const text = `${sessionTitle || "Чат с PsyHo"}\n${"=".repeat(40)}\n\n${lines.join("\n")}`;
+    const text = `${sessionTitle || "Чат с Никой"}\n${"=".repeat(40)}\n\n${lines.join("\n")}`;
     downloadFile(text, "chat.txt", "text/plain");
     setIsOpen(false);
   };
