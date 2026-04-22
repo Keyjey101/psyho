@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessions, useSession, useCreateSession, useDeleteSession } from "@/hooks/useSessions";
@@ -22,7 +22,6 @@ export default function Chat() {
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const handleMessageComplete = useCallback(
     (msg: Message) => {
@@ -64,10 +63,6 @@ export default function Chat() {
     setLocalMessages((prev) => [...prev, optimisticMsg]);
     sendMessage(msg);
   }, [isConnected, pendingMessage, sessionId, sendMessage]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [localMessages, streamingContent]);
 
   const handleSend = async (content: string) => {
     if (!sessionId) {
@@ -147,7 +142,6 @@ export default function Chat() {
           agentsUsed={agentsUsed}
           isStreaming={isStreaming}
         />
-        <div ref={messagesEndRef} />
 
         <InputBar onSend={handleSend} disabled={isStreaming} />
       </div>

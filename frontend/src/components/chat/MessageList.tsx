@@ -1,3 +1,4 @@
+import { useRef, useEffect } from "react";
 import type { Message } from "@/types";
 import MessageItem from "./MessageItem";
 import ThinkingIndicator from "./ThinkingIndicator";
@@ -16,6 +17,12 @@ export default function MessageList({
   agentsUsed,
   isStreaming,
 }: MessageListProps) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, streamingContent]);
+
   if (messages.length === 0 && !isStreaming) {
     return (
       <div className="flex flex-1 items-center justify-center px-6">
@@ -58,6 +65,7 @@ export default function MessageList({
         {isStreaming && !streamingContent && (
           <ThinkingIndicator agents={agentsUsed} />
         )}
+        <div ref={bottomRef} />
       </div>
     </div>
   );
