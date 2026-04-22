@@ -4,9 +4,12 @@ WORKDIR /app
 
 COPY pyproject.toml .
 COPY app app
+COPY alembic alembic
+COPY alembic.ini alembic.ini
+COPY start.sh start.sh
 
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir . && chmod +x start.sh
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["./start.sh"]
