@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-DB_PATH="./data/psyho.db"
+DB_PATH="/data/psyho.db"
 
 # Если БД существует, но в ней нет таблицы alembic_version —
 # значит она была создана через create_all без alembic.
@@ -10,7 +10,7 @@ DB_PATH="./data/psyho.db"
 python3 - <<'EOF'
 import sqlite3, os
 
-db_path = "./data/psyho.db"
+db_path = "/data/psyho.db"
 if os.path.exists(db_path):
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
