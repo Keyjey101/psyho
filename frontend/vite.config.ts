@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "icons/*.svg"],
       manifest: {
-        name: "PsyHo — Психологический ИИ-консультант",
-        short_name: "PsyHo",
+        name: "Ника — ИИ-психолог",
+        short_name: "Ника",
         description: "ИИ-психолог: анонимно, без осуждения, 24/7",
         theme_color: "#818cf8",
         background_color: "#0f172a",
@@ -26,7 +26,8 @@ export default defineConfig({
         categories: ["health", "lifestyle"],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+        globPatterns: ["**/*.{js,css,html,svg,woff2}", "icons/*.png"],
+        globIgnores: ["illustrations/**"],
         runtimeCaching: [
           {
             urlPattern: /^\/api\//,
