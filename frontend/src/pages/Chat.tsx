@@ -25,6 +25,7 @@ export default function Chat() {
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [awaitingGreeting, setAwaitingGreeting] = useState(false);
 
   const memoryEnabled = (user as any)?.profile?.memory_enabled ?? true;
 
@@ -39,6 +40,11 @@ export default function Chat() {
 
   const handleMessageComplete = useCallback(
     (msg: Message) => {
+      setAwaitingGreeting(false);
+      setLocalMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
       queryClient.invalidateQueries({ queryKey: ["session", sessionId] });
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
     },
@@ -51,10 +57,14 @@ export default function Chat() {
   });
 
   useEffect(() => {
+    if (!sessionId) {
+      setLocalMessages([]);
+      return;
+    }
     if (currentSession?.messages) {
       setLocalMessages(currentSession.messages);
     }
-  }, [currentSession]);
+  }, [currentSession, sessionId]);
 
   useEffect(() => {
     if (isError && sessionId) {
@@ -131,6 +141,7 @@ export default function Chat() {
   const handleContinueSession = async () => {
     if (!previousSession) return;
     const result = await continueSession.mutateAsync(previousSession.id);
+    setAwaitingGreeting(true);
     navigate(`/chat/${result.new_session_id}`);
   };
 
@@ -189,14 +200,14 @@ export default function Chat() {
           messages={localMessages}
           streamingContent={streamingContent}
           agentsUsed={agentsUsed}
-          isStreaming={isStreaming}
+          isStreaming={isStreaming || awaitingGreeting}
           previousSession={previousSession}
           onContinueSession={handleContinueSession}
           isContinuing={continueSession.isPending}
         />
 
-        <ActionPanel onAction={handleAction} disabled={isStreaming} />
-        <InputBar onSend={handleSend} disabled={isStreaming} />
+        <ActionPanel onAction={handleAction} disabled={isStreaming || awaitingGreeting} />
+        <InputBar onSend={handleSend} disabled={isStreaming || awaitingGreeting} />
       </div>
     </div>
   );
