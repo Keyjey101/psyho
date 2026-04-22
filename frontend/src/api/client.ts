@@ -13,13 +13,17 @@ api.interceptors.response.use(
   async (error) => {
     const url: string = error.config?.url || "";
     const isAuthEndpoint = url.includes("/auth/");
+    const onAuthPage = window.location.pathname === "/login" || window.location.pathname === "/register";
+
     if (error.response?.status === 401 && !error.config._retry && !isAuthEndpoint) {
       error.config._retry = true;
       try {
         await api.post("/auth/refresh", {});
         return api(error.config);
       } catch {
-        window.location.href = "/login";
+        if (!onAuthPage) {
+          window.location.href = "/login";
+        }
       }
     }
     return Promise.reject(error);
