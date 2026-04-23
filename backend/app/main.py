@@ -9,7 +9,7 @@ import structlog
 
 from app.config import get_settings
 from app.database import init_db
-from app.routers import auth, sessions, messages, users, mood
+from app.routers import auth, sessions, messages, users, mood, actions
 from app.routers import admin as admin_router
 
 logger = structlog.get_logger()
@@ -49,6 +49,7 @@ app.include_router(messages.router, prefix="/api/sessions", tags=["Messages"])
 app.include_router(users.router, prefix="/api/user", tags=["User"])
 app.include_router(admin_router.router)
 app.include_router(mood.router, prefix="/api/mood", tags=["Mood"])
+app.include_router(actions.router, prefix="/api/sessions", tags=["Actions"])
 
 
 @app.get("/health")

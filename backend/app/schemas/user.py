@@ -9,6 +9,7 @@ class UserProfileResponse(BaseModel):
     crisis_plan: str | None
     memory_enabled: bool = True
     long_term_memory: str | None = None
+    pop_score: int = 0
     updated_at: datetime
 
     model_config = {"from_attributes": True}
@@ -19,6 +20,10 @@ class UserProfileUpdate(BaseModel):
     preferred_style: str | None = Field(None, pattern="^(direct|gentle|balanced)$")
     crisis_plan: str | None = None
     memory_enabled: bool | None = None
+
+
+class PopScoreAdd(BaseModel):
+    count: int = Field(ge=1, le=500)
 
 
 class UserMeResponse(BaseModel):

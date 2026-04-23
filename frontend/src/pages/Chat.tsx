@@ -6,10 +6,9 @@ import { useChat } from "@/hooks/useChat";
 import Sidebar from "@/components/chat/Sidebar";
 import MessageList from "@/components/chat/MessageList";
 import InputBar from "@/components/chat/InputBar";
-import ActionPanel from "@/components/chat/ActionPanel";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Message } from "@/types";
-import { Menu, Brain } from "lucide-react";
+import { Menu, Brain, X } from "lucide-react";
 import api from "@/api/client";
 
 export default function Chat() {
@@ -108,17 +107,6 @@ export default function Chat() {
     sendMessage(content);
   };
 
-  const handleAction = (action: string) => {
-    const actionMessages: Record<string, string> = {
-      insight: "Хочу получить инсайт о себе",
-      breathe: "Помоги мне подышать",
-      write: "Хочу записать одну мысль",
-      exercise: "Дай мне упражнение",
-    };
-    const msg = actionMessages[action];
-    if (msg) handleSend(msg);
-  };
-
   const handleNewChat = async () => {
     navigate("/chat");
   };
@@ -146,7 +134,7 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex h-screen bg-[#FAF6F1]">
+    <div className="flex h-dvh overflow-hidden bg-[#FAF6F1]">
       <Sidebar
         sessions={sessions || []}
         activeSessionId={sessionId}
@@ -160,7 +148,7 @@ export default function Chat() {
         onClose={() => setSidebarOpen(false)}
       />
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <header className="flex items-center gap-3 bg-[#FAF6F1]/90 px-4 py-3 backdrop-blur-sm border-b border-[#E8DDD0]">
           <button
             onClick={() => setSidebarOpen(true)}
@@ -170,7 +158,19 @@ export default function Chat() {
           </button>
 
           <div className="flex h-10 w-10 shrink-0 overflow-hidden rounded-full">
-            <img src="/illustrations/ai_avatar.png" alt="Ника" className="h-full w-full object-cover" />
+            <img
+              src="/illustrations/ai_avatar.png"
+              alt="Ника"
+              className="h-full w-full object-cover"
+              loading="eager"
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (!img.dataset.retried) {
+                  img.dataset.retried = "1";
+                  setTimeout(() => { img.src = "/illustrations/ai_avatar.png?" + Date.now(); }, 800);
+                }
+              }}
+            />
           </div>
 
           <div>
@@ -186,12 +186,24 @@ export default function Chat() {
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={toggleMemory}
-              title={memoryEnabled ? "Память включена" : "Память выключена"}
-              className="rounded-full p-2 transition-colors hover:bg-[#F5EDE4]"
+              title={
+                memoryEnabled
+                  ? "Память включена — Ника запоминает важные факты о тебе между сессиями: имя, темы, прогресс. Это помогает ей лучше понимать тебя со временем. Нажми, чтобы выключить."
+                  : "Память выключена — Ника не сохраняет ничего между сессиями. Каждый раз начинаете с чистого листа. Нажми, чтобы включить."
+              }
+              className="flex items-center gap-1.5 rounded-full px-2 py-1.5 transition-colors hover:bg-[#F5EDE4]"
             >
-              <Brain
-                className={`h-4 w-4 ${memoryEnabled ? "text-[#B8785A]" : "text-[#B8A898]"}`}
-              />
+              <div className="relative">
+                <Brain
+                  className={`h-4 w-4 ${memoryEnabled ? "text-[#B8785A]" : "text-[#B8A898]"}`}
+                />
+                {!memoryEnabled && (
+                  <X className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-white text-red-400" />
+                )}
+              </div>
+              <span className={`hidden text-[12px] sm:inline ${memoryEnabled ? "text-[#8A7A6A]" : "text-[#B8A898]"}`}>
+                {memoryEnabled ? "Память вкл." : "Память выкл."}
+              </span>
             </button>
           </div>
         </header>
@@ -206,8 +218,11 @@ export default function Chat() {
           isContinuing={continueSession.isPending}
         />
 
-        <ActionPanel onAction={handleAction} disabled={isStreaming || awaitingGreeting} />
-        <InputBar onSend={handleSend} disabled={isStreaming || awaitingGreeting} />
+        <InputBar
+          onSend={handleSend}
+          disabled={isStreaming || awaitingGreeting}
+          sessionId={sessionId}
+        />
       </div>
     </div>
   );

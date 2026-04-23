@@ -56,6 +56,14 @@ export default function MessageList({
               src="/illustrations/chat_welcome.png"
               alt=""
               className="h-auto w-[200px] object-contain sm:w-[240px]"
+              loading="eager"
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (!img.dataset.retried) {
+                  img.dataset.retried = "1";
+                  setTimeout(() => { img.src = "/illustrations/chat_welcome.png?" + Date.now(); }, 800);
+                }
+              }}
             />
           </motion.div>
           <MessageItem message={makeWelcomeMessage()} />

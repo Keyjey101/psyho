@@ -8,6 +8,7 @@ interface ProfileData {
   user: User | null;
   preferred_style: string;
   therapy_goals: string;
+  pop_score: number;
 }
 
 const STYLES = [
@@ -21,6 +22,7 @@ export default function Profile() {
     user: null,
     preferred_style: "balanced",
     therapy_goals: "",
+    pop_score: 0,
   });
   const [saved, setSaved] = useState(false);
   const navigate = useNavigate();
@@ -31,6 +33,7 @@ export default function Profile() {
         user: data,
         preferred_style: data.profile?.preferred_style || "balanced",
         therapy_goals: data.profile?.therapy_goals || "",
+        pop_score: data.profile?.pop_score || 0,
       });
     });
   }, []);
@@ -103,6 +106,14 @@ export default function Profile() {
               className="input-field min-h-[100px] resize-none"
             />
           </div>
+
+          {profile.pop_score > 0 && (
+            <div className="rounded-2xl border border-surface-100 bg-white p-6 shadow-sm">
+              <h2 className="mb-1 text-lg font-semibold text-surface-900">Поп-ит</h2>
+              <p className="text-sm text-surface-500">Всего лопнуто пузырей</p>
+              <p className="mt-2 text-3xl font-bold text-primary-600">{profile.pop_score}</p>
+            </div>
+          )}
 
           <button onClick={handleSave} className="btn-primary w-full">
             <Save className="h-4 w-4" />
