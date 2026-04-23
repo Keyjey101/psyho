@@ -10,7 +10,7 @@ export default function ThinkingIndicator({ agents }: ThinkingIndicatorProps) {
     return (
       <div className="flex gap-3">
         <div className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full">
-          <img src="/illustrations/ai_avatar.png" alt="Ника" className="h-full w-full object-cover" />
+          <img src="/illustrations/opt/ai_avatar.webp" alt="Ника" className="h-full w-full object-cover" />
         </div>
         <div className="flex items-center gap-1.5 rounded-[18px] rounded-bl-[4px] border border-[#D8CDC0] bg-white px-4 py-3">
           {[0, 160, 320].map((delay) => (

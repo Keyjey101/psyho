@@ -1,21 +1,22 @@
 import { useEffect, useState, useRef } from "react";
 
+// Phases: inhale 4s (BL→BR), hold 7s (BR→top), exhale 8s (top→BL)
 const PHASES = [
-  { label: "Вдох", duration: 4, color: "#B8785A" },
-  { label: "Выдох", duration: 7, color: "#6B9E7A" },
-  { label: "Пауза", duration: 8, color: "#6B7E9E" },
+  { label: "Вдох",     duration: 4, color: "#B8785A" },
+  { label: "Задержка", duration: 7, color: "#6B7E9E" },
+  { label: "Выдох",    duration: 8, color: "#6B9E7A" },
 ] as const;
 
-const TOTAL = PHASES.reduce((s, p) => s + p.duration, 0); // 19s
+const TOTAL = 19;
 
-const CX = 140;
-const CY = 148;
-const R = 108;
-const CORNER = 28;
+const CX = 150;
+const CY = 162;
+const R = 118;
+const CORNER = 30;
 
+// Clockwise from bottom-left: BL(150°) → BR(30°) → top(-90°)
 function trianglePoints() {
-  const angles = [-90, 150, 30];
-  return angles.map((a) => {
+  return [150, 30, -90].map((a) => {
     const rad = (a * Math.PI) / 180;
     return { x: CX + R * Math.cos(rad), y: CY + R * Math.sin(rad) };
   });
@@ -53,12 +54,21 @@ function buildPath() {
 
 const PATH_D = buildPath();
 
+// Maps elapsed time (0-19s) to path fraction (0-1) non-uniformly
+function getPathFraction(t: number): number {
+  const clamped = ((t % TOTAL) + TOTAL) % TOTAL;
+  if (clamped < 4)        return (clamped / 4) * (1 / 3);
+  else if (clamped < 11)  return 1 / 3 + ((clamped - 4) / 7) * (1 / 3);
+  else                    return 2 / 3 + ((clamped - 11) / 8) * (1 / 3);
+}
+
 export default function BreathingExercise() {
   const pathRef = useRef<SVGPathElement>(null);
   const [pathLength, setPathLength] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
-  const [dotPos, setDotPos] = useState({ x: CX, y: CY - R });
+  const startedAtRef = useRef<number | null>(null);
+  const elapsedAtPauseRef = useRef(0);
 
   useEffect(() => {
     if (pathRef.current) {
@@ -68,41 +78,72 @@ export default function BreathingExercise() {
 
   useEffect(() => {
     if (!running || pathLength === 0) return;
-    const startTime = performance.now() - elapsed * 1000;
+
+    startedAtRef.current = performance.now() - elapsedAtPauseRef.current * 1000;
     let raf: number;
+
     const tick = (now: number) => {
-      const newElapsed = ((now - startTime) / 1000) % TOTAL;
-      setElapsed(newElapsed);
-      const frac = newElapsed / TOTAL;
-      const pt = pathRef.current?.getPointAtLength(frac * pathLength);
-      if (pt) setDotPos({ x: pt.x, y: pt.y });
+      const newElapsed = (now - startedAtRef.current!) / 1000;
+      setElapsed(newElapsed % TOTAL);
       raf = requestAnimationFrame(tick);
     };
+
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      elapsedAtPauseRef.current = elapsed;
+      cancelAnimationFrame(raf);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, pathLength]);
 
-  // Current phase
+  // Determine current phase
   let acc = 0;
   let phaseIdx = 0;
   let phaseElapsed = 0;
+  const e = ((elapsed % TOTAL) + TOTAL) % TOTAL;
   for (let i = 0; i < PHASES.length; i++) {
-    if (elapsed < acc + PHASES[i].duration) {
+    if (e < acc + PHASES[i].duration) {
       phaseIdx = i;
-      phaseElapsed = elapsed - acc;
+      phaseElapsed = e - acc;
       break;
     }
     acc += PHASES[i].duration;
   }
   const phase = PHASES[phaseIdx];
 
-  // Stroke showing progress (full cycle)
-  const strokeOffset = pathLength > 0 ? (1 - elapsed / TOTAL) * pathLength : pathLength;
+  // Dot position
+  const frac = getPathFraction(e);
+  const dotPos = pathLength > 0 && pathRef.current
+    ? (() => {
+        const pt = pathRef.current.getPointAtLength(frac * pathLength);
+        return { x: pt.x, y: pt.y };
+      })()
+    : { x: CX + R * Math.cos((150 * Math.PI) / 180), y: CY + R * Math.sin((150 * Math.PI) / 180) };
+
+  // Progress stroke — fills as current phase progresses (resets each phase)
+  const phaseStart = (phaseIdx === 0 ? 0 : phaseIdx === 1 ? 1 / 3 : 2 / 3);
+  const phaseEnd = phaseIdx === 2 ? 1 : phaseStart + 1 / 3;
+  const phaseFrac = phaseElapsed / phase.duration;
+  const progressOffset = pathLength > 0
+    ? pathLength - (phaseStart + phaseFrac * (phaseEnd - phaseStart)) * pathLength
+    : pathLength;
+
+  const handleToggle = () => {
+    if (running) {
+      elapsedAtPauseRef.current = elapsed;
+    }
+    setRunning((r) => !r);
+  };
 
   return (
     <div className="flex flex-col items-center gap-6 px-4 py-8">
       <div className="relative">
-        <svg width="280" height="280" viewBox="0 0 280 280">
+        <svg
+          width="300"
+          height="300"
+          viewBox="0 0 300 300"
+          className="max-w-[300px] w-full"
+        >
           {/* Background track */}
           <path
             d={PATH_D}
@@ -112,7 +153,7 @@ export default function BreathingExercise() {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          {/* Progress arc */}
+          {/* Progress arc — current phase segment */}
           {pathLength > 0 && (
             <path
               d={PATH_D}
@@ -122,14 +163,14 @@ export default function BreathingExercise() {
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeDasharray={pathLength}
-              strokeDashoffset={strokeOffset}
+              strokeDashoffset={progressOffset}
               style={{ transition: "stroke 0.6s ease" }}
             />
           )}
-          {/* Invisible path for getPointAtLength */}
+          {/* Invisible reference path */}
           <path ref={pathRef} d={PATH_D} fill="none" stroke="none" />
 
-          {/* Dot — positioned via JS */}
+          {/* Dot */}
           <circle
             cx={dotPos.x}
             cy={dotPos.y}
@@ -138,7 +179,6 @@ export default function BreathingExercise() {
             opacity="0.9"
             style={{ transition: "fill 0.6s ease" }}
           />
-          {/* Inner highlight */}
           <circle
             cx={dotPos.x - 6}
             cy={dotPos.y - 6}
@@ -148,7 +188,7 @@ export default function BreathingExercise() {
           />
         </svg>
 
-        {/* Phase label centred */}
+        {/* Phase label centred inside SVG */}
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1">
           <span
             className="text-2xl font-semibold transition-colors duration-500"
@@ -163,13 +203,13 @@ export default function BreathingExercise() {
       </div>
 
       <button
-        onClick={() => setRunning((r) => !r)}
+        onClick={handleToggle}
         className="btn-primary px-8 py-3"
       >
         {running ? "Пауза" : elapsed === 0 ? "Начать" : "Продолжить"}
       </button>
 
-      <p className="max-w-[220px] text-center text-sm text-[#8A7A6A]">
+      <p className="max-w-[240px] text-center text-sm text-[#8A7A6A]">
         Следи за точкой — она ведёт тебя через дыхание
       </p>
     </div>

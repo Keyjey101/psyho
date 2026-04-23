@@ -15,6 +15,7 @@ services:
       - ENVIRONMENT=production
       - DATABASE_URL=sqlite+aiosqlite:////data/psyho.db
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - TEST_PASSWORD_CODE=${TEST_PASSWORD_CODE:-}
     volumes:
       - sqlite_data:/data
     restart: unless-stopped

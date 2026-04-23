@@ -182,7 +182,8 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
 
                 msg_result = await db.execute(
                     select(Message)
-                    .where(Message.session_id == session_id)
+                    .join(ChatSession, Message.session_id == ChatSession.id)
+                    .where(Message.session_id == session_id, ChatSession.user_id == user_id)
                     .order_by(Message.created_at)
                 )
                 all_messages = list(msg_result.scalars().all())

@@ -59,7 +59,7 @@ export default function InputBar({ onSend, disabled, sessionId }: InputBarProps)
       <div className="mx-auto max-w-3xl">
         <div className="flex items-end gap-2">
           <ActionPanel sessionId={sessionId} disabled={disabled} />
-          <div className="flex flex-1 items-end gap-2 rounded-[24px] border border-[#D8CDC0] bg-white px-4 py-2">
+          <div className="flex flex-1 items-center gap-2 rounded-[24px] border border-[#D8CDC0] bg-white px-4 py-2">
             <VoiceInput
               onTranscript={(text) => setContent((prev) => {
                 const next = prev ? prev + " " + text : text;

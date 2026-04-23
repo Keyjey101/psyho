@@ -53,7 +53,7 @@ export default function MessageList({
             className="flex justify-center"
           >
             <img
-              src="/illustrations/chat_welcome.png"
+              src="/illustrations/opt/chat_welcome.webp"
               alt=""
               className="h-auto w-[200px] object-contain sm:w-[240px]"
               loading="eager"
@@ -61,7 +61,7 @@ export default function MessageList({
                 const img = e.currentTarget;
                 if (!img.dataset.retried) {
                   img.dataset.retried = "1";
-                  setTimeout(() => { img.src = "/illustrations/chat_welcome.png?" + Date.now(); }, 800);
+                  setTimeout(() => { img.src = "/illustrations/opt/chat_welcome.webp?" + Date.now(); }, 800);
                 }
               }}
             />

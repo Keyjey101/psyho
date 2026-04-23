@@ -25,7 +25,7 @@ export default function Hero() {
       >
         <div className="mx-auto mb-8 flex h-[200px] w-[200px] items-center justify-center sm:h-[280px] sm:w-[280px]">
           <img
-            src="/illustrations/landing_hero.png"
+            src="/illustrations/opt/landing_hero.webp"
             alt=""
             className="h-full w-full object-contain"
           />

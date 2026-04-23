@@ -37,7 +37,7 @@ export default function AuthEmail() {
       >
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center">
           <img
-            src="/illustrations/ai_avatar.png"
+            src="/illustrations/opt/ai_avatar.webp"
             alt=""
             className="h-full w-full object-contain"
           />

@@ -1,8 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
+import { Volume2, VolumeX } from "lucide-react";
 import api from "@/api/client";
 
-const ROWS = 5;
-const COLS = 6;
+const ROWS = 6;
+const COLS = 5;
 const TOTAL = ROWS * COLS;
 
 const COLORS = [
@@ -16,9 +18,32 @@ function makeGrid() {
   }));
 }
 
+function playPop(muted: boolean) {
+  if (muted) return;
+  try {
+    const ctx = new AudioContext();
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.1), ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < buf.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / buf.length, 2);
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.35, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+    src.connect(gain);
+    gain.connect(ctx.destination);
+    src.start();
+  } catch {
+    // Web Audio not supported
+  }
+}
+
 export default function PopItGame() {
   const [bubbles, setBubbles] = useState(makeGrid);
   const [sessionScore, setSessionScore] = useState(0);
+  const [muted, setMuted] = useState(false);
   const pendingRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -46,6 +71,7 @@ export default function PopItGame() {
 
   const pop = (i: number) => {
     if (bubbles[i].popped) return;
+    playPop(muted);
     setBubbles((prev) => prev.map((b, idx) => (idx === i ? { ...b, popped: true } : b)));
     setSessionScore((s) => s + 1);
     pendingRef.current += 1;
@@ -55,31 +81,41 @@ export default function PopItGame() {
   };
 
   return (
-    <div className="flex flex-col items-center gap-4 px-4 py-6">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-col items-center gap-5 px-4 py-6">
+      <div className="flex items-center gap-3">
         <span className="text-sm text-[#8A7A6A]">Очки этой сессии:</span>
         <span className="text-lg font-semibold text-[#B8785A]">{sessionScore}</span>
+        <button
+          onClick={() => setMuted((m) => !m)}
+          className="ml-2 rounded-full p-1.5 text-[#8A7A6A] hover:bg-[#F5EDE4] transition-colors"
+          title={muted ? "Включить звук" : "Выключить звук"}
+        >
+          {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+        </button>
       </div>
 
       <div
-        className="grid gap-3"
+        className="grid w-full max-w-[300px] gap-3"
         style={{ gridTemplateColumns: `repeat(${COLS}, 1fr)` }}
       >
         {bubbles.map((b, i) => (
-          <button
+          <motion.button
             key={i}
             onClick={() => pop(i)}
-            className="rounded-full transition-all duration-150 active:scale-95"
+            animate={
+              b.popped
+                ? { scale: [1, 1.22, 0.82], opacity: [1, 1, 0.45] }
+                : { scale: 1, opacity: 1 }
+            }
+            transition={{ duration: 0.22, times: [0, 0.28, 1], ease: "easeOut" }}
+            className="rounded-full"
             style={{
-              width: 44,
-              height: 44,
-              background: b.popped
-                ? "rgba(0,0,0,0.08)"
-                : b.color,
+              width: 52,
+              height: 52,
+              background: b.popped ? "rgba(0,0,0,0.08)" : b.color,
               boxShadow: b.popped
                 ? "inset 0 3px 6px rgba(0,0,0,0.18)"
-                : "0 4px 8px rgba(0,0,0,0.12), inset 0 -2px 4px rgba(255,255,255,0.4)",
-              transform: b.popped ? "scale(0.88)" : "scale(1)",
+                : "0 5px 10px rgba(0,0,0,0.14), inset 0 -2px 5px rgba(255,255,255,0.45)",
             }}
           />
         ))}

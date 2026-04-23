@@ -37,7 +37,7 @@ export default function Login() {
       <div className="w-full max-w-sm rounded-[20px] bg-white p-10" style={{ boxShadow: "0 4px 24px rgba(90,80,72,0.08)" }}>
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center">
           <img
-            src="/illustrations/auth_login.png"
+            src="/illustrations/opt/auth_login.webp"
             alt=""
             className="h-full w-full object-contain"
           />

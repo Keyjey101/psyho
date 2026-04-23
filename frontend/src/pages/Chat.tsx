@@ -159,7 +159,7 @@ export default function Chat() {
 
           <div className="flex h-10 w-10 shrink-0 overflow-hidden rounded-full">
             <img
-              src="/illustrations/ai_avatar.png"
+              src="/illustrations/opt/ai_avatar.webp"
               alt="Ника"
               className="h-full w-full object-cover"
               loading="eager"
@@ -167,7 +167,7 @@ export default function Chat() {
                 const img = e.currentTarget;
                 if (!img.dataset.retried) {
                   img.dataset.retried = "1";
-                  setTimeout(() => { img.src = "/illustrations/ai_avatar.png?" + Date.now(); }, 800);
+                  setTimeout(() => { img.src = "/illustrations/opt/ai_avatar.webp?" + Date.now(); }, 800);
                 }
               }}
             />

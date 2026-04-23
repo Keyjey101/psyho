@@ -48,7 +48,7 @@ export default function MessageItem({ message, isStreaming }: MessageItemProps) 
     >
       <div className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full">
         <img
-          src="/illustrations/ai_avatar.png"
+          src="/illustrations/opt/ai_avatar.webp"
           alt="Ника"
           className="h-full w-full object-cover"
           loading="eager"
@@ -56,7 +56,7 @@ export default function MessageItem({ message, isStreaming }: MessageItemProps) 
             const img = e.currentTarget;
             if (!img.dataset.retried) {
               img.dataset.retried = "1";
-              setTimeout(() => { img.src = "/illustrations/ai_avatar.png?" + Date.now(); }, 800);
+              setTimeout(() => { img.src = "/illustrations/opt/ai_avatar.webp?" + Date.now(); }, 800);
             }
           }}
         />

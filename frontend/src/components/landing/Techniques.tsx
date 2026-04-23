@@ -2,37 +2,37 @@ import { motion } from "framer-motion";
 
 const techniques = [
   {
-    emoji: "🧠",
+    img: "/illustrations/opt/method_cbt.webp",
     name: "Когнитивно-поведенческая терапия",
     shortName: "КПТ",
     description: "Работа с мыслями, которые мешают жить",
   },
   {
-    emoji: "🌙",
+    img: "/illustrations/opt/method_jung.webp",
     name: "Юнгианский анализ",
     shortName: "Юнг",
     description: "Понимание глубинных слоёв личности и снов",
   },
   {
-    emoji: "🧭",
+    img: "/illustrations/opt/method_act.webp",
     name: "Терапия принятия и ответственности",
     shortName: "ACT",
     description: "Действовать по ценностям, не убегая от чувств",
   },
   {
-    emoji: "🎭",
+    img: "/illustrations/opt/method_ifs.webp",
     name: "Системная семейная терапия",
     shortName: "IFS",
     description: "Примирение внутренних частей личности",
   },
   {
-    emoji: "📖",
+    img: "/illustrations/opt/method_narrative.webp",
     name: "Нарративная терапия",
     shortName: "Нарратив",
     description: "Переписать историю о себе по-новому",
   },
   {
-    emoji: "🌿",
+    img: "/illustrations/opt/method_somatic.webp",
     name: "Соматическая терапия",
     shortName: "Соматика",
     description: "Телесное осознание и работа с напряжением",
@@ -62,7 +62,7 @@ export default function Techniques() {
               className="rounded-2xl border border-[#E8DDD0] bg-white p-5 transition-all duration-300 hover:border-[#D8CDC0] hover:bg-[#FAF6F1]"
               style={{ boxShadow: "0 2px 12px rgba(90,80,72,0.06)" }}
             >
-              <div className="text-[32px]">{t.emoji}</div>
+              <img src={t.img} alt={t.shortName} className="h-12 w-12 object-contain" />
               <h4 className="mt-3 font-serif text-[16px] font-semibold text-[#5A5048]">
                 {t.shortName}
               </h4>

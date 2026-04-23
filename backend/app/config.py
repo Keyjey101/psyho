@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     SMTP_FROM: str = "noreply@psyho.app"
     SMTP_TLS: bool = True
 
+    TEST_PASSWORD_CODE: str = ""
+
     OTP_EXPIRE_MINUTES: int = 10
     OTP_MAX_ATTEMPTS: int = 5
     OTP_RATE_LIMIT_COUNT: int = 3

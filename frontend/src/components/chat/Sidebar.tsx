@@ -37,7 +37,7 @@ export default function Sidebar({
       <div className="flex items-center justify-between border-b border-[#E8DDD0] bg-[#FAF6F1] px-4 py-4">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 overflow-hidden rounded-full">
-            <img src="/illustrations/ai_avatar.png" alt="Ника" className="h-full w-full object-cover" />
+            <img src="/illustrations/opt/ai_avatar.webp" alt="Ника" className="h-full w-full object-cover" />
           </div>
           <span className="font-serif text-xl font-bold text-[#5A5048]">Ника</span>
         </div>

@@ -279,7 +279,7 @@ class Orchestrator:
 
         stream = await client.chat.completions.create(
             model=settings.ZAI_MODEL,
-            max_tokens=2048,
+            max_tokens=3000,
             temperature=0.7,
             messages=messages,
             stream=True,
