@@ -19,6 +19,7 @@ RUN echo 'server { \
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ { \
         expires 1y; \
         add_header Cache-Control "public, immutable"; \
+        max_ranges 0; \
     } \
     location ~* ^/api/sessions/[^/]+/chat$ { \
         proxy_pass http://backend:8000; \
