@@ -1,4 +1,5 @@
 import random
+import secrets
 import string
 from datetime import datetime, timedelta, timezone
 
@@ -156,7 +157,9 @@ async def verify_code(body: VerifyCodeRequest, response: Response, db: AsyncSess
     is_new_user = user is None
 
     if is_new_user:
-        user = User(email=email, name="", password=None)
+        # password field has NOT NULL DB constraint (legacy); store a random token
+        # that can never be used to log in via password auth
+        user = User(email=email, name="", password=_hash_code(secrets.token_hex(32)))
         db.add(user)
         await db.flush()
         profile = UserProfile(user_id=user.id)

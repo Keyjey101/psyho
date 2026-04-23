@@ -26,8 +26,8 @@ export default defineConfig({
         categories: ["health", "lifestyle"],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,woff2}", "icons/*.png"],
-        globIgnores: ["illustrations/**"],
+        globPatterns: ["**/*.{js,css,html,svg,woff2}"],
+        globIgnores: ["illustrations/**", "icons/*.png"],
         runtimeCaching: [
           {
             urlPattern: /^\/api\//,
@@ -37,7 +37,12 @@ export default defineConfig({
             urlPattern: /^\/ws\//,
             handler: "NetworkOnly",
           },
+          {
+            urlPattern: /\/illustrations\//,
+            handler: "NetworkOnly",
+          },
         ],
+        navigateFallbackDenylist: [/^\/api/, /^\/ws/],
       },
     }),
   ],

@@ -13,10 +13,12 @@ api.interceptors.response.use(
   async (error) => {
     const url: string = error.config?.url || "";
     const isAuthEndpoint = url.includes("/auth/");
-    const onAuthPage = window.location.pathname === "/login" || window.location.pathname === "/register";
+    const path = window.location.pathname;
+    const onAuthPage = path.startsWith("/auth") || path === "/login" || path === "/register";
 
-    const publicPages = ["/", "/login", "/register"];
-    const onPublicPage = publicPages.includes(window.location.pathname);
+    const publicPrefixes = ["/auth", "/login", "/register"];
+    const publicExact = ["/"];
+    const onPublicPage = publicExact.includes(path) || publicPrefixes.some((p) => path.startsWith(p));
 
     if (error.response?.status === 401 && !error.config._retry && !isAuthEndpoint) {
       error.config._retry = true;
@@ -25,7 +27,7 @@ api.interceptors.response.use(
         return api(error.config);
       } catch {
         if (!onAuthPage && !onPublicPage) {
-          window.location.href = "/login";
+          window.location.href = "/auth";
         }
       }
     }
