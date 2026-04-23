@@ -30,6 +30,18 @@ class Settings(BaseSettings):
     CONTEXT_COMPRESSION_THRESHOLD: int = 40
     CONTEXT_KEEP_MESSAGES: int = 20
 
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASS: str = ""
+    SMTP_FROM: str = "noreply@psyho.app"
+    SMTP_TLS: bool = True
+
+    OTP_EXPIRE_MINUTES: int = 10
+    OTP_MAX_ATTEMPTS: int = 5
+    OTP_RATE_LIMIT_COUNT: int = 3
+    OTP_RATE_LIMIT_MINUTES: int = 10
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     @field_validator("SECRET_KEY")

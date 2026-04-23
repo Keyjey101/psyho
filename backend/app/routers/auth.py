@@ -1,25 +1,44 @@
+import random
+import string
+from datetime import datetime, timedelta, timezone
+
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from sqlalchemy import select
+from passlib.context import CryptContext
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.database import get_db
-from app.models.models import User
-from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, RefreshRequest
+from app.models.models import EmailVerificationCode, User, UserProfile
+from app.schemas.auth import (
+    LoginRequest,
+    RegisterRequest,
+    RefreshRequest,
+    SendCodeRequest,
+    SendCodeResponse,
+    TokenResponse,
+    VerifyCodeRequest,
+    VerifyCodeResponse,
+)
 from app.services.auth import (
-    hash_password,
     authenticate_user,
     create_access_token,
     create_refresh_token,
     decode_token,
+    hash_password,
 )
+from app.services.email_service import send_otp_email
 from app.middleware.auth import get_current_user
 
 router = APIRouter()
+logger = structlog.get_logger()
+settings = get_settings()
 
 COOKIE_ACCESS_MAX_AGE = 15 * 60
 COOKIE_REFRESH_MAX_AGE = 30 * 24 * 60 * 60
+
+_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def _set_token_cookies(response: Response, access: str, refresh: str):
@@ -43,9 +62,121 @@ def _set_token_cookies(response: Response, access: str, refresh: str):
     )
 
 
+def _generate_otp() -> str:
+    return "".join(random.choices(string.digits, k=6))
+
+
+def _hash_code(code: str) -> str:
+    return _pwd_context.hash(code)
+
+
+def _verify_code(plain: str, hashed: str) -> bool:
+    return _pwd_context.verify(plain, hashed)
+
+
+@router.post("/send-code", response_model=SendCodeResponse)
+async def send_code(body: SendCodeRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    email = body.email.lower().strip()
+    now = datetime.now(timezone.utc)
+    window_start = now - timedelta(minutes=settings.OTP_RATE_LIMIT_MINUTES)
+
+    rate_result = await db.execute(
+        select(EmailVerificationCode).where(
+            EmailVerificationCode.email == email,
+            EmailVerificationCode.created_at >= window_start,
+        )
+    )
+    recent_codes = rate_result.scalars().all()
+    if len(recent_codes) >= settings.OTP_RATE_LIMIT_COUNT:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Слишком много попыток. Попробуй через {settings.OTP_RATE_LIMIT_MINUTES} минут."
+        )
+
+    await db.execute(
+        delete(EmailVerificationCode).where(
+            EmailVerificationCode.email == email,
+            EmailVerificationCode.used == True,  # noqa: E712
+        )
+    )
+
+    user_result = await db.execute(select(User).where(User.email == email))
+    existing_user = user_result.scalar_one_or_none()
+
+    code = _generate_otp()
+    code_record = EmailVerificationCode(
+        email=email,
+        code_hash=_hash_code(code),
+        expires_at=now + timedelta(minutes=settings.OTP_EXPIRE_MINUTES),
+    )
+    db.add(code_record)
+    await db.commit()
+
+    sent = await send_otp_email(email, code)
+    if not sent:
+        raise HTTPException(status_code=503, detail="Не удалось отправить письмо. Попробуй позже.")
+
+    return SendCodeResponse(user_exists=existing_user is not None)
+
+
+@router.post("/verify-code", response_model=VerifyCodeResponse)
+async def verify_code(body: VerifyCodeRequest, response: Response, db: AsyncSession = Depends(get_db)):
+    email = body.email.lower().strip()
+    now = datetime.now(timezone.utc)
+
+    codes_result = await db.execute(
+        select(EmailVerificationCode).where(
+            EmailVerificationCode.email == email,
+            EmailVerificationCode.used == False,  # noqa: E712
+            EmailVerificationCode.expires_at > now,
+        ).order_by(EmailVerificationCode.created_at.desc())
+    )
+    code_record = codes_result.scalars().first()
+
+    if not code_record:
+        raise HTTPException(status_code=400, detail="Код недействителен или истёк. Запроси новый.")
+
+    if code_record.attempts >= settings.OTP_MAX_ATTEMPTS:
+        raise HTTPException(status_code=400, detail="Превышено число попыток. Запроси новый код.")
+
+    if not _verify_code(body.code, code_record.code_hash):
+        code_record.attempts += 1
+        await db.commit()
+        remaining = settings.OTP_MAX_ATTEMPTS - code_record.attempts
+        raise HTTPException(
+            status_code=400,
+            detail=f"Неверный код. Осталось попыток: {remaining}."
+        )
+
+    code_record.used = True
+    await db.commit()
+
+    user_result = await db.execute(select(User).where(User.email == email))
+    user = user_result.scalar_one_or_none()
+    is_new_user = user is None
+
+    if is_new_user:
+        user = User(email=email, name="", password=None)
+        db.add(user)
+        await db.flush()
+        profile = UserProfile(user_id=user.id)
+        db.add(profile)
+        await db.commit()
+        await db.refresh(user)
+
+    access = create_access_token({"sub": user.id})
+    refresh = create_refresh_token({"sub": user.id})
+    _set_token_cookies(response, access, refresh)
+
+    return VerifyCodeResponse(
+        access_token=access,
+        refresh_token=refresh,
+        is_new_user=is_new_user,
+    )
+
+
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(body: RegisterRequest, response: Response, db: AsyncSession = Depends(get_db)):
-    from sqlalchemy import select
     result = await db.execute(select(User).where(User.email == body.email))
     if result.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Email already registered")

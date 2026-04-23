@@ -38,3 +38,24 @@ class UserResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class SendCodeRequest(BaseModel):
+    email: EmailStr
+
+
+class SendCodeResponse(BaseModel):
+    user_exists: bool
+    message: str = "Код отправлен"
+
+
+class VerifyCodeRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class VerifyCodeResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    is_new_user: bool

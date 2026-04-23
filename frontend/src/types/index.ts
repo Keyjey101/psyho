@@ -14,6 +14,9 @@ export interface UserProfile {
   crisis_plan: string | null;
   memory_enabled: boolean;
   long_term_memory: string | null;
+  pop_score?: number;
+  address_form: string;
+  gender: string | null;
   updated_at: string;
 }
 
