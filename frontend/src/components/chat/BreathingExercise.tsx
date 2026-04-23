@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 
-// Phases: inhale 4s (BL→top), hold 7s (top→BR), exhale 8s (BR→BL)
+// Phases: inhale 4s (BL→top), exhale 8s (top→BR), pause 7s (BR→BL)
 const PHASES = [
-  { label: "Вдох",     duration: 4, color: "#B8785A" },
-  { label: "Задержка", duration: 7, color: "#6B7E9E" },
-  { label: "Выдох",    duration: 8, color: "#6B9E7A" },
+  { label: "Вдох",   duration: 4, color: "#B8785A" },
+  { label: "Выдох",  duration: 8, color: "#6B9E7A" },
+  { label: "Пауза",  duration: 7, color: "#6B7E9E" },
 ] as const;
 
 const TOTAL = 19;
@@ -58,8 +58,8 @@ const PATH_D = buildPath();
 function getPathFraction(t: number): number {
   const clamped = ((t % TOTAL) + TOTAL) % TOTAL;
   if (clamped < 4)        return (clamped / 4) * (1 / 3);
-  else if (clamped < 11)  return 1 / 3 + ((clamped - 4) / 7) * (1 / 3);
-  else                    return 2 / 3 + ((clamped - 11) / 8) * (1 / 3);
+  else if (clamped < 12)  return 1 / 3 + ((clamped - 4) / 8) * (1 / 3);
+  else                    return 2 / 3 + ((clamped - 12) / 7) * (1 / 3);
 }
 
 export default function BreathingExercise() {
