@@ -45,6 +45,12 @@ async def update_me(
         profile.crisis_plan = body.crisis_plan
     if body.memory_enabled is not None:
         profile.memory_enabled = body.memory_enabled
+    if body.address_form is not None:
+        profile.address_form = body.address_form
+    if body.gender is not None:
+        profile.gender = body.gender
+    if body.name is not None:
+        user.name = body.name
 
     await db.commit()
     await db.refresh(profile)

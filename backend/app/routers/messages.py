@@ -86,6 +86,9 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
         profile = profile_result.scalar_one_or_none()
         preferred_style = profile.preferred_style if profile else "balanced"
         long_term_memory = profile.long_term_memory if (profile and profile.memory_enabled) else ""
+        therapy_goals = profile.therapy_goals or "" if profile else ""
+        address_form = getattr(profile, "address_form", "ты") if profile else "ты"
+        gender = getattr(profile, "gender", "") if profile else ""
 
         continuation_context = session.continuation_context
         existing_msg_result = await db.execute(
@@ -164,8 +167,8 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
             if not content:
                 continue
 
-            if len(content) > 10000:
-                await websocket.send_json({"type": "error", "message": "Сообщение слишком длинное (максимум 10000 символов)"})
+            if len(content) > 4000:
+                await websocket.send_json({"type": "error", "message": "Сообщение слишком длинное (максимум 4000 символов)"})
                 continue
 
             async with async_session() as db:
@@ -199,7 +202,10 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
             full_response = ""
 
             try:
-                async for event in orchestrator.process(content, history_dicts, summary_text, preferred_style, long_term_memory):
+                async for event in orchestrator.process(
+                    content, history_dicts, summary_text, preferred_style, long_term_memory,
+                    therapy_goals, address_form, gender,
+                ):
                     if event["type"] == "token":
                         await websocket.send_json({"type": "token", "content": event["content"]})
                         full_response += event["content"]

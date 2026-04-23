@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from app.database import Base
-from app.models.models import User, ChatSession, Message, UserProfile
+from app.models.models import User, ChatSession, Message, UserProfile, EmailVerificationCode
 from app.config import get_settings
 
 config = context.config

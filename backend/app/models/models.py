@@ -20,8 +20,8 @@ class User(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
-    password: Mapped[str] = mapped_column(Text, nullable=False)
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    password: Mapped[str | None] = mapped_column(Text, nullable=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -67,9 +67,23 @@ class UserProfile(Base):
     memory_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
     long_term_memory: Mapped[str | None] = mapped_column(Text)
     pop_score: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    address_form: Mapped[str] = mapped_column(String(10), default="ты", server_default="ты")
+    gender: Mapped[str | None] = mapped_column(String(20), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
     user = relationship("User", back_populates="profile")
+
+
+class EmailVerificationCode(Base):
+    __tablename__ = "email_verification_codes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    code_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    used: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
 
 class MoodEntry(Base):

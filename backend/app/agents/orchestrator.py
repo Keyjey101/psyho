@@ -148,6 +148,9 @@ class Orchestrator:
         session_summary: str = "",
         preferred_style: str = "balanced",
         long_term_memory: str = "",
+        therapy_goals: str = "",
+        address_form: str = "ты",
+        gender: str = "",
     ):
         if _check_crisis(message):
             yield {"type": "agents_used", "agents": ["crisis"]}
@@ -176,7 +179,10 @@ class Orchestrator:
 
         yield {"type": "agents_used", "agents": agent_names if agent_names else ["orchestrator"]}
 
-        async for token in self._synthesize(message, history, perspectives, session_summary, preferred_style, long_term_memory):
+        async for token in self._synthesize(
+            message, history, perspectives, session_summary,
+            preferred_style, long_term_memory, therapy_goals, address_form, gender,
+        ):
             yield token
 
     async def _synthesize(
@@ -187,6 +193,9 @@ class Orchestrator:
         session_summary: str,
         preferred_style: str = "balanced",
         long_term_memory: str = "",
+        therapy_goals: str = "",
+        address_form: str = "ты",
+        gender: str = "",
     ):
         perspectives_text = ""
         if perspectives:
@@ -245,13 +254,24 @@ class Orchestrator:
         if long_term_memory:
             messages[0]["content"] += f"\n\n## Что я знаю об этом человеке\n{long_term_memory}"
 
+        if therapy_goals:
+            messages[0]["content"] += f"\n\n## Цели пользователя в терапии\n{therapy_goals}"
+
         if preferred_style and preferred_style != "balanced":
             style_instructions = {
-                "direct": "\n\n## Стиль общения пользователя\nПользователь предпочитает прямой, структурированный стиль. Давай чёткие шаги и конкретные техники, меньше воды.",
-                "gentle": "\n\n## Стиль общения пользователя\nПользователь предпочитает мягкий, поддерживающий стиль. Будь особенно тёплой и эмпатичной, избегай директивности.",
+                "direct": "\n\n## Стиль общения\nПользователь предпочитает прямой, структурированный стиль. Давай чёткие шаги и конкретные техники, меньше воды.",
+                "gentle": "\n\n## Стиль общения\nПользователь предпочитает мягкий, поддерживающий стиль. Будь особенно тёплой и эмпатичной, избегай директивности.",
             }
             if preferred_style in style_instructions:
                 messages[0]["content"] += style_instructions[preferred_style]
+
+        if address_form == "вы":
+            messages[0]["content"] += "\n\n## Форма обращения\nОбращайся к пользователю на «вы» (с маленькой буквы)."
+
+        if gender == "female":
+            messages[0]["content"] += "\n\n## Пол пользователя\nПользователь женского пола. Используй соответствующие окончания глаголов и прилагательных."
+        elif gender == "male":
+            messages[0]["content"] += "\n\n## Пол пользователя\nПользователь мужского пола. Используй соответствующие окончания глаголов и прилагательных."
 
         if history:
             messages.extend(history[-10:])

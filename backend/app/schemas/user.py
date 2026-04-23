@@ -10,6 +10,8 @@ class UserProfileResponse(BaseModel):
     memory_enabled: bool = True
     long_term_memory: str | None = None
     pop_score: int = 0
+    address_form: str = "ты"
+    gender: str | None = None
     updated_at: datetime
 
     model_config = {"from_attributes": True}
@@ -20,6 +22,9 @@ class UserProfileUpdate(BaseModel):
     preferred_style: str | None = Field(None, pattern="^(direct|gentle|balanced)$")
     crisis_plan: str | None = None
     memory_enabled: bool | None = None
+    address_form: str | None = Field(None, pattern="^(ты|вы)$")
+    gender: str | None = Field(None, pattern="^(male|female|other)$")
+    name: str | None = Field(None, min_length=1, max_length=100)
 
 
 class PopScoreAdd(BaseModel):
