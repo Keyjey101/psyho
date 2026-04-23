@@ -18,21 +18,46 @@ function makeGrid() {
   }));
 }
 
+let _audioCtx: AudioContext | null = null;
+
+function getAudioCtx(): AudioContext | null {
+  try {
+    if (!_audioCtx || _audioCtx.state === "closed") {
+      _audioCtx = new AudioContext();
+    }
+    return _audioCtx;
+  } catch {
+    return null;
+  }
+}
+
 function playPop(muted: boolean) {
   if (muted) return;
   try {
-    const ctx = new AudioContext();
-    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.1), ctx.sampleRate);
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    if (ctx.state === "suspended") ctx.resume();
+
+    const duration = 0.14;
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate);
     const data = buf.getChannelData(0);
     for (let i = 0; i < buf.length; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / buf.length, 2);
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / buf.length, 3);
     }
+
     const src = ctx.createBufferSource();
     src.buffer = buf;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 600;
+
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.35, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-    src.connect(gain);
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+    src.connect(filter);
+    filter.connect(gain);
     gain.connect(ctx.destination);
     src.start();
   } catch {
