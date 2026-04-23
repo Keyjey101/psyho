@@ -47,7 +47,19 @@ export default function MessageItem({ message, isStreaming }: MessageItemProps) 
       className="flex gap-3"
     >
       <div className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full">
-        <img src="/illustrations/ai_avatar.png" alt="Ника" className="h-full w-full object-cover" />
+        <img
+          src="/illustrations/ai_avatar.png"
+          alt="Ника"
+          className="h-full w-full object-cover"
+          loading="eager"
+          onError={(e) => {
+            const img = e.currentTarget;
+            if (!img.dataset.retried) {
+              img.dataset.retried = "1";
+              setTimeout(() => { img.src = "/illustrations/ai_avatar.png?" + Date.now(); }, 800);
+            }
+          }}
+        />
       </div>
       <div className="max-w-[85%] min-w-0">
         <div className="rounded-[18px] rounded-bl-[4px] border border-[#D8CDC0] bg-white px-[18px] py-[14px] shadow-[0_1px_4px_rgba(90,80,72,0.06)]">
@@ -59,7 +71,10 @@ export default function MessageItem({ message, isStreaming }: MessageItemProps) 
           )}
         </div>
         <p className="mt-1 text-[11px] text-[#B8A898]">
-          {new Date(message.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+          {(() => {
+            const ts = message.created_at.endsWith("Z") ? message.created_at : message.created_at + "Z";
+            return new Date(ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+          })()}
         </p>
         {agents.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">

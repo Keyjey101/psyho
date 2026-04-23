@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.models import User, UserProfile
-from app.schemas.user import UserProfileResponse, UserProfileUpdate, UserMeResponse
+from app.schemas.user import UserProfileResponse, UserProfileUpdate, UserMeResponse, PopScoreAdd
 from app.middleware.auth import get_current_user
 
 router = APIRouter()
@@ -57,3 +57,22 @@ async def update_me(
         created_at=user.created_at,
         profile=UserProfileResponse.model_validate(profile),
     )
+
+
+@router.post("/me/pop")
+async def add_pop_score(
+    body: PopScoreAdd,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(UserProfile).where(UserProfile.user_id == user.id))
+    profile = result.scalar_one_or_none()
+
+    if not profile:
+        profile = UserProfile(user_id=user.id, pop_score=body.count)
+        db.add(profile)
+    else:
+        profile.pop_score = (profile.pop_score or 0) + body.count
+
+    await db.commit()
+    return {"pop_score": profile.pop_score}

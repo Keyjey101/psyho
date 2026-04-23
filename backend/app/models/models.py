@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import String, Text, Boolean, DateTime, ForeignKey
+from sqlalchemy import String, Text, Boolean, DateTime, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -66,6 +66,7 @@ class UserProfile(Base):
     crisis_plan: Mapped[str | None] = mapped_column(Text)
     memory_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
     long_term_memory: Mapped[str | None] = mapped_column(Text)
+    pop_score: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
     user = relationship("User", back_populates="profile")
