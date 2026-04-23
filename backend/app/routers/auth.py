@@ -78,6 +78,14 @@ def _verify_code(plain: str, hashed: str) -> bool:
 @router.post("/send-code", response_model=SendCodeResponse)
 async def send_code(body: SendCodeRequest, request: Request, db: AsyncSession = Depends(get_db)):
     email = body.email.lower().strip()
+
+    user_result = await db.execute(select(User).where(User.email == email))
+    existing_user = user_result.scalar_one_or_none()
+
+    # In test mode, skip OTP generation entirely — TEST_PASSWORD_CODE is the code
+    if settings.TEST_PASSWORD_CODE:
+        return SendCodeResponse(user_exists=existing_user is not None)
+
     now = datetime.now(timezone.utc)
     window_start = now - timedelta(minutes=settings.OTP_RATE_LIMIT_MINUTES)
 
@@ -101,9 +109,6 @@ async def send_code(body: SendCodeRequest, request: Request, db: AsyncSession = 
         )
     )
 
-    user_result = await db.execute(select(User).where(User.email == email))
-    existing_user = user_result.scalar_one_or_none()
-
     code = _generate_otp()
     code_record = EmailVerificationCode(
         email=email,
@@ -123,6 +128,25 @@ async def send_code(body: SendCodeRequest, request: Request, db: AsyncSession = 
 @router.post("/verify-code", response_model=VerifyCodeResponse)
 async def verify_code(body: VerifyCodeRequest, response: Response, db: AsyncSession = Depends(get_db)):
     email = body.email.lower().strip()
+
+    # Test mode: accept TEST_PASSWORD_CODE as a universal bypass code
+    if settings.TEST_PASSWORD_CODE and body.code == settings.TEST_PASSWORD_CODE:
+        user_result = await db.execute(select(User).where(User.email == email))
+        user = user_result.scalar_one_or_none()
+        is_new_user = user is None
+        if is_new_user:
+            user = User(email=email, name="", password=_hash_code(secrets.token_hex(32)))
+            db.add(user)
+            await db.flush()
+            profile = UserProfile(user_id=user.id)
+            db.add(profile)
+            await db.commit()
+            await db.refresh(user)
+        access = create_access_token({"sub": user.id})
+        refresh = create_refresh_token({"sub": user.id})
+        _set_token_cookies(response, access, refresh)
+        return VerifyCodeResponse(access_token=access, refresh_token=refresh, is_new_user=is_new_user)
+
     now = datetime.now(timezone.utc)
 
     codes_result = await db.execute(
