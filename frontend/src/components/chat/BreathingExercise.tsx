@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 
-// Phases: inhale 4s (BL→BR), hold 7s (BR→top), exhale 8s (top→BL)
+// Phases: inhale 4s (BL→top), hold 7s (top→BR), exhale 8s (BR→BL)
 const PHASES = [
   { label: "Вдох",     duration: 4, color: "#B8785A" },
   { label: "Задержка", duration: 7, color: "#6B7E9E" },
@@ -9,14 +9,14 @@ const PHASES = [
 
 const TOTAL = 19;
 
-const CX = 150;
-const CY = 162;
-const R = 118;
+const CX = 190;
+const CY = 200;
+const R = 170;
 const CORNER = 30;
 
-// Clockwise from bottom-left: BL(150°) → BR(30°) → top(-90°)
+// Clockwise from bottom-left: BL(150°) → top(-90°) → BR(30°)
 function trianglePoints() {
-  return [150, 30, -90].map((a) => {
+  return [150, -90, 30].map((a) => {
     const rad = (a * Math.PI) / 180;
     return { x: CX + R * Math.cos(rad), y: CY + R * Math.sin(rad) };
   });
@@ -118,7 +118,7 @@ export default function BreathingExercise() {
         const pt = pathRef.current.getPointAtLength(frac * pathLength);
         return { x: pt.x, y: pt.y };
       })()
-    : { x: CX + R * Math.cos((150 * Math.PI) / 180), y: CY + R * Math.sin((150 * Math.PI) / 180) };
+    : { x: CX + R * Math.cos((150 * Math.PI) / 180), y: CY + R * Math.sin((150 * Math.PI) / 180) }; // BL
 
   // Progress stroke — fills as current phase progresses (resets each phase)
   const phaseStart = (phaseIdx === 0 ? 0 : phaseIdx === 1 ? 1 / 3 : 2 / 3);
@@ -139,10 +139,10 @@ export default function BreathingExercise() {
     <div className="flex flex-col items-center gap-6 px-4 py-8">
       <div className="relative">
         <svg
-          width="300"
-          height="300"
-          viewBox="0 0 300 300"
-          className="max-w-[300px] w-full"
+          width="380"
+          height="380"
+          viewBox="0 0 380 380"
+          className="max-w-[380px] w-full"
         >
           {/* Background track */}
           <path
