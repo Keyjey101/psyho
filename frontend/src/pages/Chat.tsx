@@ -26,6 +26,13 @@ export default function Chat() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [awaitingGreeting, setAwaitingGreeting] = useState(false);
 
+  // Redirect to onboarding if user skipped/missed it (name still empty)
+  useEffect(() => {
+    if (user && (user as any).name === "") {
+      navigate("/onboarding", { replace: true });
+    }
+  }, [user, navigate]);
+
   const memoryEnabled = (user as any)?.profile?.memory_enabled ?? true;
 
   const toggleMemory = async () => {

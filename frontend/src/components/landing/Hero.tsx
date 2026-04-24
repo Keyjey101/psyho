@@ -41,19 +41,12 @@ export default function Hero() {
 
         <div className="mt-8">
           <Link
-            to="/register"
+            to="/auth"
             className="btn-primary inline-block w-full max-w-[320px]"
           >
             Начать разговор
           </Link>
         </div>
-
-        <Link
-          to="/login"
-          className="mt-4 inline-block text-sm text-[#8A7A6A] transition-colors hover:text-[#B8785A]"
-        >
-          Уже есть аккаунт
-        </Link>
 
         <p className="mt-8 text-xs text-[#B8A898]">
           Бесплатно · Без карты · Без обязательств

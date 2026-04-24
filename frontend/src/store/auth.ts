@@ -28,6 +28,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   verifyCode: async (email, code) => {
     const { data } = await api.post("/auth/verify-code", { email, code });
     set({ isAuthenticated: true, isLoading: false });
+    try {
+      const { data: userData } = await api.get("/user/me");
+      set({ user: userData });
+    } catch { /* ignore */ }
     return data;
   },
 

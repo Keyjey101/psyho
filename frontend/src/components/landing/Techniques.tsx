@@ -6,36 +6,42 @@ const techniques = [
     name: "Когнитивно-поведенческая терапия",
     shortName: "КПТ",
     description: "Работа с мыслями, которые мешают жить",
+    examples: ["Я катастрофизирую", "Мысли по кругу", "Прокрастинация"],
   },
   {
     img: "/illustrations/opt/method_jung.webp",
     name: "Юнгианский анализ",
     shortName: "Юнг",
     description: "Понимание глубинных слоёв личности и снов",
+    examples: ["Снится один и тот же сон", "Не понимаю себя", "Ощущение пустоты"],
   },
   {
     img: "/illustrations/opt/method_act.webp",
     name: "Терапия принятия и ответственности",
     shortName: "ACT",
     description: "Действовать по ценностям, не убегая от чувств",
+    examples: ["Не знаю зачем это всё", "Откладываю важное", "Борюсь сам с собой"],
   },
   {
     img: "/illustrations/opt/method_ifs.webp",
     name: "Системная семейная терапия",
     shortName: "IFS",
     description: "Примирение внутренних частей личности",
+    examples: ["Внутренний критик", "Злюсь на себя", "Чувствую раздробленность"],
   },
   {
     img: "/illustrations/opt/method_narrative.webp",
     name: "Нарративная терапия",
     shortName: "Нарратив",
     description: "Переписать историю о себе по-новому",
+    examples: ["Чувствую себя неудачником", "Прошлое давит", "Хочу переосмыслить себя"],
   },
   {
     img: "/illustrations/opt/method_somatic.webp",
     name: "Соматическая терапия",
     shortName: "Соматика",
     description: "Телесное осознание и работа с напряжением",
+    examples: ["Тревога в теле", "Сжимается грудь", "Не могу расслабиться"],
   },
 ];
 
@@ -67,6 +73,13 @@ export default function Techniques() {
                 {t.shortName}
               </h4>
               <p className="mt-1 text-[13px] leading-[1.5] text-[#8A7A6A]">{t.description}</p>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {t.examples.map((ex) => (
+                  <span key={ex} className="inline-block rounded-full bg-[#F3EBE3] px-2 py-0.5 text-[11px] text-[#8A7A6A]">
+                    {ex}
+                  </span>
+                ))}
+              </div>
             </motion.div>
           ))}
         </div>

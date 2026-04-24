@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import Hero from "@/components/landing/Hero";
 import Techniques from "@/components/landing/Techniques";
+import UserGuide from "@/components/landing/UserGuide";
+import AgentSystem from "@/components/landing/AgentSystem";
 
 export default function Landing() {
   const { isAuthenticated } = useAuth();
@@ -19,14 +21,9 @@ export default function Landing() {
                 Открыть чат
               </Link>
             ) : (
-              <>
-                <Link to="/login" className="btn-ghost">
-                  Войти
-                </Link>
-                <Link to="/register" className="btn-primary">
-                  Начать разговор
-                </Link>
-              </>
+              <Link to="/auth" className="btn-primary">
+                Начать разговор
+              </Link>
             )}
           </div>
         </div>
@@ -35,6 +32,8 @@ export default function Landing() {
       <main>
         <Hero />
         <Techniques />
+        <UserGuide />
+        <AgentSystem />
       </main>
     </div>
   );
