@@ -38,7 +38,7 @@ function playPop(muted: boolean) {
     if (!ctx) return;
     if (ctx.state === "suspended") ctx.resume();
 
-    const duration = 0.14;
+    const duration = 0.12 + Math.random() * 0.04;
     const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate);
     const data = buf.getChannelData(0);
     for (let i = 0; i < buf.length; i++) {
@@ -50,10 +50,11 @@ function playPop(muted: boolean) {
 
     const filter = ctx.createBiquadFilter();
     filter.type = "lowpass";
-    filter.frequency.value = 600;
+    filter.frequency.value = 500 + Math.random() * 200;
 
+    const gainVal = 0.14 + Math.random() * 0.08;
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.setValueAtTime(gainVal, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
 
     src.connect(filter);
