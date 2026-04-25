@@ -2,14 +2,10 @@ import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/auth";
-import Landing from "@/pages/Landing";
-import Login from "@/pages/Login";
-import Register from "@/pages/Register";
 import AuthEmail from "@/pages/AuthEmail";
 import AuthVerify from "@/pages/AuthVerify";
 import Chat from "@/pages/Chat";
 import Admin from "@/pages/Admin";
-import Onboarding from "@/pages/Onboarding";
 import OnboardingFlow from "@/pages/OnboardingFlow";
 import Profile from "@/pages/Profile";
 import MoodPage from "@/pages/MoodPage";
@@ -44,13 +40,11 @@ export default function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
+      <Route path="/" element={<Navigate to="/auth" replace />} />
 
-      {/* New passwordless auth flow */}
       <Route path="/auth" element={<AuthEmail />} />
       <Route path="/auth/verify" element={<AuthVerify />} />
 
-      {/* Legacy routes — kept for backward compat */}
       <Route path="/login" element={<Navigate to="/auth" replace />} />
       <Route path="/register" element={<Navigate to="/auth" replace />} />
 
@@ -79,14 +73,6 @@ export default function App() {
         }
       />
       <Route
-        path="/onboarding/legacy"
-        element={
-          <ProtectedRoute>
-            <Onboarding />
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/profile"
         element={
           <ProtectedRoute>
@@ -102,7 +88,7 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/chat" replace />} />
     </Routes>
   );
 }

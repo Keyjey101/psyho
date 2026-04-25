@@ -1,6 +1,14 @@
 version: '3.9'
 
 services:
+  mail:
+    image: mwader/postfix-relay
+    environment:
+      - POSTFIX_MYDOMAIN=${SMTP_DOMAIN:-ekbmassage.online}
+    restart: unless-stopped
+    networks:
+      - internal
+
   backend:
     build:
       context: ./backend
@@ -16,11 +24,21 @@ services:
       - DATABASE_URL=sqlite+aiosqlite:////data/psyho.db
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
       - TEST_PASSWORD_CODE=${TEST_PASSWORD_CODE:-}
+      - SMTP_HOST=mail
+      - SMTP_PORT=25
+      - SMTP_USER=
+      - SMTP_PASS=
+      - SMTP_FROM=${SMTP_FROM:-noreply@ekbmassage.online}
+      - SMTP_TLS=false
     volumes:
       - sqlite_data:/data
     restart: unless-stopped
     expose:
       - "8000"
+    depends_on:
+      - mail
+    networks:
+      - internal
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -38,6 +56,11 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    networks:
+      - internal
+
+networks:
+  internal:
 
 volumes:
   sqlite_data:

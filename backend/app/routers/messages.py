@@ -15,9 +15,12 @@ from app.agents.orchestrator import Orchestrator
 from app.services.context import maybe_compress_context, generate_session_title
 from app.services.memory_service import extract_and_update_memory
 
+from app.config import get_settings
+
 router = APIRouter()
 
 orchestrator = Orchestrator()
+settings = get_settings()
 
 
 @router.get("/{session_id}/messages", response_model=MessageListResponse)
@@ -59,7 +62,7 @@ async def list_messages(
 
 @router.websocket("/{session_id}/chat")
 async def websocket_chat(websocket: WebSocket, session_id: str):
-    token = websocket.query_params.get("token") or websocket.cookies.get("access_token")
+    token = websocket.cookies.get("access_token")
     if not token:
         await websocket.close(code=4001, reason="Missing token")
         return
@@ -122,12 +125,10 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
             greeting_content = ""
             try:
                 from app.agents.base import client as ai_client
-                from app.config import get_settings
-                settings = get_settings()
 
                 stream = await ai_client.chat.completions.create(
                     model=settings.ZAI_MODEL,
-                    max_tokens=512,
+                    max_tokens=settings.SYNTHESIS_MAX_TOKENS,
                     temperature=0.7,
                     messages=[
                         {"role": "system", "content": orchestrator.system_prompt},
@@ -167,7 +168,7 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
             if not content:
                 continue
 
-            if len(content) > 4000:
+            if len(content) > settings.MAX_MESSAGE_LENGTH:
                 await websocket.send_json({"type": "error", "message": "Сообщение слишком длинное (максимум 4000 символов)"})
                 continue
 

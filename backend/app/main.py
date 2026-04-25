@@ -8,7 +8,7 @@ from slowapi.errors import RateLimitExceeded
 import structlog
 
 from app.config import get_settings
-from app.database import init_db
+from app.database import init_db, async_session
 from app.routers import auth, sessions, messages, users, mood, actions
 from app.routers import admin as admin_router
 
@@ -39,8 +39,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
@@ -54,4 +54,13 @@ app.include_router(actions.router, prefix="/api/sessions", tags=["Actions"])
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "version": settings.VERSION}
+    db_ok = False
+    try:
+        async with async_session() as db:
+            from sqlalchemy import text
+            await db.execute(text("SELECT 1"))
+            db_ok = True
+    except Exception:
+        pass
+    status_val = "ok" if db_ok else "degraded"
+    return {"status": status_val, "version": settings.VERSION, "db": db_ok}

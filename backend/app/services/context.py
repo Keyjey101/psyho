@@ -36,6 +36,9 @@ async def maybe_compress_context(db: AsyncSession, session_id: str):
     formatted = _format_messages(old_messages)
     summary = await _generate_summary(formatted)
 
+    if not summary or summary == "Резюме недоступно.":
+        return
+
     session_result = await db.execute(
         select(ChatSession).where(ChatSession.id == session_id)
     )
@@ -43,6 +46,8 @@ async def maybe_compress_context(db: AsyncSession, session_id: str):
     if session:
         existing = session.summary or ""
         session.summary = f"{existing}\n\n--- Дополнительное резюме ---\n{summary}" if existing else summary
+
+    await db.commit()
 
     old_ids = [m.id for m in old_messages]
     await db.execute(delete(Message).where(Message.id.in_(old_ids)))

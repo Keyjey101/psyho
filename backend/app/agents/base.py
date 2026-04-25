@@ -42,8 +42,9 @@ class BaseAgent(ABC):
 
         response = await client.chat.completions.create(
             model=settings.ZAI_MODEL,
-            max_tokens=1024,
+            max_tokens=settings.AGENT_MAX_TOKENS,
             temperature=0.7,
             messages=messages,
         )
-        return response.choices[0].message.content
+        content = response.choices[0].message.content
+        return content if content else ""

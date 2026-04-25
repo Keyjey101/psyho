@@ -1,5 +1,6 @@
 import json
 import asyncio
+import structlog
 from pathlib import Path
 
 from app.agents.base import BaseAgent, client
@@ -70,6 +71,22 @@ def _check_crisis(message: str) -> bool:
     return False
 
 
+MEMORY_INJECTION_PATTERNS = [
+    "запомни:", "запомни что", "запомни —",
+    "always respond", "always reply", "ignore previous",
+    "system:", "[system]", "new instruction",
+    "отныне ты", "теперь ты", "забудь всё",
+]
+
+
+def _sanitize_memory(memory: str) -> str:
+    lower = memory.lower()
+    for pattern in MEMORY_INJECTION_PATTERNS:
+        if pattern in lower:
+            return ""
+    return memory
+
+
 class Orchestrator:
     def __init__(self):
         self.agents: dict[str, BaseAgent] = {
@@ -102,18 +119,21 @@ class Orchestrator:
 
         response = await client.chat.completions.create(
             model=settings.ZAI_SMALL_MODEL,
-            max_tokens=200,
+            max_tokens=settings.CLASSIFICATION_MAX_TOKENS,
             temperature=0.1,
             messages=[{"role": "user", "content": classify_prompt}],
         )
         try:
-            text = response.choices[0].message.content.strip()
+            text = response.choices[0].message.content
+            if not text:
+                return []
+            text = text.strip()
             if text.startswith("```"):
                 text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
             topics = json.loads(text)
             if isinstance(topics, list):
                 return [t for t in topics if isinstance(t, str) and t in TOPIC_AGENT_MAP]
-        except (json.JSONDecodeError, IndexError):
+        except (json.JSONDecodeError, IndexError, AttributeError):
             pass
         return []
 
@@ -160,22 +180,24 @@ class Orchestrator:
         topics = await self._classify_topics(message, history)
         selected = self._select_agents(topics)
 
-        if len(history) < 4:
-            selected = []
-
         perspectives: dict[str, str] = {}
         agent_names = [k for k, _ in selected]
 
         if selected:
-            tasks = [
-                agent.analyze(message, history)
-                for _, agent in selected
-            ]
+            async def _run_agent(key: str, agent: BaseAgent):
+                return key, await asyncio.wait_for(
+                    agent.analyze(message, history),
+                    timeout=settings.AGENT_TIMEOUT_SECONDS,
+                )
+
+            tasks = [_run_agent(k, a) for k, a in selected]
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            for (key, _), result in zip(selected, results):
+            for result in results:
                 if isinstance(result, Exception):
+                    structlog.get_logger().warning("Agent analysis failed or timed out", error=str(result))
                     continue
-                perspectives[key] = result
+                key, analysis = result
+                perspectives[key] = analysis
 
         yield {"type": "agents_used", "agents": agent_names if agent_names else ["orchestrator"]}
 
@@ -252,7 +274,9 @@ class Orchestrator:
         messages = [{"role": "system", "content": self.system_prompt}]
 
         if long_term_memory:
-            messages[0]["content"] += f"\n\n## Что я знаю об этом человеке\n{long_term_memory}"
+            sanitized_memory = _sanitize_memory(long_term_memory)
+            if sanitized_memory:
+                messages[0]["content"] += f"\n\n## Что я знаю об этом человеке\n{sanitized_memory}"
 
         if therapy_goals:
             messages[0]["content"] += f"\n\n## Цели пользователя в терапии\n{therapy_goals}"
@@ -279,7 +303,7 @@ class Orchestrator:
 
         stream = await client.chat.completions.create(
             model=settings.ZAI_MODEL,
-            max_tokens=3000,
+            max_tokens=settings.SYNTHESIS_MAX_TOKENS,
             temperature=0.7,
             messages=messages,
             stream=True,

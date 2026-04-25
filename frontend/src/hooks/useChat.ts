@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { WSMessage, Message } from "@/types";
+import { useToast } from "@/components/Toast";
 
 interface UseChatOptions {
   sessionId: string;
@@ -7,6 +8,7 @@ interface UseChatOptions {
 }
 
 export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
+  const { showToast } = useToast();
   const [isConnected, setIsConnected] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [agentsUsed, setAgentsUsed] = useState<string[]>([]);
@@ -16,14 +18,36 @@ export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
   const agentsUsedRef = useRef<string[]>([]);
   const streamingContentRef = useRef("");
   const onMessageCompleteRef = useRef(onMessageComplete);
+  const sessionIdRef = useRef(sessionId);
 
   useEffect(() => {
     onMessageCompleteRef.current = onMessageComplete;
   }, [onMessageComplete]);
 
+  const cleanup = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    if (wsRef.current) {
+      wsRef.current.onopen = null;
+      wsRef.current.onclose = null;
+      wsRef.current.onerror = null;
+      wsRef.current.onmessage = null;
+      if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
+        wsRef.current.close();
+      }
+      wsRef.current = null;
+    }
+    setIsConnected(false);
+    setIsStreaming(false);
+  }, []);
+
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
     if (!sessionId) return;
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+
+    cleanup();
 
     const wsBase =
       import.meta.env.VITE_WS_URL ||
@@ -38,14 +62,15 @@ export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
     ws.onclose = () => {
       setIsConnected(false);
       setIsStreaming(false);
-      reconnectTimeoutRef.current = setTimeout(() => {
-        if (sessionId) connect();
-      }, 3000);
+      if (sessionIdRef.current === sessionId) {
+        reconnectTimeoutRef.current = setTimeout(() => {
+          if (sessionIdRef.current === sessionId) connect();
+        }, 3000);
+      }
     };
 
     ws.onerror = () => ws.close();
 
-    // Permanent handler — catches both auto-greetings and responses to user messages
     ws.onmessage = (event) => {
       const data: WSMessage = JSON.parse(event.data);
       switch (data.type) {
@@ -77,12 +102,16 @@ export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
           break;
         case "error":
           setIsStreaming(false);
-          setStreamingContent((prev) => prev + "\n\n[Ошибка: " + data.message + "]");
+          showToast(data.message || "Произошла ошибка");
           break;
         case "context_compressed":
           break;
       }
     };
+  }, [sessionId, cleanup]);
+
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
   }, [sessionId]);
 
   const sendMessage = useCallback(
@@ -98,16 +127,10 @@ export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
     [],
   );
 
-  const disconnect = useCallback(() => {
-    if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-    wsRef.current?.close();
-    wsRef.current = null;
-  }, []);
-
   useEffect(() => {
     connect();
-    return () => disconnect();
-  }, [connect, disconnect]);
+    return () => cleanup();
+  }, [connect, cleanup]);
 
-  return { isConnected, streamingContent, agentsUsed, isStreaming, sendMessage, disconnect };
+  return { isConnected, streamingContent, agentsUsed, isStreaming, sendMessage };
 }

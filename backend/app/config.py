@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     CONTEXT_COMPRESSION_THRESHOLD: int = 40
     CONTEXT_KEEP_MESSAGES: int = 20
 
+    AGENT_TIMEOUT_SECONDS: int = 15
+    AGENT_MAX_TOKENS: int = 2048
+    SYNTHESIS_MAX_TOKENS: int = 4096
+    MAX_MESSAGE_LENGTH: int = 4000
+    CLASSIFICATION_MAX_TOKENS: int = 200
+
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
     SMTP_USER: str = ""

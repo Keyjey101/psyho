@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Mic, MicOff } from "lucide-react";
 
 interface VoiceInputProps {
@@ -8,6 +8,7 @@ interface VoiceInputProps {
 
 export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
   const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
   const [supported] = useState(() => {
     return "webkitSpeechRecognition" in window || "SpeechRecognition" in window;
   });
@@ -15,17 +16,31 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
   const toggleListen = useCallback(() => {
     if (!supported || disabled) return;
 
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+      setIsListening(false);
+      return;
+    }
+
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
     recognition.lang = "ru-RU";
     recognition.interimResults = false;
     recognition.continuous = false;
 
     recognition.onstart = () => setIsListening(true);
-    recognition.onend = () => setIsListening(false);
-    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+    recognition.onerror = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
 
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
@@ -34,11 +49,7 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
       }
     };
 
-    if (isListening) {
-      recognition.stop();
-    } else {
-      recognition.start();
-    }
+    recognition.start();
   }, [supported, disabled, isListening, onTranscript]);
 
   if (!supported) return null;
