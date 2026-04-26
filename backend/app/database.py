@@ -23,3 +23,9 @@ async def init_db():
     async with engine.begin() as conn:
         await conn.execute(sqlalchemy.text("PRAGMA journal_mode=WAL"))
         await conn.run_sync(Base.metadata.create_all)
+        try:
+            await conn.execute(sqlalchemy.text(
+                "ALTER TABLE sessions ADD COLUMN max_exchanges INTEGER DEFAULT 20"
+            ))
+        except Exception:
+            pass

@@ -1,9 +1,11 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import type { Message, Session } from "@/types";
 import MessageItem from "./MessageItem";
 import ThinkingIndicator from "./ThinkingIndicator";
+import PendingTaskCard from "./PendingTaskCard";
+import api from "@/api/client";
 
 interface MessageListProps {
   messages: Message[];
@@ -13,6 +15,14 @@ interface MessageListProps {
   previousSession?: Session | null;
   onContinueSession?: () => void;
   isContinuing?: boolean;
+}
+
+interface PendingTask {
+  id: string;
+  session_id: string;
+  text: string;
+  completed: boolean;
+  created_at: string;
 }
 
 function makeWelcomeMessage(): Message {
@@ -37,6 +47,13 @@ export default function MessageList({
   isContinuing,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [pendingTasks, setPendingTasks] = useState<PendingTask[]>([]);
+
+  useEffect(() => {
+    if (messages.length === 0 && !isStreaming) {
+      api.get("/tasks/pending").then(({ data }) => setPendingTasks(data)).catch(() => {});
+    }
+  }, [messages.length, isStreaming]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,7 +61,7 @@ export default function MessageList({
 
   if (messages.length === 0 && !isStreaming) {
     return (
-      <div className="flex-1 overflow-y-auto bg-[#FAF6F1] px-4 py-6">
+      <div className="flex-1 overflow-y-auto bg-[#FAF6F1] px-4 py-6 dark:bg-[#2A2420]">
         <div className="mx-auto max-w-3xl space-y-6">
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -67,6 +84,12 @@ export default function MessageList({
             />
           </motion.div>
           <MessageItem message={makeWelcomeMessage()} />
+          {pendingTasks.length > 0 && (
+            <PendingTaskCard
+              tasks={pendingTasks}
+              onDismiss={() => setPendingTasks([])}
+            />
+          )}
           {previousSession && onContinueSession && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
@@ -96,7 +119,7 @@ export default function MessageList({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#FAF6F1] px-4 py-6 lg:px-6">
+    <div className="flex-1 overflow-y-auto bg-[#FAF6F1] px-4 py-6 lg:px-6 dark:bg-[#2A2420]">
       <div className="mx-auto max-w-3xl space-y-6">
         {messages.map((msg) => (
           <MessageItem key={msg.id} message={msg} />

@@ -1,6 +1,8 @@
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import { motion } from "framer-motion";
+import { Copy, Check } from "lucide-react";
 import type { Message } from "@/types";
 import { getAgentInfo } from "@/types";
 import AgentBadge from "./AgentBadge";
@@ -12,6 +14,7 @@ interface MessageItemProps {
 
 export default function MessageItem({ message, isStreaming }: MessageItemProps) {
   const isUser = message.role === "user";
+  const [copied, setCopied] = useState(false);
   const agents: string[] = message.agents_used
     ? (() => {
         try {
@@ -62,7 +65,17 @@ export default function MessageItem({ message, isStreaming }: MessageItemProps) 
         />
       </div>
       <div className="max-w-[85%] min-w-0">
-        <div className="rounded-[18px] rounded-bl-[4px] border border-[#D8CDC0] bg-white px-[18px] py-[14px] shadow-[0_1px_4px_rgba(90,80,72,0.06)]">
+        <div className="group relative rounded-[18px] rounded-bl-[4px] border border-[#D8CDC0] bg-white px-[18px] py-[14px] shadow-[0_1px_4px_rgba(90,80,72,0.06)]">
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(message.content);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            }}
+            className="absolute right-2 top-2 rounded-md p-1.5 text-[#B8A898] opacity-0 transition-opacity hover:bg-[#F5EDE4] hover:text-[#8A7A6A] group-hover:opacity-100"
+          >
+            {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+          </button>
           <div className="markdown-content text-[15px] leading-[1.6] text-[#5A5048]">
             <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{message.content}</ReactMarkdown>
           </div>

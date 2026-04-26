@@ -3,9 +3,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessions, useSession, useCreateSession, useDeleteSession, useContinueSession } from "@/hooks/useSessions";
 import { useChat } from "@/hooks/useChat";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import Sidebar from "@/components/chat/Sidebar";
 import MessageList from "@/components/chat/MessageList";
 import InputBar from "@/components/chat/InputBar";
+import ActionPanel from "@/components/chat/ActionPanel";
+import SessionProgress from "@/components/chat/SessionProgress";
+import SessionEndCard from "@/components/chat/SessionEndCard";
+import MoodTracker from "@/components/chat/MoodTracker";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Message } from "@/types";
 import { Menu, Brain, X } from "lucide-react";
@@ -25,8 +30,11 @@ export default function Chat() {
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [awaitingGreeting, setAwaitingGreeting] = useState(false);
+  const [isActionsOpen, setIsActionsOpen] = useState(false);
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [showMoodTracker, setShowMoodTracker] = useState(false);
+  const [initialExchangeCount, setInitialExchangeCount] = useState(0);
 
-  // Redirect to onboarding if user skipped/missed it (name still empty)
   useEffect(() => {
     if (user && (user as any).name === "") {
       navigate("/onboarding", { replace: true });
@@ -57,18 +65,25 @@ export default function Chat() {
     [sessionId, queryClient],
   );
 
-  const { streamingContent, agentsUsed, isStreaming, sendMessage, isConnected } = useChat({
+  const handleSessionLimitReached = useCallback(() => {
+    setShowLimitModal(true);
+  }, []);
+
+  const { streamingContent, agentsUsed, isStreaming, sendMessage, isConnected, exchangeCount, maxExchanges } = useChat({
     sessionId: sessionId || "",
     onMessageComplete: handleMessageComplete,
+    onSessionLimitReached: handleSessionLimitReached,
   });
 
   useEffect(() => {
     if (!sessionId) {
       setLocalMessages([]);
+      setInitialExchangeCount(0);
       return;
     }
     if (currentSession?.messages) {
       setLocalMessages(currentSession.messages);
+      setInitialExchangeCount(currentSession.messages.filter((m) => m.role === "user").length);
     }
   }, [currentSession, sessionId]);
 
@@ -140,8 +155,47 @@ export default function Chat() {
     navigate(`/chat/${result.new_session_id}`);
   };
 
+  const handleContinueFromLimit = async () => {
+    if (!sessionId) return;
+    setShowLimitModal(false);
+    const result = await continueSession.mutateAsync(sessionId);
+    setAwaitingGreeting(true);
+    navigate(`/chat/${result.new_session_id}`);
+  };
+
+  const handleFinishFromLimit = (moodValue: number | null) => {
+    setShowLimitModal(false);
+    if (moodValue) {
+      api.post("/mood", { value: moodValue, session_id: sessionId }).catch(() => {});
+    }
+  };
+
+  const handleMoodSubmit = async (value: number) => {
+    try {
+      await api.post("/mood", { value, session_id: sessionId });
+    } catch {}
+    setShowMoodTracker(false);
+  };
+
+  const handleMoodSkip = () => {
+    setShowMoodTracker(false);
+  };
+
+  const displayExchangeCount = exchangeCount || initialExchangeCount;
+  const displayMaxExchanges = maxExchanges || currentSession?.max_exchanges || 20;
+
+  useKeyboardShortcuts({
+    onNewChat: handleNewChat,
+    onCloseOverlay: () => {
+      if (showLimitModal) setShowLimitModal(false);
+      if (showMoodTracker) setShowMoodTracker(false);
+      if (isActionsOpen) setIsActionsOpen(false);
+    },
+    onToggleActions: () => setIsActionsOpen((prev) => !prev),
+  });
+
   return (
-    <div className="flex h-dvh overflow-hidden bg-[#FAF6F1]">
+    <div className="flex h-dvh overflow-hidden bg-[#FAF6F1] dark:bg-[#2A2420]">
       <Sidebar
         sessions={sessions || []}
         activeSessionId={sessionId}
@@ -156,10 +210,10 @@ export default function Chat() {
       />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <header className="flex items-center gap-3 bg-[#FAF6F1]/90 px-4 py-3 backdrop-blur-sm border-b border-[#E8DDD0]">
+        <header className="flex items-center gap-3 bg-[#FAF6F1]/90 px-4 py-3 backdrop-blur-sm border-b border-[#E8DDD0] dark:bg-[#2A2420]/90 dark:border-[#4A4038]">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="rounded-lg p-2 text-[#8A7A6A] hover:bg-[#F5EDE4] lg:hidden"
+            className="rounded-lg p-2 text-[#8A7A6A] hover:bg-[#F5EDE4] dark:text-[#B8A898] dark:hover:bg-[#352E2A] lg:hidden"
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -181,7 +235,7 @@ export default function Chat() {
           </div>
 
           <div>
-            <p className="text-[15px] font-semibold leading-none text-[#5A5048]">Ника</p>
+            <p className="text-[15px] font-semibold leading-none text-[#5A5048] dark:text-[#F5EDE4]">Ника</p>
             {isConnected && (
               <div className="mt-0.5 flex items-center gap-1.5">
                 <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -195,8 +249,8 @@ export default function Chat() {
               onClick={toggleMemory}
               title={
                 memoryEnabled
-                  ? "Память включена — Ника запоминает важные факты о тебе между сессиями: имя, темы, прогресс. Это помогает ей лучше понимать тебя со временем. Нажми, чтобы выключить."
-                  : "Память выключена — Ника не сохраняет ничего между сессиями. Каждый раз начинаете с чистого листа. Нажми, чтобы включить."
+                  ? "Память включена — Ника запоминает важные факты о тебе между сессиями"
+                  : "Память выключена — Ника не сохраняет ничего между сессиями"
               }
               className="flex items-center gap-1.5 rounded-full px-2 py-1.5 transition-colors hover:bg-[#F5EDE4]"
             >
@@ -215,6 +269,8 @@ export default function Chat() {
           </div>
         </header>
 
+        <SessionProgress current={displayExchangeCount} max={displayMaxExchanges} />
+
         <MessageList
           messages={localMessages}
           streamingContent={streamingContent}
@@ -225,12 +281,41 @@ export default function Chat() {
           isContinuing={continueSession.isPending}
         />
 
+        <ActionPanel
+          sessionId={sessionId}
+          disabled={isStreaming || awaitingGreeting}
+          isOpen={isActionsOpen}
+          onMoodRequest={() => setShowMoodTracker(true)}
+        />
+
         <InputBar
           onSend={handleSend}
           disabled={isStreaming || awaitingGreeting}
-          sessionId={sessionId}
+          isActionsOpen={isActionsOpen}
+          onToggleActions={() => setIsActionsOpen((prev) => !prev)}
         />
       </div>
+
+      {showLimitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <SessionEndCard
+            exchangeCount={displayExchangeCount}
+            messages={localMessages}
+            onContinue={handleContinueFromLimit}
+            onFinish={handleFinishFromLimit}
+            isContinuing={continueSession.isPending}
+          />
+        </div>
+      )}
+
+      {showMoodTracker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <MoodTracker
+            onSubmit={handleMoodSubmit}
+            onSkip={handleMoodSkip}
+          />
+        </div>
+      )}
     </div>
   );
 }

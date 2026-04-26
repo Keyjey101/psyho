@@ -9,16 +9,17 @@ import Admin from "@/pages/Admin";
 import OnboardingFlow from "@/pages/OnboardingFlow";
 import Profile from "@/pages/Profile";
 import MoodPage from "@/pages/MoodPage";
+import PersonalityPage from "@/pages/PersonalityPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#FAF6F1]">
+      <div className="flex h-screen items-center justify-center bg-[#FAF6F1] dark:bg-[#2A2420]">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#E8DDD0] border-t-[#B8785A]" />
-          <p className="text-sm text-[#8A7A6A]">Загрузка...</p>
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#E8DDD0] border-t-[#B8785A] dark:border-[#4A4038] dark:border-t-[#C08B68]" />
+          <p className="text-sm text-[#8A7A6A] dark:text-[#B8A898]">Загрузка...</p>
         </div>
       </div>
     );
@@ -36,6 +37,9 @@ export default function App() {
 
   useEffect(() => {
     checkAuth();
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
   }, [checkAuth]);
 
   return (
@@ -85,6 +89,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <MoodPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/personality"
+        element={
+          <ProtectedRoute>
+            <PersonalityPage />
           </ProtectedRoute>
         }
       />

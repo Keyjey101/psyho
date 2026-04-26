@@ -13,8 +13,8 @@ export default defineConfig({
         name: "Ника — ИИ-психолог",
         short_name: "Ника",
         description: "ИИ-психолог: анонимно, без осуждения, 24/7",
-        theme_color: "#818cf8",
-        background_color: "#0f172a",
+        theme_color: "#B8785A",
+        background_color: "#FAF6F1",
         display: "standalone",
         start_url: "/",
         lang: "ru",
@@ -49,6 +49,15 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "framer-motion": ["framer-motion"],
+        },
+      },
     },
   },
   server: {

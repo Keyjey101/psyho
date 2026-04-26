@@ -39,6 +39,7 @@ class ChatSession(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
     summary: Mapped[str | None] = mapped_column(Text)
     continuation_context: Mapped[str | None] = mapped_column(Text)
+    max_exchanges: Mapped[int] = mapped_column(Integer, default=20, server_default="20")
 
     user = relationship("User", back_populates="sessions")
     messages = relationship("Message", back_populates="session", cascade="all, delete-orphan", order_by="Message.created_at")
@@ -98,3 +99,30 @@ class MoodEntry(Base):
 
     user = relationship("User")
     session = relationship("ChatSession")
+
+
+class PersonalitySnapshot(Base):
+    __tablename__ = "personality_snapshots"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    self_awareness: Mapped[int] = mapped_column(Integer, default=50)
+    emotional_regulation: Mapped[int] = mapped_column(Integer, default=50)
+    self_compassion: Mapped[int] = mapped_column(Integer, default=50)
+    acceptance: Mapped[int] = mapped_column(Integer, default=50)
+    values_clarity: Mapped[int] = mapped_column(Integer, default=50)
+    resourcefulness: Mapped[int] = mapped_column(Integer, default=50)
+    dominant_theme: Mapped[str | None] = mapped_column(String(50))
+    summary_note: Mapped[str | None] = mapped_column(Text)
+
+
+class SessionTask(Base):
+    __tablename__ = "session_tasks"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    session_id: Mapped[str] = mapped_column(String(36), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

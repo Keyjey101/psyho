@@ -51,7 +51,7 @@ class SendCodeResponse(BaseModel):
 
 class VerifyCodeRequest(BaseModel):
     email: EmailStr
-    code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+    code: str = Field(min_length=4, max_length=10, pattern=r"^\d+$")
 
 
 class VerifyCodeResponse(BaseModel):

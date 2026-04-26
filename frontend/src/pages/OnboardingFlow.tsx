@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, ArrowLeft, Check } from "lucide-react";
 import api from "@/api/client";
 import { useAuthStore } from "@/store/auth";
 
 const TOTAL_STEPS = 5;
+const DRAFT_KEY = "onboarding_draft";
 
 const GOALS = [
   { id: "anxiety", label: "Справиться с тревогой", emoji: "😰" },
@@ -38,17 +39,47 @@ const variants = {
   exit: { opacity: 0, x: -32 },
 };
 
+interface Draft {
+  step: number;
+  name: string;
+  addressForm: string;
+  selectedGoals: string[];
+  style: string;
+  gender: string;
+}
+
+function loadDraft(): Draft | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return null;
+}
+
+function saveDraft(d: Draft) {
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+}
+
 export default function OnboardingFlow() {
   const navigate = useNavigate();
   const { refreshUser } = useAuthStore();
 
-  const [step, setStep] = useState(1);
-  const [name, setName] = useState("");
-  const [addressForm, setAddressForm] = useState<"ты" | "вы">("ты");
-  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
-  const [style, setStyle] = useState("balanced");
-  const [gender, setGender] = useState("");
+  const draft = loadDraft();
+  const [step, setStep] = useState(draft?.step ?? 1);
+  const [name, setName] = useState(draft?.name ?? "");
+  const [addressForm, setAddressForm] = useState<"ты" | "вы">(draft?.addressForm as "ты" | "вы" ?? "ты");
+  const [selectedGoals, setSelectedGoals] = useState<string[]>(draft?.selectedGoals ?? []);
+  const [style, setStyle] = useState(draft?.style ?? "balanced");
+  const [gender, setGender] = useState(draft?.gender ?? "");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    saveDraft({ step, name, addressForm, selectedGoals, style, gender });
+  }, [step, name, addressForm, selectedGoals, style, gender]);
 
   const toggleGoal = (id: string) => {
     setSelectedGoals((prev) =>
@@ -64,6 +95,12 @@ export default function OnboardingFlow() {
   const handleNext = () => {
     if (step < TOTAL_STEPS) {
       setStep((s) => s + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (step > 1) {
+      setStep((s) => s - 1);
     }
   };
 
@@ -87,6 +124,7 @@ export default function OnboardingFlow() {
         preferred_style: style,
         gender: gender || undefined,
       });
+      clearDraft();
       await refreshUser();
       navigate("/chat", { replace: true });
     } catch {
@@ -114,21 +152,33 @@ export default function OnboardingFlow() {
               <StepName name={name} setName={setName} onNext={handleNext} canNext={canProceed()} />
             )}
             {step === 2 && (
-              <StepAddress addressForm={addressForm} setAddressForm={setAddressForm} onNext={handleNext} />
+              <StepAddress addressForm={addressForm} setAddressForm={setAddressForm} onNext={handleNext} onBack={handleBack} />
             )}
             {step === 3 && (
-              <StepGoals selected={selectedGoals} toggle={toggleGoal} onNext={handleNext} onSkip={handleSkip} />
+              <StepGoals selected={selectedGoals} toggle={toggleGoal} onNext={handleNext} onSkip={handleSkip} onBack={handleBack} />
             )}
             {step === 4 && (
-              <StepStyle style={style} setStyle={setStyle} onNext={handleNext} onSkip={handleSkip} />
+              <StepStyle style={style} setStyle={setStyle} onNext={handleNext} onSkip={handleSkip} onBack={handleBack} />
             )}
             {step === 5 && (
-              <StepGender gender={gender} setGender={setGender} onFinish={handleFinish} onSkip={handleFinish} saving={saving} />
+              <StepGender gender={gender} setGender={setGender} onFinish={handleFinish} onSkip={handleFinish} saving={saving} onBack={handleBack} />
             )}
           </motion.div>
         </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+function BackButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="mb-3 flex items-center gap-1 text-[13px] text-[#B8A898] hover:text-[#8A7A6A]"
+    >
+      <ArrowLeft className="h-3.5 w-3.5" />
+      Назад
+    </button>
   );
 }
 
@@ -166,11 +216,12 @@ function StepName({ name, setName, onNext, canNext }: {
   );
 }
 
-function StepAddress({ addressForm, setAddressForm, onNext }: {
-  addressForm: "ты" | "вы"; setAddressForm: (v: "ты" | "вы") => void; onNext: () => void;
+function StepAddress({ addressForm, setAddressForm, onNext, onBack }: {
+  addressForm: "ты" | "вы"; setAddressForm: (v: "ты" | "вы") => void; onNext: () => void; onBack: () => void;
 }) {
   return (
     <div>
+      <BackButton onClick={onBack} />
       <p className="mb-1 text-center text-[32px]">🤝</p>
       <h2 className="mb-2 text-center font-serif text-[22px] font-bold text-[#4A4038]">
         Как тебе комфортнее?
@@ -206,11 +257,12 @@ function StepAddress({ addressForm, setAddressForm, onNext }: {
   );
 }
 
-function StepGoals({ selected, toggle, onNext, onSkip }: {
-  selected: string[]; toggle: (id: string) => void; onNext: () => void; onSkip: () => void;
+function StepGoals({ selected, toggle, onNext, onSkip, onBack }: {
+  selected: string[]; toggle: (id: string) => void; onNext: () => void; onSkip: () => void; onBack: () => void;
 }) {
   return (
     <div>
+      <BackButton onClick={onBack} />
       <p className="mb-1 text-center text-[32px]">🎯</p>
       <h2 className="mb-2 text-center font-serif text-[22px] font-bold text-[#4A4038]">
         Что хочешь проработать?
@@ -264,11 +316,12 @@ const STYLES = [
   { id: "direct", label: "Прямой", desc: "Конкретно, структурно, по делу" },
 ];
 
-function StepStyle({ style, setStyle, onNext, onSkip }: {
-  style: string; setStyle: (v: string) => void; onNext: () => void; onSkip: () => void;
+function StepStyle({ style, setStyle, onNext, onSkip, onBack }: {
+  style: string; setStyle: (v: string) => void; onNext: () => void; onSkip: () => void; onBack: () => void;
 }) {
   return (
     <div>
+      <BackButton onClick={onBack} />
       <p className="mb-1 text-center text-[32px]">💬</p>
       <h2 className="mb-2 text-center font-serif text-[22px] font-bold text-[#4A4038]">
         Как говорить с тобой?
@@ -309,11 +362,12 @@ const GENDERS = [
   { id: "other", label: "Предпочитаю не указывать" },
 ];
 
-function StepGender({ gender, setGender, onFinish, onSkip, saving }: {
-  gender: string; setGender: (v: string) => void; onFinish: () => void; onSkip: () => void; saving: boolean;
+function StepGender({ gender, setGender, onFinish, onSkip, saving, onBack }: {
+  gender: string; setGender: (v: string) => void; onFinish: () => void; onSkip: () => void; saving: boolean; onBack: () => void;
 }) {
   return (
     <div>
+      <BackButton onClick={onBack} />
       <p className="mb-1 text-center text-[32px]">✨</p>
       <h2 className="mb-2 text-center font-serif text-[22px] font-bold text-[#4A4038]">
         Как к тебе обращаться?

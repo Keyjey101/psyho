@@ -12,6 +12,13 @@ client = AsyncOpenAI(
     base_url=settings.ZAI_BASE_URL,
 )
 
+AGENT_PREAMBLE = """Ты — эксперт-аналитик. Твой анализ читает главный терапевт Ника — она синтезирует все перспективы в единый ответ пользователю. Ты НЕ общаешься с пользователем напрямую.
+
+Пиши аналитически, конкретно. Без вступлений «Конечно!» или «Я помогу».
+Язык: всегда русский.
+Объём: 300-400 слов.
+Выполни цепочку рассуждений ПЕРЕД тем как писать анализ."""
+
 
 class BaseAgent(ABC):
     @property
@@ -32,8 +39,8 @@ class BaseAgent(ABC):
         history: list[dict],
         focus: str = "",
     ) -> str:
-        messages = [{"role": "system", "content": self.system_prompt}]
-        messages.extend(history[-10:])
+        messages = [{"role": "system", "content": AGENT_PREAMBLE + "\n\n" + self.system_prompt}]
+        messages.extend(history[-16:])
         user_content = user_message
         if focus:
             user_content += f"\n\nФокус анализа: {focus}"

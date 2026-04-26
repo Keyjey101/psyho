@@ -64,35 +64,35 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-50 p-6 lg:p-10">
+    <div className="min-h-screen bg-[#FAF6F1] p-6 lg:p-10">
       <div className="mx-auto max-w-2xl">
         <button
           onClick={() => navigate("/chat")}
-          className="mb-6 flex items-center gap-2 text-sm text-surface-500 hover:text-surface-700"
+          className="mb-6 flex items-center gap-2 text-sm text-[#8A7A6A] hover:text-[#5A5048]"
         >
           <ArrowLeft className="h-4 w-4" />
           Назад к чату
         </button>
 
-        <h1 className="mb-8 text-2xl font-bold text-surface-900">Профиль</h1>
+        <h1 className="mb-8 text-2xl font-bold text-[#5A5048]">Профиль</h1>
 
         {profile.user && (
-          <div className="mb-6 rounded-2xl border border-surface-100 bg-white p-6 shadow-sm">
+          <div className="mb-6 rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm">
             <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-600 text-lg font-bold text-white">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#B8785A] text-lg font-bold text-white">
                 {(profile.user.name || profile.user.email)?.[0]?.toUpperCase() ?? "?"}
               </div>
               <div>
-                <p className="font-semibold text-surface-900">{profile.user.name || "Имя не указано"}</p>
-                <p className="text-sm text-surface-500">{profile.user.email}</p>
+                <p className="font-semibold text-[#5A5048]">{profile.user.name || "Имя не указано"}</p>
+                <p className="text-sm text-[#8A7A6A]">{profile.user.email}</p>
               </div>
             </div>
           </div>
         )}
 
         <div className="space-y-6">
-          <div className="rounded-2xl border border-surface-100 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-surface-900">Форма обращения</h2>
+          <div className="rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold text-[#5A5048]">Форма обращения</h2>
             <div className="grid grid-cols-2 gap-3">
               {(["ты", "вы"] as const).map((form) => (
                 <button
@@ -100,8 +100,8 @@ export default function Profile() {
                   onClick={() => setProfile((p) => ({ ...p, address_form: form }))}
                   className={`rounded-xl border py-3 text-center text-sm font-medium transition-all ${
                     profile.address_form === form
-                      ? "border-primary-400 bg-primary-50 text-primary-700"
-                      : "border-surface-200 bg-white text-surface-700 hover:border-surface-300"
+                      ? "border-[#B8785A] bg-[#FAF0E8] text-[#B8785A]"
+                      : "border-[#E8DDD0] bg-white text-[#5A5048] hover:border-[#D8CDC0]"
                   }`}
                 >
                   На «{form}»
@@ -110,9 +110,9 @@ export default function Profile() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-surface-100 bg-white p-6 shadow-sm">
-            <h2 className="mb-1 text-lg font-semibold text-surface-900">Местоимения</h2>
-            <p className="mb-4 text-sm text-surface-500">Помогает Нике правильно использовать окончания</p>
+          <div className="rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm">
+            <h2 className="mb-1 text-lg font-semibold text-[#5A5048]">Местоимения</h2>
+            <p className="mb-4 text-sm text-[#8A7A6A]">Помогает Нике правильно использовать окончания</p>
             <div className="space-y-2">
               {GENDERS.map((g) => (
                 <button
@@ -120,8 +120,8 @@ export default function Profile() {
                   onClick={() => setProfile((p) => ({ ...p, gender: g.id }))}
                   className={`w-full rounded-xl border px-5 py-3 text-left text-sm transition-all ${
                     profile.gender === g.id
-                      ? "border-primary-400 bg-primary-50 font-medium text-primary-700"
-                      : "border-surface-200 bg-white text-surface-700 hover:border-surface-300"
+                      ? "border-[#B8785A] bg-[#FAF0E8] font-medium text-[#B8785A]"
+                      : "border-[#E8DDD0] bg-white text-[#5A5048] hover:border-[#D8CDC0]"
                   }`}
                 >
                   {g.label}
@@ -130,8 +130,8 @@ export default function Profile() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-surface-100 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-surface-900">Стиль общения</h2>
+          <div className="rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold text-[#5A5048]">Стиль общения</h2>
             <div className="space-y-3">
               {STYLES.map((s) => (
                 <button
@@ -139,19 +139,19 @@ export default function Profile() {
                   onClick={() => setProfile((p) => ({ ...p, preferred_style: s.id }))}
                   className={`w-full rounded-xl border px-5 py-3 text-left transition-all ${
                     profile.preferred_style === s.id
-                      ? "border-primary-400 bg-primary-50"
-                      : "border-surface-200 bg-white hover:border-surface-300"
+                      ? "border-[#B8785A] bg-[#FAF0E8]"
+                      : "border-[#E8DDD0] bg-white hover:border-[#D8CDC0]"
                   }`}
                 >
-                  <p className="font-medium text-surface-900">{s.label}</p>
-                  <p className="text-sm text-surface-500">{s.desc}</p>
+                  <p className="font-medium text-[#5A5048]">{s.label}</p>
+                  <p className="text-sm text-[#8A7A6A]">{s.desc}</p>
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-surface-100 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-surface-900">Цели терапии</h2>
+          <div className="rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold text-[#5A5048]">Цели терапии</h2>
             <textarea
               value={profile.therapy_goals}
               onChange={(e) => setProfile((p) => ({ ...p, therapy_goals: e.target.value }))}
@@ -161,10 +161,10 @@ export default function Profile() {
           </div>
 
           {profile.pop_score > 0 && (
-            <div className="rounded-2xl border border-surface-100 bg-white p-6 shadow-sm">
-              <h2 className="mb-1 text-lg font-semibold text-surface-900">Поп-ит</h2>
-              <p className="text-sm text-surface-500">Всего лопнуто пузырей</p>
-              <p className="mt-2 text-3xl font-bold text-primary-600">{profile.pop_score}</p>
+            <div className="rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm">
+              <h2 className="mb-1 text-lg font-semibold text-[#5A5048]">Поп-ит</h2>
+              <p className="text-sm text-[#8A7A6A]">Всего лопнуто пузырей</p>
+              <p className="mt-2 text-3xl font-bold text-[#B8785A]">{profile.pop_score}</p>
             </div>
           )}
 

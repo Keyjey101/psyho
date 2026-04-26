@@ -11,6 +11,9 @@ settings = get_settings()
 logger = structlog.get_logger()
 
 
+SUMMARY_MAX_CHARS = 3000
+
+
 async def maybe_compress_context(db: AsyncSession, session_id: str):
     count_result = await db.execute(
         select(func.count()).where(Message.session_id == session_id)
@@ -45,7 +48,10 @@ async def maybe_compress_context(db: AsyncSession, session_id: str):
     session = session_result.scalar_one_or_none()
     if session:
         existing = session.summary or ""
-        session.summary = f"{existing}\n\n--- Дополнительное резюме ---\n{summary}" if existing else summary
+        new_summary = f"{existing}\n\n--- Дополнительное резюме ---\n{summary}" if existing else summary
+        if len(new_summary) > SUMMARY_MAX_CHARS:
+            new_summary = new_summary[-SUMMARY_MAX_CHARS:]
+        session.summary = new_summary
 
     await db.commit()
 

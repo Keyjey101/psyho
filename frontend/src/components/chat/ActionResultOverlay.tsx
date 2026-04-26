@@ -34,7 +34,7 @@ export default function ActionResultOverlay({
         >
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 rounded-full p-1.5 text-[#B8A898] hover:bg-[#F5EDE4]"
+            className="absolute right-4 top-4 z-10 rounded-full p-1.5 text-[#B8A898] hover:bg-[#F5EDE4]"
           >
             <X className="h-5 w-5" />
           </button>
@@ -45,6 +45,12 @@ export default function ActionResultOverlay({
             <div className="flex flex-col items-center gap-4 py-10">
               <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#E8DDD0] border-t-[#B8785A]" />
               <p className="text-sm text-[#8A7A6A]">Готовлю для тебя...</p>
+              <button
+                onClick={onClose}
+                className="mt-2 text-sm text-[#B8A898] hover:text-[#8A7A6A]"
+              >
+                Отмена
+              </button>
             </div>
           ) : (
             <div className="markdown-content max-h-[60vh] overflow-y-auto text-[15px] leading-relaxed text-[#5A5048]">

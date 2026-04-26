@@ -5,24 +5,32 @@ import { useToast } from "@/components/Toast";
 interface UseChatOptions {
   sessionId: string;
   onMessageComplete?: (message: Message) => void;
+  onSessionLimitReached?: () => void;
 }
 
-export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
+export function useChat({ sessionId, onMessageComplete, onSessionLimitReached }: UseChatOptions) {
   const { showToast } = useToast();
   const [isConnected, setIsConnected] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [agentsUsed, setAgentsUsed] = useState<string[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [exchangeCount, setExchangeCount] = useState(0);
+  const [maxExchanges, setMaxExchanges] = useState(20);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const agentsUsedRef = useRef<string[]>([]);
   const streamingContentRef = useRef("");
   const onMessageCompleteRef = useRef(onMessageComplete);
+  const onSessionLimitReachedRef = useRef(onSessionLimitReached);
   const sessionIdRef = useRef(sessionId);
 
   useEffect(() => {
     onMessageCompleteRef.current = onMessageComplete;
   }, [onMessageComplete]);
+
+  useEffect(() => {
+    onSessionLimitReachedRef.current = onSessionLimitReached;
+  }, [onSessionLimitReached]);
 
   const cleanup = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -88,6 +96,17 @@ export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
           break;
         case "done":
           setIsStreaming(false);
+          if (data.exchange_count !== undefined) {
+            setExchangeCount(data.exchange_count);
+          }
+          if (data.max_exchanges !== undefined) {
+            setMaxExchanges(data.max_exchanges);
+          }
+          if (document.hidden && Notification.permission === "granted") {
+            try {
+              new Notification("Ника ответила", { icon: "/icons/pwa-192.svg" });
+            } catch {}
+          }
           onMessageCompleteRef.current?.({
             id: data.message_id,
             session_id: sessionId,
@@ -105,10 +124,14 @@ export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
           showToast(data.message || "Произошла ошибка");
           break;
         case "context_compressed":
+          showToast("Контекст оптимизирован");
+          break;
+        case "session_limit_reached":
+          onSessionLimitReachedRef.current?.();
           break;
       }
     };
-  }, [sessionId, cleanup]);
+  }, [sessionId, cleanup, showToast]);
 
   useEffect(() => {
     sessionIdRef.current = sessionId;
@@ -132,5 +155,5 @@ export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
     return () => cleanup();
   }, [connect, cleanup]);
 
-  return { isConnected, streamingContent, agentsUsed, isStreaming, sendMessage };
+  return { isConnected, streamingContent, agentsUsed, isStreaming, sendMessage, exchangeCount, maxExchanges };
 }

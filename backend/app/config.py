@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     SYNTHESIS_MAX_TOKENS: int = 4096
     MAX_MESSAGE_LENGTH: int = 4000
     CLASSIFICATION_MAX_TOKENS: int = 200
+    SESSION_MAX_EXCHANGES: int = 20
 
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
