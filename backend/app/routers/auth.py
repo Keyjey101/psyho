@@ -129,7 +129,8 @@ async def send_code(body: SendCodeRequest, request: Request, db: AsyncSession = 
 async def verify_code(body: VerifyCodeRequest, response: Response, db: AsyncSession = Depends(get_db)):
     email = body.email.lower().strip()
 
-    # Test mode: accept TEST_PASSWORD_CODE as a universal bypass code
+    logger.info("verify-code attempt", email=email, code=body.code, test_code_set=bool(settings.TEST_PASSWORD_CODE), test_code=settings.TEST_PASSWORD_CODE)
+
     if settings.TEST_PASSWORD_CODE and body.code == settings.TEST_PASSWORD_CODE:
         user_result = await db.execute(select(User).where(User.email == email))
         user = user_result.scalar_one_or_none()
