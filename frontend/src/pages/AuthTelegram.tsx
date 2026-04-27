@@ -2,11 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Send, RefreshCw } from "lucide-react";
 import { useAuthStore } from "@/store/auth";
+import { isTMA, getInitData } from "@/utils/telegram";
 
-type Step = "input" | "code";
+type Step = "tma_loading" | "input" | "code";
 
 export default function AuthTelegram() {
-  const [step, setStep] = useState<Step>("input");
+  const [step, setStep] = useState<Step>(isTMA() ? "tma_loading" : "input");
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -20,8 +21,22 @@ export default function AuthTelegram() {
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const { requestTgCode, checkTgCode } = useAuthStore();
+  const { requestTgCode, checkTgCode, telegramAuth } = useAuthStore();
   const navigate = useNavigate();
+
+  // В Telegram Mini App — авторизуемся автоматически через initData, OTP не нужен
+  useEffect(() => {
+    if (!isTMA()) return;
+    const initData = getInitData();
+    if (!initData) { setStep("input"); return; }
+    telegramAuth(initData)
+      .then((data) => {
+        navigate(data.is_new_user ? "/onboarding" : "/chat", { replace: true });
+      })
+      .catch(() => {
+        setStep("input");
+      });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -141,6 +156,13 @@ export default function AuthTelegram() {
             onError={(e) => { e.currentTarget.src = "/illustrations/ai_avatar.png" }}
           />
         </div>
+
+        {step === "tma_loading" && (
+          <div className="flex flex-col items-center gap-4 py-4">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#E8DDD0] border-t-[#B8785A]" />
+            <p className="text-[13px] text-[#8A7A6A]">Входим через Telegram...</p>
+          </div>
+        )}
 
         {step === "input" && (
           <>

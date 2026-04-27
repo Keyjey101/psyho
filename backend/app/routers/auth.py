@@ -331,7 +331,7 @@ async def tg_check(request_id: str, response: Response, db: AsyncSession = Depen
     if not record:
         raise HTTPException(status_code=404, detail="Запрос не найден")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
 
     if not record.verified:
         if now > record.expires_at:
