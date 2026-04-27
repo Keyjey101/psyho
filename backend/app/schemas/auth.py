@@ -77,6 +77,24 @@ class LinkTelegramRequest(BaseModel):
     init_data: str
 
 
+class TgRequestCodeRequest(BaseModel):
+    telegram_username: str | None = None
+
+
+class TgRequestCodeResponse(BaseModel):
+    request_id: str
+    code: str
+    bot_username: str
+    expires_in: int = 600
+
+
+class TgCheckResponse(BaseModel):
+    status: str
+    access_token: str | None = None
+    refresh_token: str | None = None
+    is_new_user: bool | None = None
+
+
 class LinkEmailSendRequest(BaseModel):
     email: EmailStr
 

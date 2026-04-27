@@ -1,11 +1,15 @@
 import { motion } from "framer-motion";
 
+const RAW_BOT = (import.meta.env.VITE_TG_BOT_USERNAME || "").replace(/^@/, "");
+const BOT_DISPLAY = RAW_BOT ? `@${RAW_BOT}` : null;
+const BOT_LINK = RAW_BOT ? `https://t.me/${RAW_BOT}` : null;
+
 const cards = [
   {
     img: "/illustrations/opt/guide_email.webp",
     fallback: "/illustrations/guide_email.png",
-    title: "Вход по email",
-    body: "Введи почту — придёт 6-значный код. Пароль не нужен. Каждый раз входишь по новому коду — быстро и безопасно.",
+    title: "Вход через Telegram",
+    tg: true,
   },
   {
     img: "/illustrations/opt/guide_chat.webp",
@@ -78,6 +82,25 @@ export default function UserGuide() {
               <h4 className="mt-3 font-serif text-[16px] font-semibold text-[#5A5048]">
                 {card.title}
               </h4>
+
+              {card.tg && (
+                <p className="mt-1 text-[13px] leading-[1.6] text-[#8A7A6A]">
+                  Нажми «Войти», укажи свой ник в Telegram — на экране появится 6-значный код. Отправь его{" "}
+                  {BOT_LINK ? (
+                    <a
+                      href={BOT_LINK}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-[#B8785A] hover:underline"
+                    >
+                      {BOT_DISPLAY}
+                    </a>
+                  ) : (
+                    "боту"
+                  )}
+                  . Пароль не нужен.
+                </p>
+              )}
 
               {card.body && (
                 <p className="mt-1 text-[13px] leading-[1.6] text-[#8A7A6A]">{card.body}</p>

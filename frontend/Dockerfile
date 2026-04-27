@@ -3,6 +3,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
 COPY . .
+ARG VITE_TG_BOT_USERNAME
+ENV VITE_TG_BOT_USERNAME=$VITE_TG_BOT_USERNAME
 RUN npm run build
 
 FROM nginx:1.25-alpine

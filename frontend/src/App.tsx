@@ -5,6 +5,7 @@ import { useAuthStore } from "@/store/auth";
 import { isTMA, initTelegramApp, getInitData } from "@/utils/telegram";
 import AuthEmail from "@/pages/AuthEmail";
 import AuthVerify from "@/pages/AuthVerify";
+import AuthTelegram from "@/pages/AuthTelegram";
 import Chat from "@/pages/Chat";
 import Admin from "@/pages/Admin";
 import OnboardingFlow from "@/pages/OnboardingFlow";
@@ -67,7 +68,8 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
 
-      <Route path="/auth" element={<AuthEmail />} />
+      <Route path="/auth" element={<AuthTelegram />} />
+      <Route path="/auth/email" element={<AuthEmail />} />
       <Route path="/auth/verify" element={<AuthVerify />} />
 
       <Route path="/login" element={<Navigate to="/auth" replace />} />

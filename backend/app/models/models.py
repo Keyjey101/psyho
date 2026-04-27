@@ -89,6 +89,19 @@ class EmailVerificationCode(Base):
     used: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
 
+class TelegramVerificationCode(Base):
+    __tablename__ = "telegram_verification_codes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    telegram_username: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    code: Mapped[str] = mapped_column(String(6), nullable=False)
+    telegram_id: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    used: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+
+
 class MoodEntry(Base):
     __tablename__ = "mood_entries"
 

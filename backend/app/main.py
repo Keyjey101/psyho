@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.database import init_db, async_session
 from app.routers import auth, sessions, messages, users, mood, actions, personality, tasks
 from app.routers import admin as admin_router
+from app.services.telegram_bot import start_bot, stop_bot
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -21,8 +22,12 @@ limiter = Limiter(key_func=get_remote_address)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    if settings.TELEGRAM_BOT_TOKEN:
+        await start_bot()
     logger.info("PsyHo backend started", environment=settings.ENVIRONMENT)
     yield
+    if settings.TELEGRAM_BOT_TOKEN:
+        await stop_bot()
     logger.info("PsyHo backend shutting down")
 
 

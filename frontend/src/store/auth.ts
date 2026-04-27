@@ -15,6 +15,8 @@ interface AuthState {
   checkAuth: () => Promise<void>;
   refreshUser: () => Promise<void>;
   telegramAuth: (initData: string) => Promise<{ is_new_user: boolean; tg_name: string }>;
+  requestTgCode: (username: string) => Promise<{ request_id: string; code: string; bot_username: string; expires_in: number }>;
+  checkTgCode: (requestId: string) => Promise<{ status: string; is_new_user?: boolean }>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -79,6 +81,23 @@ export const useAuthStore = create<AuthState>((set) => ({
       const { data: userData } = await api.get("/user/me");
       set({ user: userData });
     } catch { /* ignore */ }
+    return data;
+  },
+
+  requestTgCode: async (username: string) => {
+    const { data } = await api.post("/auth/tg/request-code", { telegram_username: username || null });
+    return data;
+  },
+
+  checkTgCode: async (requestId: string) => {
+    const { data } = await api.get(`/auth/tg/check/${requestId}`);
+    if (data.status === "verified") {
+      set({ isAuthenticated: true, isLoading: false });
+      try {
+        const { data: userData } = await api.get("/user/me");
+        set({ user: userData });
+      } catch { /* ignore */ }
+    }
     return data;
   },
 }));

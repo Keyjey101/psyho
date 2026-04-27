@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
-from app.models.models import EmailVerificationCode, User, UserProfile
+from app.models.models import EmailVerificationCode, User, UserProfile, TelegramVerificationCode
 from app.schemas.auth import (
     LoginRequest,
     RegisterRequest,
@@ -31,6 +31,9 @@ from app.schemas.auth import (
     LinkTelegramRequest,
     LinkEmailSendRequest,
     LinkEmailVerifyRequest,
+    TgRequestCodeRequest,
+    TgRequestCodeResponse,
+    TgCheckResponse,
 )
 from app.services.auth import (
     authenticate_user,
@@ -273,6 +276,103 @@ async def logout(response: Response):
     response.delete_cookie("access_token", path="/")
     response.delete_cookie("refresh_token", path="/api/auth")
     return {"detail": "Logged out successfully"}
+
+
+@router.post("/tg/request-code", response_model=TgRequestCodeResponse)
+async def tg_request_code(body: TgRequestCodeRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    username = None
+    if body.telegram_username:
+        username = body.telegram_username.strip().lstrip("@").lower()
+
+    now = datetime.now(timezone.utc)
+
+    if username:
+        window_start = now - timedelta(minutes=10)
+        rate_result = await db.execute(
+            select(TelegramVerificationCode).where(
+                TelegramVerificationCode.telegram_username == username,
+                TelegramVerificationCode.created_at >= window_start,
+            )
+        )
+        if len(rate_result.scalars().all()) >= 5:
+            raise HTTPException(status_code=429, detail="Слишком много попыток. Попробуй через 10 минут.")
+
+        await db.execute(
+            delete(TelegramVerificationCode).where(
+                TelegramVerificationCode.telegram_username == username,
+                TelegramVerificationCode.used == False,  # noqa: E712
+            )
+        )
+
+    code = _generate_otp()
+    record = TelegramVerificationCode(
+        telegram_username=username,
+        code=code,
+        expires_at=now + timedelta(minutes=settings.OTP_EXPIRE_MINUTES),
+    )
+    db.add(record)
+    await db.commit()
+    await db.refresh(record)
+
+    return TgRequestCodeResponse(
+        request_id=record.id,
+        code=code,
+        bot_username=settings.TELEGRAM_BOT_USERNAME,
+        expires_in=settings.OTP_EXPIRE_MINUTES * 60,
+    )
+
+
+@router.get("/tg/check/{request_id}", response_model=TgCheckResponse)
+async def tg_check(request_id: str, response: Response, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(TelegramVerificationCode).where(TelegramVerificationCode.id == request_id)
+    )
+    record = result.scalar_one_or_none()
+    if not record:
+        raise HTTPException(status_code=404, detail="Запрос не найден")
+
+    now = datetime.now(timezone.utc)
+
+    if not record.verified:
+        if now > record.expires_at:
+            return TgCheckResponse(status="expired")
+        return TgCheckResponse(status="pending")
+
+    if record.used:
+        return TgCheckResponse(status="expired")
+
+    record.used = True
+
+    user_result = await db.execute(select(User).where(User.telegram_id == record.telegram_id))
+    user = user_result.scalar_one_or_none()
+    is_new_user = user is None
+
+    if is_new_user:
+        synthetic_email = f"tg_{record.telegram_id}@tg.local"
+        user = User(
+            email=synthetic_email,
+            name="",
+            password=_hash_code(secrets.token_hex(32)),
+            telegram_id=record.telegram_id,
+            telegram_username=record.telegram_username,
+        )
+        db.add(user)
+        await db.flush()
+        profile = UserProfile(user_id=user.id)
+        db.add(profile)
+
+    await db.commit()
+
+    access = create_access_token({"sub": user.id})
+    refresh = create_refresh_token({"sub": user.id})
+    _set_token_cookies(response, access, refresh)
+
+    return TgCheckResponse(
+        status="verified",
+        access_token=access,
+        refresh_token=refresh,
+        is_new_user=is_new_user,
+    )
 
 
 def _validate_telegram_init_data(init_data: str) -> dict | None:
