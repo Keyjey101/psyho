@@ -5,10 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.database import get_db
 from app.models.models import ChatSession, Message, User
 from app.schemas.session import SessionCreate, SessionUpdate, SessionResponse, SessionListResponse, SessionDetailResponse
 from app.middleware.auth import get_current_user
+
+settings = get_settings()
 
 router = APIRouter()
 
@@ -25,7 +28,7 @@ async def list_sessions(user: User = Depends(get_current_user), db: AsyncSession
 
 @router.post("", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)
 async def create_session(body: SessionCreate, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    session = ChatSession(user_id=user.id, title=body.title)
+    session = ChatSession(user_id=user.id, title=body.title, max_exchanges=settings.SESSION_MAX_EXCHANGES)
     db.add(session)
     await db.commit()
     await db.refresh(session)
@@ -173,6 +176,7 @@ async def continue_session(
         user_id=user.id,
         title=None,
         continuation_context=continuation_ctx,
+        max_exchanges=settings.SESSION_MAX_EXCHANGES,
     )
     db.add(new_session)
     await db.commit()
