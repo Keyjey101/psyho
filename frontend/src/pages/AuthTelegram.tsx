@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Send, RefreshCw, Copy, Check } from "lucide-react";
 import { useAuthStore } from "@/store/auth";
-import { isTMA, getInitData } from "@/utils/telegram";
+import { isTMA, getInitData, getTelegramUser } from "@/utils/telegram";
 
 type Step = "tma_loading" | "input" | "code";
 
@@ -22,21 +22,32 @@ export default function AuthTelegram() {
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const { requestTgCode, checkTgCode, telegramAuth } = useAuthStore();
+  const { requestTgCode, checkTgCode, telegramAuth, telegramMiniAppAuth } = useAuthStore();
   const navigate = useNavigate();
 
-  // В Telegram Mini App — авторизуемся автоматически через initData, OTP не нужен
+  // В Telegram Mini App — авторизуемся автоматически, OTP не нужен
   useEffect(() => {
     if (!isTMA()) return;
     const initData = getInitData();
-    if (!initData) { setStep("input"); return; }
-    telegramAuth(initData)
-      .then((data) => {
-        navigate(data.is_new_user ? "/onboarding" : "/chat", { replace: true });
-      })
-      .catch(() => {
-        setStep("input");
-      });
+    if (initData) {
+      telegramAuth(initData)
+        .then((data) => {
+          navigate(data.is_new_user ? "/onboarding" : "/chat", { replace: true });
+        })
+        .catch(() => { setStep("input"); });
+      return;
+    }
+    // Fallback for Telegram Android where initData is empty but initDataUnsafe.user is available
+    const tgUser = getTelegramUser();
+    if (tgUser?.id) {
+      telegramMiniAppAuth(String(tgUser.id), tgUser.first_name, tgUser.username)
+        .then((data) => {
+          navigate(data.is_new_user ? "/onboarding" : "/chat", { replace: true });
+        })
+        .catch(() => { setStep("input"); });
+      return;
+    }
+    setStep("input");
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stopPolling = useCallback(() => {

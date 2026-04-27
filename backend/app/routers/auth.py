@@ -34,6 +34,7 @@ from app.schemas.auth import (
     TgRequestCodeRequest,
     TgRequestCodeResponse,
     TgCheckResponse,
+    TgMiniAppRequest,
 )
 from app.services.auth import (
     authenticate_user,
@@ -372,6 +373,53 @@ async def tg_check(request_id: str, response: Response, db: AsyncSession = Depen
         access_token=access,
         refresh_token=refresh,
         is_new_user=is_new_user,
+    )
+
+
+@router.post("/tg/mini-app", response_model=TelegramAuthResponse)
+async def tg_mini_app_auth(body: TgMiniAppRequest, response: Response, db: AsyncSession = Depends(get_db)):
+    """TMA fallback: called when initData is empty (known Telegram Android bug) but initDataUnsafe.user is available."""
+    if not settings.TELEGRAM_BOT_TOKEN:
+        raise HTTPException(status_code=503, detail="Telegram auth not configured")
+
+    if not body.telegram_id.isdigit():
+        raise HTTPException(status_code=400, detail="Invalid telegram_id")
+
+    result = await db.execute(select(User).where(User.telegram_id == body.telegram_id))
+    user = result.scalar_one_or_none()
+    is_new_user = user is None
+
+    if is_new_user:
+        synthetic_email = f"tg_{body.telegram_id}@tg.local"
+        user = User(
+            email=synthetic_email,
+            name=body.first_name,
+            password=_hash_code(secrets.token_hex(32)),
+            telegram_id=body.telegram_id,
+            telegram_username=body.username,
+        )
+        db.add(user)
+        await db.flush()
+        profile = UserProfile(user_id=user.id)
+        db.add(profile)
+        await db.commit()
+        await db.refresh(user)
+    else:
+        if body.first_name and not user.name:
+            user.name = body.first_name
+        if body.username and not user.telegram_username:
+            user.telegram_username = body.username
+        await db.commit()
+
+    access = create_access_token({"sub": user.id})
+    refresh = create_refresh_token({"sub": user.id})
+    _set_token_cookies(response, access, refresh)
+
+    return TelegramAuthResponse(
+        access_token=access,
+        refresh_token=refresh,
+        is_new_user=is_new_user,
+        tg_name=body.first_name,
     )
 
 

@@ -95,6 +95,12 @@ class TgCheckResponse(BaseModel):
     is_new_user: bool | None = None
 
 
+class TgMiniAppRequest(BaseModel):
+    telegram_id: str
+    first_name: str = ""
+    username: str | None = None
+
+
 class LinkEmailSendRequest(BaseModel):
     email: EmailStr
 

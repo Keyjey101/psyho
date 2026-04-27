@@ -23,7 +23,8 @@ declare global {
 }
 
 export const isTMA = (): boolean =>
-  typeof window !== "undefined" && Boolean(window.Telegram?.WebApp?.initData)
+  typeof window !== "undefined" &&
+  (Boolean(window.Telegram?.WebApp?.initData) || Boolean(window.Telegram?.WebApp?.initDataUnsafe?.user?.id))
 
 export const getTelegramUser = () =>
   window.Telegram?.WebApp?.initDataUnsafe?.user

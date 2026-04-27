@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/auth";
-import { getInitData } from "@/utils/telegram";
+import { getInitData, getTelegramUser } from "@/utils/telegram";
 import Hero from "@/components/landing/Hero";
 import Techniques from "@/components/landing/Techniques";
 import UserGuide from "@/components/landing/UserGuide";
@@ -12,6 +12,7 @@ export default function Landing() {
   const { isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
   const telegramAuth = useAuthStore((s) => s.telegramAuth);
+  const telegramMiniAppAuth = useAuthStore((s) => s.telegramMiniAppAuth);
   const navigate = useNavigate();
 
   const handleStart = async () => {
@@ -23,11 +24,26 @@ export default function Landing() {
         navigate(data.is_new_user ? "/onboarding" : "/chat", { replace: true });
         return;
       } catch {
-        // initData есть, но сервер отклонил — падаем на OTP
+        // fall through to initDataUnsafe fallback
       } finally {
         setLoading(false);
       }
     }
+
+    const tgUser = getTelegramUser();
+    if (tgUser?.id) {
+      setLoading(true);
+      try {
+        const data = await telegramMiniAppAuth(String(tgUser.id), tgUser.first_name, tgUser.username);
+        navigate(data.is_new_user ? "/onboarding" : "/chat", { replace: true });
+        return;
+      } catch {
+        // fall through to OTP
+      } finally {
+        setLoading(false);
+      }
+    }
+
     navigate("/auth");
   };
 
