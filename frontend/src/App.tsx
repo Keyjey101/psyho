@@ -1,8 +1,8 @@
 import { useEffect } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/auth";
-import { isTMA, initTelegramApp, getInitData } from "@/utils/telegram";
+import { isTMA, initTelegramApp } from "@/utils/telegram";
 import AuthEmail from "@/pages/AuthEmail";
 import AuthVerify from "@/pages/AuthVerify";
 import AuthTelegram from "@/pages/AuthTelegram";
@@ -37,32 +37,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
-  const telegramAuth = useAuthStore((s) => s.telegramAuth);
-  const navigate = useNavigate();
 
   useEffect(() => {
-    if (isTMA()) {
-      initTelegramApp();
-      const initData = getInitData();
-      if (initData) {
-        telegramAuth(initData)
-          .then((data) => {
-            if (data.is_new_user) navigate("/onboarding", { replace: true });
-            else navigate("/chat", { replace: true });
-          })
-          .catch(() => {
-            checkAuth();
-          });
-      } else {
-        checkAuth();
-      }
-    } else {
-      checkAuth();
-    }
+    if (isTMA()) initTelegramApp();
+    checkAuth();
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
-  }, [checkAuth, telegramAuth, navigate]);
+  }, [checkAuth]);
 
   return (
     <Routes>
@@ -123,7 +105,7 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="*" element={<Navigate to="/chat" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
