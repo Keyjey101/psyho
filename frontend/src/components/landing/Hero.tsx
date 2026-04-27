@@ -1,14 +1,36 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useAuthStore } from "@/store/auth";
+import { getInitData } from "@/utils/telegram";
 
 export default function Hero() {
+  const [loading, setLoading] = useState(false);
+  const telegramAuth = useAuthStore((s) => s.telegramAuth);
+  const navigate = useNavigate();
+
+  const handleStart = async () => {
+    const initData = getInitData();
+    if (initData) {
+      setLoading(true);
+      try {
+        const data = await telegramAuth(initData);
+        navigate(data.is_new_user ? "/onboarding" : "/chat", { replace: true });
+        return;
+      } catch {
+        // initData есть, но сервер отклонил — падаем на OTP
+      } finally {
+        setLoading(false);
+      }
+    }
+    navigate("/auth");
+  };
+
   return (
     <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 pt-20">
       <div
         className="absolute inset-0"
-        style={{
-          background: "linear-gradient(to bottom, #FAF6F1, #F3EBE3)",
-        }}
+        style={{ background: "linear-gradient(to bottom, #FAF6F1, #F3EBE3)" }}
       />
       <div
         className="absolute inset-0 opacity-[0.03]"
@@ -41,12 +63,17 @@ export default function Hero() {
         </p>
 
         <div className="mt-8">
-          <Link
-            to="/auth"
-            className="btn-primary inline-block w-full max-w-[320px]"
+          <button
+            onClick={handleStart}
+            disabled={loading}
+            className="btn-primary inline-flex items-center justify-center w-full max-w-[320px] gap-2"
           >
-            Начать разговор
-          </Link>
+            {loading ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            ) : (
+              "Начать разговор"
+            )}
+          </button>
         </div>
 
         <p className="mt-8 text-xs text-[#B8A898]">

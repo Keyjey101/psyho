@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Send, RefreshCw } from "lucide-react";
+import { ArrowLeft, Send, RefreshCw, Copy, Check } from "lucide-react";
 import { useAuthStore } from "@/store/auth";
 import { isTMA, getInitData } from "@/utils/telegram";
 
@@ -18,6 +18,7 @@ export default function AuthTelegram() {
   const [expiresIn, setExpiresIn] = useState(0);
   const [polling, setPolling] = useState(false);
   const [expired, setExpired] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -231,7 +232,7 @@ export default function AuthTelegram() {
               Отправь этот код боту — и вход выполнится автоматически
             </p>
 
-            <div className="mb-6 flex justify-center gap-2.5">
+            <div className="mb-2 flex justify-center gap-2.5">
               {code.split("").map((digit, i) => (
                 <div
                   key={i}
@@ -240,6 +241,24 @@ export default function AuthTelegram() {
                   {digit}
                 </div>
               ))}
+            </div>
+
+            <div className="mb-4 flex justify-center">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(code).then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  });
+                }}
+                className="flex items-center gap-1.5 text-[12px] text-[#B8A898] hover:text-[#8A7A6A] transition-colors"
+              >
+                {copied ? (
+                  <><Check className="h-3.5 w-3.5 text-green-500" /><span className="text-green-500">Скопировано</span></>
+                ) : (
+                  <><Copy className="h-3.5 w-3.5" />Скопировать код</>
+                )}
+              </button>
             </div>
 
             {expired ? (
