@@ -79,6 +79,8 @@ export default function MessageList({
                 if (!img.dataset.retried) {
                   img.dataset.retried = "1";
                   setTimeout(() => { img.src = "/illustrations/opt/chat_welcome.webp?" + Date.now(); }, 800);
+                } else {
+                  img.src = "/illustrations/chat_welcome.png";
                 }
               }}
             />

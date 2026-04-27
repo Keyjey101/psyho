@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { User } from "@/types";
 import api from "@/api/client";
+import { TG_TOKEN_KEY, TG_REFRESH_KEY } from "@/utils/telegram";
 
 interface AuthState {
   user: User | null;
@@ -13,6 +14,7 @@ interface AuthState {
   logout: () => void;
   checkAuth: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  telegramAuth: (initData: string) => Promise<{ is_new_user: boolean; tg_name: string }>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -66,5 +68,17 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch {
       // ignore
     }
+  },
+
+  telegramAuth: async (initData: string) => {
+    const { data } = await api.post("/auth/telegram", { init_data: initData });
+    localStorage.setItem(TG_TOKEN_KEY, data.access_token);
+    localStorage.setItem(TG_REFRESH_KEY, data.refresh_token);
+    set({ isAuthenticated: true, isLoading: false });
+    try {
+      const { data: userData } = await api.get("/user/me");
+      set({ user: userData });
+    } catch { /* ignore */ }
+    return data;
   },
 }));

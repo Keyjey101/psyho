@@ -24,16 +24,18 @@ export default function AgentBadge({ agent }: AgentBadgeProps) {
       </span>
       <AnimatePresence>
         {showTooltip && agent.tooltip && (
-          <motion.span
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4 }}
-            transition={{ duration: 0.15 }}
-            className="absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg bg-[#5A5048] px-2.5 py-1.5 text-[11px] leading-tight text-white shadow-lg"
-          >
-            {agent.tooltip}
-            <span className="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 bg-[#5A5048]" />
-          </motion.span>
+          <span className="absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 block">
+            <motion.span
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 4 }}
+              transition={{ duration: 0.15 }}
+              className="relative block whitespace-nowrap rounded-lg bg-[#5A5048] px-2.5 py-1.5 text-[11px] leading-tight text-white shadow-lg"
+            >
+              {agent.tooltip}
+              <span className="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 bg-[#5A5048]" />
+            </motion.span>
+          </span>
         )}
       </AnimatePresence>
     </span>

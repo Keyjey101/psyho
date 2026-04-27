@@ -8,6 +8,14 @@ import { useRenameSession } from "@/hooks/useSessions";
 
 const PAGE_SIZE = 20;
 
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/#{1,6}\s/g, '')
+    .replace(/`(.*?)`/g, '$1');
+}
+
 interface SidebarProps {
   sessions: Session[];
   activeSessionId?: string;
@@ -161,8 +169,8 @@ export default function Sidebar({
                 </div>
               </div>
               {hoveredId === session.id && session.summary && (
-                <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-[#E8DDD0] bg-white p-3 text-xs leading-relaxed text-[#8A7A6A] shadow-lg">
-                  {session.summary.slice(0, 200)}
+                <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-3 text-xs leading-relaxed text-[#8A7A6A] dark:text-[#B8A898] shadow-lg">
+                  {stripMarkdown(session.summary.slice(0, 200))}
                   {session.summary.length > 200 ? "..." : ""}
                 </div>
               )}

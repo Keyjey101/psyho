@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowLeft, Check } from "lucide-react";
 import api from "@/api/client";
 import { useAuthStore } from "@/store/auth";
+import { isTMA, getTelegramUser } from "@/utils/telegram";
 
 const TOTAL_STEPS = 5;
 const DRAFT_KEY = "onboarding_draft";
@@ -80,6 +81,15 @@ export default function OnboardingFlow() {
   useEffect(() => {
     saveDraft({ step, name, addressForm, selectedGoals, style, gender });
   }, [step, name, addressForm, selectedGoals, style, gender]);
+
+  useEffect(() => {
+    if (!name && isTMA()) {
+      const tgUser = getTelegramUser();
+      if (tgUser?.first_name) {
+        setName(tgUser.first_name);
+      }
+    }
+  }, []);
 
   const toggleGoal = (id: string) => {
     setSelectedGoals((prev) =>

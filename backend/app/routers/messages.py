@@ -25,6 +25,18 @@ router = APIRouter()
 orchestrator = Orchestrator()
 settings = get_settings()
 
+FAREWELL_KEYWORDS = {
+    "пока", "до свидания", "досвидания", "до встречи", "спасибо большое",
+    "всё, спасибо", "всё спасибо", "спасибо, всё", "на этом всё",
+    "bye", "goodbye", "до следующего раза", "спасибо за сессию",
+}
+
+def _is_farewell(message: str, exchange_count: int) -> bool:
+    if exchange_count < 5:
+        return False
+    msg = message.lower().strip()
+    return any(kw in msg for kw in FAREWELL_KEYWORDS) and len(msg) < 80
+
 _memory_counters: dict[str, int] = {}
 
 TASK_EXTRACT_PROMPT = """Из ответа терапевта ниже извлеки конкретную домашнюю задачу / практику, которую предложили пользователю.
@@ -121,7 +133,7 @@ async def list_messages(
 
 @router.websocket("/{session_id}/chat")
 async def websocket_chat(websocket: WebSocket, session_id: str):
-    token = websocket.cookies.get("access_token")
+    token = websocket.cookies.get("access_token") or websocket.query_params.get("token")
     if not token:
         await websocket.close(code=4001, reason="Missing token")
         return
@@ -360,6 +372,9 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                     )
 
             if exchange_count >= max_exchanges:
+                await websocket.send_json({"type": "session_limit_reached"})
+
+            if _is_farewell(content, exchange_count) and exchange_count < max_exchanges:
                 await websocket.send_json({"type": "session_limit_reached"})
 
     except WebSocketDisconnect:

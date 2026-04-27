@@ -83,7 +83,10 @@ export default function Chat() {
     }
     if (currentSession?.messages) {
       setLocalMessages(currentSession.messages);
-      setInitialExchangeCount(currentSession.messages.filter((m) => m.role === "user").length);
+      setInitialExchangeCount(
+        currentSession.exchange_count ??
+        currentSession.messages.filter((m) => m.role === "user").length
+      );
     }
   }, [currentSession, sessionId]);
 
@@ -183,6 +186,7 @@ export default function Chat() {
 
   const displayExchangeCount = exchangeCount || initialExchangeCount;
   const displayMaxExchanges = maxExchanges || currentSession?.max_exchanges || 20;
+  const isSessionCompleted = displayExchangeCount > 0 && displayExchangeCount >= displayMaxExchanges;
 
   useKeyboardShortcuts({
     onNewChat: handleNewChat,
@@ -229,6 +233,8 @@ export default function Chat() {
                 if (!img.dataset.retried) {
                   img.dataset.retried = "1";
                   setTimeout(() => { img.src = "/illustrations/opt/ai_avatar.webp?" + Date.now(); }, 800);
+                } else {
+                  img.src = "/illustrations/ai_avatar.png";
                 }
               }}
             />
@@ -269,7 +275,7 @@ export default function Chat() {
           </div>
         </header>
 
-        <SessionProgress current={displayExchangeCount} max={displayMaxExchanges} />
+        <SessionProgress current={displayExchangeCount} max={displayMaxExchanges} isSessionCompleted={isSessionCompleted} />
 
         <MessageList
           messages={localMessages}
@@ -283,14 +289,14 @@ export default function Chat() {
 
         <ActionPanel
           sessionId={sessionId}
-          disabled={isStreaming || awaitingGreeting}
+          disabled={isStreaming || awaitingGreeting || isSessionCompleted}
           isOpen={isActionsOpen}
           onMoodRequest={() => setShowMoodTracker(true)}
         />
 
         <InputBar
           onSend={handleSend}
-          disabled={isStreaming || awaitingGreeting}
+          disabled={isStreaming || awaitingGreeting || isSessionCompleted}
           isActionsOpen={isActionsOpen}
           onToggleActions={() => setIsActionsOpen((prev) => !prev)}
         />

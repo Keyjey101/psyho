@@ -1,7 +1,8 @@
 import { useEffect } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/auth";
+import { isTMA, initTelegramApp, getInitData } from "@/utils/telegram";
 import AuthEmail from "@/pages/AuthEmail";
 import AuthVerify from "@/pages/AuthVerify";
 import Chat from "@/pages/Chat";
@@ -10,6 +11,7 @@ import OnboardingFlow from "@/pages/OnboardingFlow";
 import Profile from "@/pages/Profile";
 import MoodPage from "@/pages/MoodPage";
 import PersonalityPage from "@/pages/PersonalityPage";
+import Landing from "@/pages/Landing";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -34,17 +36,36 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
+  const telegramAuth = useAuthStore((s) => s.telegramAuth);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    checkAuth();
+    if (isTMA()) {
+      initTelegramApp();
+      const initData = getInitData();
+      if (initData) {
+        telegramAuth(initData)
+          .then((data) => {
+            if (data.is_new_user) navigate("/onboarding", { replace: true });
+            else navigate("/chat", { replace: true });
+          })
+          .catch(() => {
+            checkAuth();
+          });
+      } else {
+        checkAuth();
+      }
+    } else {
+      checkAuth();
+    }
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
-  }, [checkAuth]);
+  }, [checkAuth, telegramAuth, navigate]);
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/auth" replace />} />
+      <Route path="/" element={<Landing />} />
 
       <Route path="/auth" element={<AuthEmail />} />
       <Route path="/auth/verify" element={<AuthVerify />} />

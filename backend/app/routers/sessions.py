@@ -50,6 +50,11 @@ async def get_session(session_id: str, user: User = Depends(get_current_user), d
     )
     messages = list(reversed(msg_result.scalars().all()))
 
+    count_result = await db.execute(
+        select(func.count()).where(Message.session_id == session_id, Message.role == "user")
+    )
+    exchange_count = count_result.scalar() or 0
+
     from app.schemas.message import MessageResponse
     return SessionDetailResponse(
         id=session.id,
@@ -59,6 +64,7 @@ async def get_session(session_id: str, user: User = Depends(get_current_user), d
         summary=session.summary,
         continuation_context=session.continuation_context,
         max_exchanges=session.max_exchanges,
+        exchange_count=exchange_count,
         messages=[MessageResponse.model_validate(m) for m in messages],
     )
 

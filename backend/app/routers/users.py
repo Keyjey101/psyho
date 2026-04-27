@@ -21,6 +21,8 @@ async def get_me(user: User = Depends(get_current_user), db: AsyncSession = Depe
         is_active=user.is_active,
         created_at=user.created_at,
         profile=UserProfileResponse.model_validate(profile) if profile else None,
+        telegram_username=user.telegram_username,
+        has_real_email=not user.email.endswith("@tg.local"),
     )
 
 
@@ -62,6 +64,8 @@ async def update_me(
         is_active=user.is_active,
         created_at=user.created_at,
         profile=UserProfileResponse.model_validate(profile),
+        telegram_username=user.telegram_username,
+        has_real_email=not user.email.endswith("@tg.local"),
     )
 
 

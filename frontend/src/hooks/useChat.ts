@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { WSMessage, Message } from "@/types";
 import { useToast } from "@/components/Toast";
+import { isTMA, TG_TOKEN_KEY } from "@/utils/telegram";
 
 interface UseChatOptions {
   sessionId: string;
@@ -60,7 +61,8 @@ export function useChat({ sessionId, onMessageComplete, onSessionLimitReached }:
     const wsBase =
       import.meta.env.VITE_WS_URL ||
       `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`;
-    const wsUrl = `${wsBase}/api/sessions/${sessionId}/chat`;
+    const tgToken = isTMA() ? localStorage.getItem(TG_TOKEN_KEY) : null;
+    const wsUrl = `${wsBase}/api/sessions/${sessionId}/chat${tgToken ? `?token=${tgToken}` : ""}`;
 
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;

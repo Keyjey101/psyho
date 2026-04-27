@@ -5,6 +5,8 @@ export interface User {
   is_active: boolean;
   created_at: string;
   profile?: UserProfile | null;
+  telegram_username?: string | null;
+  has_real_email?: boolean;
 }
 
 export interface UserProfile {
@@ -32,6 +34,7 @@ export interface Session {
 
 export interface SessionDetail extends Session {
   messages: Message[];
+  exchange_count?: number;
 }
 
 export interface Message {

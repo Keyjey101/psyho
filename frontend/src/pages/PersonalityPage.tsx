@@ -42,6 +42,15 @@ function getTrend(history: PersonalityData[], key: keyof PersonalityData): strin
   return "";
 }
 
+const DIM_SVG_LABEL: Record<string, string> = {
+  self_awareness: "Осознан.",
+  emotional_regulation: "Эмоц. рег.",
+  self_compassion: "Самосостр.",
+  acceptance: "Принятие",
+  values_clarity: "Ясность цен.",
+  resourcefulness: "Ресурсность",
+};
+
 function RadarChart({ data }: { data: PersonalityData }) {
   const values = DIMENSIONS.map((d) => data[d.key] as number);
   const size = 300;
@@ -72,7 +81,8 @@ function RadarChart({ data }: { data: PersonalityData }) {
   const polygonStr = points.map((p) => `${p.x},${p.y}`).join(" ");
 
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="mx-auto" width={size} height={size}>
+    <div className="px-10">
+      <svg viewBox={`0 0 ${size} ${size}`} className="mx-auto" width={size} height={size} overflow="visible">
       {gridLevels.map((level) => {
         const r = maxR * (level / 100);
         const pts = DIMENSIONS.map((_, i) => {
@@ -132,7 +142,8 @@ function RadarChart({ data }: { data: PersonalityData }) {
           </text>
         );
       })}
-    </svg>
+      </svg>
+    </div>
   );
 }
 
@@ -196,7 +207,7 @@ export default function PersonalityPage() {
                   >
                     <div className="flex items-center gap-3">
                       <span className="w-32 shrink-0 text-sm font-medium text-[#5A5048] dark:text-[#F5EDE4] sm:w-40">
-                        {dim.label}
+            {DIM_SVG_LABEL[dim.key]}
                       </span>
                       <div className="flex-1">
                         <div className="h-2.5 overflow-hidden rounded-full bg-[#F5EDE4] dark:bg-[#4A4038]">

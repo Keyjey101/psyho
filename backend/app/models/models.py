@@ -24,6 +24,8 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    telegram_id: Mapped[str | None] = mapped_column(String(20), nullable=True, unique=True, index=True)
+    telegram_username: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
     profile = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")

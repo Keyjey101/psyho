@@ -38,5 +38,7 @@ class UserMeResponse(BaseModel):
     is_active: bool
     created_at: datetime
     profile: UserProfileResponse | None = None
+    telegram_username: str | None = None
+    has_real_email: bool = True
 
     model_config = {"from_attributes": True}

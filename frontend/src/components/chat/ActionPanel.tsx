@@ -16,10 +16,10 @@ interface ActionPanelProps {
 type ActiveMode = "insight" | "exercise" | "breathe" | "distract" | null;
 
 const CARDS = [
-  { id: "breathe" as const, emoji: "\uD83E\uDE81", label: "Подышать" },
-  { id: "insight" as const, emoji: "\uD83D\uDCA1", label: "Инсайт" },
-  { id: "exercise" as const, emoji: "\uD83C\uDFCB\uFE0F", label: "Упражнение" },
-  { id: "distract" as const, emoji: "\uD83C\uDFAE", label: "Поп-ит" },
+  { id: "breathe" as const, image: "action_breathe", label: "Подышать" },
+  { id: "insight" as const, image: "action_insight", label: "Инсайт" },
+  { id: "exercise" as const, image: "action_exercise", label: "Упражнение" },
+  { id: "distract" as const, image: "action_journal", label: "Поп-ит" },
 ];
 
 export default function ActionPanel({ sessionId, disabled, isOpen, onMoodRequest }: ActionPanelProps) {
@@ -85,7 +85,7 @@ export default function ActionPanel({ sessionId, disabled, isOpen, onMoodRequest
                              bg-white/60 hover:bg-white active:scale-95 transition-all
                              text-xs text-[#5A5048] font-medium disabled:opacity-40 disabled:pointer-events-none"
                 >
-                  <span className="text-lg leading-none">{card.emoji}</span>
+                  <img src={`/illustrations/opt/${card.image}.webp`} alt={card.label} className="h-10 w-10 object-contain" />
                   <span>{card.label}</span>
                 </button>
               ))}

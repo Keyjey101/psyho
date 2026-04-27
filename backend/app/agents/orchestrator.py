@@ -39,10 +39,11 @@ PHASE_INSTRUCTIONS = {
         "(если соматика — укажи технику из 4-7-8 или 5-4-3-2-1)."
     ),
     SessionPhase.CLOSE: (
-        "ЗАДАЧА CLOSE: Это последний обмен. Сделай:\n"
-        "1. Краткое резюме: что прояснилось, что изменилось в понимании\n"
-        "2. 1 конкретная домашняя задача / практика до следующей сессии\n"
-        "3. Тёплое завершение, приглашение вернуться"
+        "ЗАДАЧА CLOSE: Мы подходим к завершению сессии, но НЕ прощайся и не заканчивай разговор — "
+        "пользователь может ответить ещё. Сделай:\n"
+        "1. Краткое резюме: что прояснилось в этой сессии\n"
+        "2. 1 конкретная домашняя задача / практика\n"
+        "3. Оставайся открытой — если человек ответит, продолжи естественно."
     ),
 }
 
@@ -260,7 +261,10 @@ class Orchestrator:
             results = await asyncio.gather(*tasks, return_exceptions=True)
             for result in results:
                 if isinstance(result, Exception):
-                    structlog.get_logger().warning("Agent analysis failed or timed out", error=str(result))
+                    structlog.get_logger().warning(
+                        "Agent analysis failed or timed out",
+                        error=type(result).__name__ + (f": {result}" if str(result) else ""),
+                    )
                     continue
                 key, analysis = result
                 perspectives[key] = analysis

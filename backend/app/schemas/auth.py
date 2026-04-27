@@ -59,3 +59,28 @@ class VerifyCodeResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     is_new_user: bool
+
+
+class TelegramAuthRequest(BaseModel):
+    init_data: str
+
+
+class TelegramAuthResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    is_new_user: bool
+    tg_name: str = ""
+
+
+class LinkTelegramRequest(BaseModel):
+    init_data: str
+
+
+class LinkEmailSendRequest(BaseModel):
+    email: EmailStr
+
+
+class LinkEmailVerifyRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=4, max_length=10, pattern=r"^\d+$")

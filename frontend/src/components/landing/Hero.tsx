@@ -28,6 +28,7 @@ export default function Hero() {
             src="/illustrations/opt/landing_hero.webp"
             alt=""
             className="h-full w-full object-contain"
+            onError={(e) => { e.currentTarget.src = "/illustrations/landing_hero.png" }}
           />
         </div>
 
