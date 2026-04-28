@@ -1,3 +1,4 @@
+import time
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +8,9 @@ from app.models.models import User
 from app.services.auth import decode_token
 
 security = HTTPBearer(auto_error=False)
+
+_token_cache: dict[str, tuple[str, float]] = {}  # token -> (user_id, expires_at)
+TOKEN_CACHE_TTL = 60  # 60 seconds (access token is 15 min)
 
 
 async def get_current_user(
@@ -25,6 +29,18 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
         )
+
+    # Check cache — store only user_id to avoid stale User objects across DB sessions
+    now = time.monotonic()
+    cached = _token_cache.get(token)
+    if cached is not None:
+        user_id_cached, exp = cached
+        if now < exp:
+            from sqlalchemy import select
+            result = await db.execute(select(User).where(User.id == user_id_cached))
+            user = result.scalar_one_or_none()
+            if user and user.is_active:
+                return user
 
     payload = decode_token(token)
     if payload is None or payload.get("type") != "access":
@@ -46,4 +62,14 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive",
         )
+
+    # Cache the validated token
+    _token_cache[token] = (user_id, now + TOKEN_CACHE_TTL)
+
+    # Evict expired entries occasionally
+    if len(_token_cache) > 10000:
+        expired_keys = [k for k, (_, exp) in _token_cache.items() if exp < now]
+        for k in expired_keys:
+            del _token_cache[k]
+
     return user

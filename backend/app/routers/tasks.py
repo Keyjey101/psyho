@@ -52,6 +52,14 @@ async def complete_task(
         raise HTTPException(status_code=404, detail="Задача не найдена")
     task.completed = True
     await db.commit()
+
+    # Check for task-related achievements
+    try:
+        from app.services.achievement_service import check_and_award
+        await check_and_award(user.id, "task_completed", db)
+    except Exception:
+        pass
+
     return {"ok": True}
 
 

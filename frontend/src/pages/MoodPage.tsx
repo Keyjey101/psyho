@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import api from "@/api/client";
 import { ArrowLeft } from "lucide-react";
+
+function SkeletonBlock({ h = "h-4", w = "w-full", className = "" }: { h?: string; w?: string; className?: string }) {
+  return <div className={`animate-pulse rounded-lg bg-[#E8DDD0] ${h} ${w} ${className}`} />;
+}
 
 interface MoodEntry {
   id: string;
@@ -64,20 +68,23 @@ export default function MoodPage() {
   const [entries, setEntries] = useState<MoodEntry[]>([]);
   const [sessionMap, setSessionMap] = useState<Record<string, string>>({});
   const [taskMap, setTaskMap] = useState<Record<string, TaskInfo>>({});
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.get("/mood").then(({ data }) => setEntries(data)).catch(() => {});
-    api.get("/sessions?limit=100").then(({ data }: { data: SessionInfo[] }) => {
-      const map: Record<string, string> = {};
-      data.forEach((s) => { if (s.title) map[s.id] = s.title; });
-      setSessionMap(map);
-    }).catch(() => {});
-    api.get("/tasks/history").then(({ data }: { data: TaskInfo[] }) => {
-      const map: Record<string, TaskInfo> = {};
-      data.forEach((t) => { map[t.session_id] = t; });
-      setTaskMap(map);
-    }).catch(() => {});
+    Promise.all([
+      api.get("/mood").then(({ data }) => setEntries(data)).catch(() => {}),
+      api.get("/sessions?limit=100").then(({ data }: { data: SessionInfo[] }) => {
+        const map: Record<string, string> = {};
+        data.forEach((s) => { if (s.title) map[s.id] = s.title; });
+        setSessionMap(map);
+      }).catch(() => {}),
+      api.get("/tasks/history").then(({ data }: { data: TaskInfo[] }) => {
+        const map: Record<string, TaskInfo> = {};
+        data.forEach((t) => { map[t.session_id] = t; });
+        setTaskMap(map);
+      }).catch(() => {}),
+    ]).finally(() => setLoading(false));
   }, []);
 
   const avg = entries.length > 0
@@ -115,10 +122,38 @@ export default function MoodPage() {
           Назад к чату
         </button>
 
-        <h1 className="mb-8 text-2xl font-bold text-[#5A5048]">Трекер настроения</h1>
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-[#5A5048]">Трекер настроения</h1>
+          <Link
+            to="/emotion-map"
+            className="text-sm text-[#B8785A] hover:text-[#9A6248]"
+          >
+            Тепловая карта →
+          </Link>
+        </div>
 
-        {/* Summary row */}
-        {avg && (
+        {loading && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="rounded-2xl border border-[#E8DDD0] bg-white p-5 shadow-sm">
+                  <SkeletonBlock h="h-3" w="w-16" className="mb-3" />
+                  <SkeletonBlock h="h-8" w="w-24" />
+                </div>
+              ))}
+            </div>
+            <div className="rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm">
+              <SkeletonBlock h="h-4" w="w-24" className="mb-4" />
+              <div className="flex h-36 items-end gap-1.5">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <SkeletonBlock key={i} h={`h-${[16, 24, 20, 28, 12, 32, 20, 24, 16, 28][i]}`} className="flex-1" />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!loading && avg && (
           <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div className="rounded-2xl border border-[#E8DDD0] bg-white p-5 shadow-sm">
               <p className="text-[12px] text-[#8A7A6A]">Среднее</p>

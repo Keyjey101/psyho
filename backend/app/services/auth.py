@@ -44,13 +44,19 @@ def decode_token(token: str) -> Optional[dict]:
 
 
 async def authenticate_user(db: AsyncSession, email: str, password: str) -> Optional[User]:
+    import os
     from app.config import get_settings
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if not user:
         return None
     settings = get_settings()
-    if settings.TEST_PASSWORD_CODE and password == settings.TEST_PASSWORD_CODE:
+    # TEST_PASSWORD_CODE is only allowed outside production
+    if (
+        settings.TEST_PASSWORD_CODE
+        and os.getenv("ENVIRONMENT") != "production"
+        and password == settings.TEST_PASSWORD_CODE
+    ):
         return user
     if not verify_password(password, user.password):
         return None

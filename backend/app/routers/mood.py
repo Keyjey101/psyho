@@ -33,6 +33,14 @@ async def create_mood(
     db.add(entry)
     await db.commit()
     await db.refresh(entry)
+
+    # Check for mood-tracking achievement
+    try:
+        from app.services.achievement_service import check_and_award
+        await check_and_award(user.id, "mood_tracked", db)
+    except Exception:
+        pass
+
     return {"id": entry.id, "value": entry.value, "created_at": entry.created_at}
 
 

@@ -75,6 +75,10 @@ def _hash_code(code: str) -> str:
     return _pwd_context.hash(code)
 
 
+def _sha256_hex(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()
+
+
 def _verify_code(plain: str, hashed: str) -> bool:
     return _pwd_context.verify(plain, hashed)
 
@@ -136,9 +140,11 @@ async def tg_request_code(body: TgRequestCodeRequest, request: Request, db: Asyn
         )
 
     code = _generate_otp()
+    code_hash = _sha256_hex(code)
     record = TelegramVerificationCode(
         telegram_username=username,
-        code=code,
+        code="",  # no longer store plaintext OTP
+        code_hash=code_hash,
         expires_at=now + timedelta(minutes=10),
     )
     db.add(record)

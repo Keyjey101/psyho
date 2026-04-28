@@ -13,7 +13,7 @@ import SessionEndCard from "@/components/chat/SessionEndCard";
 import MoodTracker from "@/components/chat/MoodTracker";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Message } from "@/types";
-import { Menu, Brain, X } from "lucide-react";
+import { Menu, Brain, X, Download } from "lucide-react";
 import api from "@/api/client";
 
 interface PendingTask {
@@ -45,7 +45,7 @@ export default function Chat() {
   const [taskDismissed, setTaskDismissed] = useState(false);
 
   useEffect(() => {
-    if (user && (user as any).name === "") {
+    if (user && user.name === "") {
       navigate("/onboarding", { replace: true });
     }
   }, [user, navigate]);
@@ -62,7 +62,7 @@ export default function Chat() {
     }).catch(() => {});
   }, [sessionId]);
 
-  const memoryEnabled = (user as any)?.profile?.memory_enabled ?? true;
+  const memoryEnabled = user?.profile?.memory_enabled ?? true;
 
   const toggleMemory = async () => {
     try {
@@ -216,6 +216,21 @@ export default function Chat() {
     setShowMoodTracker(false);
   };
 
+  const handleExportSession = async () => {
+    if (!sessionId) return;
+    try {
+      const response = await api.get(`/export/session/${sessionId}`, { responseType: "blob" });
+      const url = URL.createObjectURL(response.data as Blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `nika-session-${sessionId}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // ignore export error
+    }
+  };
+
   const displayExchangeCount = exchangeCount || initialExchangeCount;
   const displayMaxExchanges = maxExchanges || currentSession?.max_exchanges || 20;
   const isSessionCompleted = displayExchangeCount > 0 && displayExchangeCount >= displayMaxExchanges;
@@ -288,6 +303,15 @@ export default function Chat() {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
+            {sessionId && localMessages.length > 0 && (
+              <button
+                onClick={handleExportSession}
+                title="Экспортировать сессию"
+                className="rounded-lg p-2 text-[#8A7A6A] hover:bg-[#F5EDE4] dark:text-[#B8A898] dark:hover:bg-[#352E2A]"
+              >
+                <Download className="h-4 w-4" />
+              </button>
+            )}
             <button
               onClick={toggleMemory}
               title={

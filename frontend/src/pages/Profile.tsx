@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/api/client";
-import { ArrowLeft, Save, Mail, Send } from "lucide-react";
+import { ArrowLeft, Save, Send } from "lucide-react";
 import type { User } from "@/types";
 import { isTMA, getInitData, TG_TOKEN_KEY, TG_REFRESH_KEY } from "@/utils/telegram";
 import { useAuthStore } from "@/store/auth";
+import Achievements from "@/components/Achievements";
 
 interface ProfileData {
   user: User | null;
@@ -40,13 +41,9 @@ export default function Profile() {
   const [saved, setSaved] = useState(false);
   const navigate = useNavigate();
 
-  const [linkingEmail, setLinkingEmail] = useState(false);
-  const [linkEmail, setLinkEmail] = useState("");
-  const [linkCode, setLinkCode] = useState("");
-  const [linkStep, setLinkStep] = useState<"idle" | "email" | "code">("idle");
+  const [tgLinkLoading, setTgLinkLoading] = useState(false);
   const [linkError, setLinkError] = useState("");
   const [linkSuccess, setLinkSuccess] = useState("");
-  const [tgLinkLoading, setTgLinkLoading] = useState(false);
 
   useEffect(() => {
     api.get("/user/me").then(({ data }) => {
@@ -85,53 +82,11 @@ export default function Profile() {
       setProfile((p) => ({ ...p, user: userData }));
       setLinkSuccess(linkData.merged ? "Аккаунты объединены! История из Telegram теперь в отдельных сессиях." : "Telegram привязан!");
       setTimeout(() => setLinkSuccess(""), 4000);
-    } catch (err: any) {
-      setLinkError(err?.response?.data?.detail || "Ошибка привязки");
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { detail?: string } } };
+      setLinkError(apiErr?.response?.data?.detail || "Ошибка привязки");
     } finally {
       setTgLinkLoading(false);
-    }
-  };
-
-  const handleLinkEmailSend = async () => {
-    setLinkError("");
-    try {
-      await api.post("/auth/link-email/send", { email: linkEmail.trim().toLowerCase() });
-      setLinkStep("code");
-    } catch (err: any) {
-      setLinkError(err?.response?.data?.detail || "Ошибка");
-    }
-  };
-
-  const handleLinkEmailVerify = async () => {
-    setLinkError("");
-    try {
-      const { data } = await api.post("/auth/link-email/verify", { email: linkEmail.trim().toLowerCase(), code: linkCode });
-      setLinkStep("idle");
-      setLinkingEmail(false);
-      setLinkEmail("");
-      setLinkCode("");
-      if (data.merged) {
-        localStorage.setItem(TG_TOKEN_KEY, data.access_token);
-        localStorage.setItem(TG_REFRESH_KEY, data.refresh_token);
-        await checkAuth();
-        const { data: userData } = await api.get("/user/me");
-        setProfile({
-          user: userData,
-          preferred_style: userData.profile?.preferred_style || "balanced",
-          therapy_goals: userData.profile?.therapy_goals || "",
-          address_form: userData.profile?.address_form || "ты",
-          gender: userData.profile?.gender || "",
-          pop_score: userData.profile?.pop_score || 0,
-        });
-        setLinkSuccess("Аккаунты объединены! Теперь ты в своём основном аккаунте.");
-      } else {
-        const { data: userData } = await api.get("/user/me");
-        setProfile((p) => ({ ...p, user: userData }));
-        setLinkSuccess("Email привязан!");
-      }
-      setTimeout(() => setLinkSuccess(""), 4000);
-    } catch (err: any) {
-      setLinkError(err?.response?.data?.detail || "Неверный код");
     }
   };
 
@@ -184,81 +139,6 @@ export default function Profile() {
             <div className="space-y-3">
               <div className="flex items-center justify-between rounded-xl border border-[#E8DDD0] px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-[#8A7A6A]" />
-                  <div>
-                    <p className="text-sm font-medium text-[#5A5048]">Email</p>
-                    {hasRealEmail ? (
-                      <p className="text-xs text-[#8A7A6A]">{profile.user?.email}</p>
-                    ) : (
-                      <p className="text-xs text-[#B8A898]">не указан</p>
-                    )}
-                  </div>
-                </div>
-                {!hasRealEmail && !linkingEmail && (
-                  <button
-                    onClick={() => { setLinkingEmail(true); setLinkStep("email"); }}
-                    className="text-xs font-medium text-[#B8785A] hover:text-[#9A6248]"
-                  >
-                    Привязать email
-                  </button>
-                )}
-              </div>
-
-              {linkingEmail && (
-                <div className="rounded-xl border border-[#E8DDD0] bg-[#FAF6F1] p-4">
-                  {linkError && (
-                    <div className="mb-3 rounded-lg border border-[#C4786A] bg-[#FDF5F3] px-3 py-2 text-xs text-[#C4786A]">
-                      {linkError}
-                    </div>
-                  )}
-                  {linkStep === "email" && (
-                    <div className="flex gap-2">
-                      <input
-                        type="email"
-                        value={linkEmail}
-                        onChange={(e) => setLinkEmail(e.target.value)}
-                        placeholder="email@example.com"
-                        className="input-field flex-1 text-sm"
-                      />
-                      <button
-                        onClick={handleLinkEmailSend}
-                        disabled={!linkEmail.trim()}
-                        className="btn-primary px-4 text-sm"
-                      >
-                        Отправить
-                      </button>
-                    </div>
-                  )}
-                  {linkStep === "code" && (
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={linkCode}
-                        onChange={(e) => setLinkCode(e.target.value)}
-                        placeholder="Код из письма"
-                        className="input-field w-32 text-sm"
-                        maxLength={6}
-                      />
-                      <button
-                        onClick={handleLinkEmailVerify}
-                        disabled={linkCode.length < 4}
-                        className="btn-primary px-4 text-sm"
-                      >
-                        Подтвердить
-                      </button>
-                      <button
-                        onClick={() => { setLinkingEmail(false); setLinkStep("idle"); setLinkCode(""); setLinkEmail(""); setLinkError(""); }}
-                        className="px-3 text-xs text-[#B8A898] hover:text-[#8A7A6A]"
-                      >
-                        Отмена
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="flex items-center justify-between rounded-xl border border-[#E8DDD0] px-4 py-3">
-                <div className="flex items-center gap-3">
                   <Send className="h-4 w-4 text-[#8A7A6A]" />
                   <div>
                     <p className="text-sm font-medium text-[#5A5048]">Telegram</p>
@@ -286,7 +166,7 @@ export default function Profile() {
                 )}
               </div>
 
-              {linkError && !linkingEmail && (
+              {linkError && (
                 <div className="rounded-lg border border-[#C4786A] bg-[#FDF5F3] px-3 py-2 text-xs text-[#C4786A]">
                   {linkError}
                 </div>
@@ -370,6 +250,8 @@ export default function Profile() {
               <p className="mt-2 text-3xl font-bold text-[#B8785A]">{profile.pop_score}</p>
             </div>
           )}
+
+          <Achievements />
 
           <button onClick={handleSave} className="btn-primary w-full flex items-center justify-center gap-2">
             <Save className="h-4 w-4" />
