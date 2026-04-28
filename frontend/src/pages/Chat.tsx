@@ -245,6 +245,7 @@ export default function Chat() {
         onDeleteSession={handleDeleteSession}
         onLogout={handleLogout}
         userName={user?.name}
+        isAdmin={user?.is_admin}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />

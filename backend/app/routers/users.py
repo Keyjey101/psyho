@@ -6,6 +6,7 @@ from app.database import get_db
 from app.models.models import User, UserProfile
 from app.schemas.user import UserProfileResponse, UserProfileUpdate, UserMeResponse, PopScoreAdd
 from app.middleware.auth import get_current_user
+from app.middleware.admin import _is_admin
 
 router = APIRouter()
 
@@ -23,6 +24,7 @@ async def get_me(user: User = Depends(get_current_user), db: AsyncSession = Depe
         profile=UserProfileResponse.model_validate(profile) if profile else None,
         telegram_username=user.telegram_username,
         has_real_email=not user.email.endswith("@tg.local"),
+        is_admin=_is_admin(user),
     )
 
 
@@ -66,6 +68,7 @@ async def update_me(
         profile=UserProfileResponse.model_validate(profile),
         telegram_username=user.telegram_username,
         has_real_email=not user.email.endswith("@tg.local"),
+        is_admin=_is_admin(user),
     )
 
 

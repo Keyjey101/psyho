@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, LogOut, MessageSquare, Settings, Download, Smile, BarChart2, Moon, Sun } from "lucide-react";
+import { Plus, Trash2, X, LogOut, MessageSquare, Settings, Download, Smile, BarChart2, Moon, Sun, Shield } from "lucide-react";
 import type { Session } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { useThemeStore } from "@/store/theme";
@@ -25,6 +25,7 @@ interface SidebarProps {
   onDeleteSession: (id: string) => void;
   onLogout: () => void;
   userName?: string;
+  isAdmin?: boolean;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -51,6 +52,7 @@ export default function Sidebar({
   onDeleteSession,
   onLogout,
   userName,
+  isAdmin,
   isOpen,
   onClose,
 }: SidebarProps) {
@@ -216,6 +218,15 @@ export default function Sidebar({
             <BarChart2 className="h-4 w-4" />
             Психопортрет
           </button>
+          {isAdmin && (
+            <button
+              onClick={() => navigate("/admin")}
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A]"
+            >
+              <Shield className="h-4 w-4" />
+              Админ
+            </button>
+          )}
           <ThemeToggle />
           <button
             onClick={onLogout}

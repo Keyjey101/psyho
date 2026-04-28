@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/api/client";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Users,
   MessageSquare,
@@ -64,6 +65,13 @@ export default function Admin() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user && !user.is_admin) {
+      navigate("/", { replace: true });
+    }
+  }, [user, navigate]);
 
   useEffect(() => {
     api

@@ -15,6 +15,11 @@ RUN echo 'server { \
     root /usr/share/nginx/html; \
     index index.html; \
     client_max_body_size 10M; \
+    location = /index.html { \
+        add_header Cache-Control "no-cache, no-store, must-revalidate"; \
+        add_header Pragma "no-cache"; \
+        expires 0; \
+    } \
     location / { \
         try_files $uri $uri/ /index.html; \
     } \

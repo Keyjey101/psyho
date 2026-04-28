@@ -7,6 +7,7 @@ export interface User {
   profile?: UserProfile | null;
   telegram_username?: string | null;
   has_real_email?: boolean;
+  is_admin?: boolean;
 }
 
 export interface UserProfile {

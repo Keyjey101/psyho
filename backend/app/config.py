@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
 
     ADMIN_EMAILS: str = ""
+    ADMIN_TELEGRAM_USERNAMES: str = ""
     RATE_LIMIT_CHAT: str = "30/minute"
     RATE_LIMIT_AUTH: str = "5/minute"
 
@@ -75,6 +76,10 @@ class Settings(BaseSettings):
     @property
     def admin_emails_list(self) -> list[str]:
         return [e.strip().lower() for e in self.ADMIN_EMAILS.split(",") if e.strip()]
+
+    @property
+    def admin_telegram_usernames_list(self) -> list[str]:
+        return [u.strip().lstrip("@").lower() for u in self.ADMIN_TELEGRAM_USERNAMES.split(",") if u.strip()]
 
 
 @lru_cache()

@@ -26,8 +26,9 @@ export default defineConfig({
         categories: ["health", "lifestyle"],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,woff2}"],
+        globPatterns: ["**/*.{js,css,svg,woff2}"],
         globIgnores: ["illustrations/**", "icons/*.png"],
+        navigateFallback: null,
         runtimeCaching: [
           {
             urlPattern: /^\/api\//,
@@ -39,10 +40,16 @@ export default defineConfig({
           },
           {
             urlPattern: /\/illustrations\//,
-            handler: "NetworkOnly",
+            handler: "CacheFirst",
+            options: {
+              cacheName: "illustrations",
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 30 * 24 * 60 * 60,
+              },
+            },
           },
         ],
-        navigateFallbackDenylist: [/^\/api/, /^\/ws/],
       },
     }),
   ],

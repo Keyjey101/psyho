@@ -40,5 +40,6 @@ class UserMeResponse(BaseModel):
     profile: UserProfileResponse | None = None
     telegram_username: str | None = None
     has_real_email: bool = True
+    is_admin: bool = False
 
     model_config = {"from_attributes": True}
