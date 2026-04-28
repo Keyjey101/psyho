@@ -84,22 +84,41 @@ export default function UserGuide() {
               </h4>
 
               {card.tg && (
-                <p className="mt-1 text-[13px] leading-[1.6] text-[#8A7A6A]">
-                  Нажми «Войти», укажи свой ник в Telegram — на экране появится 6-значный код. Отправь его{" "}
-                  {BOT_LINK ? (
-                    <a
-                      href={BOT_LINK}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-semibold text-[#B8785A] hover:underline"
-                    >
-                      {BOT_DISPLAY}
-                    </a>
-                  ) : (
-                    "боту"
-                  )}
-                  . Пароль не нужен.
-                </p>
+                <div className="mt-1 space-y-2 text-[13px] leading-[1.6] text-[#8A7A6A]">
+                  <p>
+                    <span className="font-medium text-[#5A5048]">Через бота:</span>{" "}
+                    {BOT_LINK ? (
+                      <a
+                        href={BOT_LINK}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-[#B8785A] hover:underline"
+                      >
+                        {BOT_DISPLAY}
+                      </a>
+                    ) : (
+                      "открой бота"
+                    )}{" "}
+                    — нажми кнопку <span className="font-medium text-[#5A5048]">«Открыть приложение»</span> и сразу начинай пользоваться прямо в Telegram.
+                  </p>
+                  <p>
+                    <span className="font-medium text-[#5A5048]">Через сайт:</span>{" "}
+                    нажми «Войти», укажи свой ник в Telegram — появится 6-значный код. Отправь его{" "}
+                    {BOT_LINK ? (
+                      <a
+                        href={BOT_LINK}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-[#B8785A] hover:underline"
+                      >
+                        {BOT_DISPLAY}
+                      </a>
+                    ) : (
+                      "боту"
+                    )}
+                    . Пароль не нужен.
+                  </p>
+                </div>
               )}
 
               {card.body && (

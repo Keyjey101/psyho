@@ -16,7 +16,7 @@ export function useChat({ sessionId, onMessageComplete, onSessionLimitReached }:
   const [agentsUsed, setAgentsUsed] = useState<string[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [exchangeCount, setExchangeCount] = useState(0);
-  const [maxExchanges, setMaxExchanges] = useState(20);
+  const [maxExchanges, setMaxExchanges] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const agentsUsedRef = useRef<string[]>([]);
