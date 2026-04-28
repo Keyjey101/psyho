@@ -23,7 +23,7 @@
 |---|---|
 | Backend | FastAPI 0.115, uvicorn, SQLAlchemy 2 (async), aiosqlite |
 | AI | ZAI/GLM (OpenAI-совместимый API), glm-5 / glm-4-flash |
-| Auth | JWT (python-jose + bcrypt), httpOnly cookies |
+| Auth | JWT (python-jose + bcrypt), httpOnly cookies, Telegram OTP |
 | Frontend | React 19, TypeScript 6, Vite 5, TailwindCSS 3.4 |
 | State | Zustand (auth), React Query (data) |
 | Realtime | WebSocket с токен-стримингом |
@@ -39,13 +39,18 @@
 - Стриминг ответов через WebSocket (токен за токеном)
 - Сжатие контекста при >40 сообщениях
 - Авто-генерация заголовков сессий
-- Админ-панель (статистика, управление пользователями)
-- Трекер настроения с графиком
-- Онбординг с выбором целей и стиля общения
-- Профиль пользователя (предпочитаемый стиль влияет на ответы ИИ)
+- Персонализация: форма обращения (ты/вы), пол, стиль общения — влияют на ответы
+- Трекер настроения с корреляцией «выполненные упражнения → настроение»
+- Психопортрет: radar chart по 6 психологическим измерениям, сильные стороны, зоны роста, динамика
+- Задания из сессий: при запросе упражнения создаётся задание; при следующей сессии спрашивается о выполнении
+- Онбординг: цели, стиль, форма обращения, пол
+- Долгосрочная память между сессиями
+- Продолжение предыдущей сессии с контекстом
+- Telegram mini-app + Telegram OTP-авторизация
 - Голосовой ввод (Web Speech API)
 - Экспорт истории чата (TXT/JSON)
 - PWA — установка на домашний экран
+- Админ-панель (статистика, управление пользователями)
 
 ## Структура проекта
 
@@ -58,7 +63,7 @@ psyho/
 │   │   ├── models/           # SQLAlchemy модели
 │   │   ├── routers/          # API эндпоинты
 │   │   ├── schemas/          # Pydantic схемы
-│   │   ├── services/         # Auth, context, AI provider
+│   │   ├── services/         # Auth, context, AI provider, memory
 │   │   ├── config.py
 │   │   ├── database.py
 │   │   └── main.py
@@ -70,7 +75,7 @@ psyho/
 │   │   ├── api/              # Axios client
 │   │   ├── components/       # UI компоненты (chat, landing)
 │   │   ├── hooks/            # useChat, useAuth, useSessions, usePWAInstall
-│   │   ├── pages/            # Страницы (Landing, Chat, Admin, Profile...)
+│   │   ├── pages/            # Страницы (Landing, Chat, MoodPage, PersonalityPage...)
 │   │   ├── store/            # Zustand auth store
 │   │   ├── types/
 │   │   ├── App.tsx
@@ -107,6 +112,7 @@ pip install -e .
 ZAI_API_KEY=your-actual-key
 SECRET_KEY=any-secret-for-dev
 ENVIRONMENT=development
+SESSION_MAX_EXCHANGES=20     # лимит обменов в одной сессии
 ```
 
 ```bash
@@ -175,11 +181,17 @@ SECRET_KEY=$(openssl rand -hex 32)
 # Домен (без слеша в конце)
 ALLOWED_ORIGINS=https://yourdomain.com
 
+# Telegram бот (для mini-app и OTP)
+VITE_TG_BOT_USERNAME=@your_bot
+
 # Админы (через запятую)
 ADMIN_EMAILS=admin@example.com
 
 # Порт, на котором приложение будет доступно на localhost
 APP_PORT=8080
+
+# Лимит обменов в одной сессии
+SESSION_MAX_EXCHANGES=20
 
 ENVIRONMENT=production
 DATABASE_URL=sqlite+aiosqlite:////data/psyho.db
@@ -278,20 +290,28 @@ docker compose exec backend cp /data/psyho.db /data/psyho.db.bak
 | POST | `/api/auth/login` | Вход |
 | POST | `/api/auth/refresh` | Обновление токена |
 | POST | `/api/auth/logout` | Выход |
-| GET | `/api/user/me` | Профиль |
-| PATCH | `/api/user/me` | Обновить профиль |
+| POST | `/api/auth/telegram/start` | Telegram OTP — начало |
+| POST | `/api/auth/telegram/verify` | Telegram OTP — верификация |
+| GET | `/api/user/me` | Профиль пользователя |
+| PATCH | `/api/user/me` | Обновить профиль (address_form, gender, style…) |
+| GET | `/api/user/me/personality` | Психопортрет (snapshots) |
 | GET | `/api/sessions` | Список сессий |
 | POST | `/api/sessions` | Создать сессию |
-| GET | `/api/sessions/{id}` | Сессия с сообщениями |
+| GET | `/api/sessions/{id}` | Сессия с сообщениями и exchange_count |
 | DELETE | `/api/sessions/{id}` | Удалить сессию |
-| GET | `/api/sessions/{id}/messages` | Сообщения (cursor pagination) |
+| POST | `/api/sessions/{id}/continue` | Создать продолжение сессии |
 | GET | `/api/sessions/{id}/insights` | Инсайты по сессии |
+| POST | `/api/sessions/{id}/action` | Action panel (insight / exercise) |
 | WS | `/api/sessions/{id}/chat` | WebSocket чат |
-| GET | `/api/admin/stats` | Статистика (админ) |
-| GET | `/api/admin/users` | Пользователи (админ) |
-| PATCH | `/api/admin/users/{id}/deactivate` | Деактивировать |
+| GET | `/api/tasks/pending` | Невыполненные задания |
+| GET | `/api/tasks/history` | История всех заданий |
+| PATCH | `/api/tasks/{id}/complete` | Отметить задание выполненным |
+| POST | `/api/tasks` | Создать задание вручную |
 | POST | `/api/mood` | Запись настроения |
 | GET | `/api/mood` | История настроений |
+| GET | `/api/admin/stats` | Статистика (админ) |
+| GET | `/api/admin/users` | Пользователи (админ) |
+| PATCH | `/api/admin/users/{id}/deactivate` | Деактивировать пользователя |
 | GET | `/health` | Health check |
 
 ## Лицензия
