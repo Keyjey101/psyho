@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.middleware.auth import get_current_user
-from app.models.models import ChatSession, Message, User, UserProfile
+from app.models.models import ChatSession, Message, SessionTask, User, UserProfile
 from app.services.action_service import run_action
 
 router = APIRouter()
@@ -17,6 +17,7 @@ class ActionRequest(BaseModel):
 
 class ActionResponse(BaseModel):
     content: str
+    task_id: str | None = None
 
 
 @router.post("/{session_id}/action", response_model=ActionResponse)
@@ -53,4 +54,17 @@ async def session_action(
         therapy_goals=profile.therapy_goals if profile else None,
     )
 
-    return ActionResponse(content=content)
+    task_id = None
+    if body.action_type == "exercise":
+        first_line = content.split("\n")[0][:200]
+        task = SessionTask(
+            user_id=user.id,
+            session_id=session_id,
+            text=first_line,
+        )
+        db.add(task)
+        await db.commit()
+        await db.refresh(task)
+        task_id = task.id
+
+    return ActionResponse(content=content, task_id=task_id)

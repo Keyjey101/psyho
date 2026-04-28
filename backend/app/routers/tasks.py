@@ -55,6 +55,31 @@ async def complete_task(
     return {"ok": True}
 
 
+@router.get("/history")
+async def get_task_history(
+    limit: int = 50,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(SessionTask)
+        .where(SessionTask.user_id == user.id)
+        .order_by(SessionTask.created_at.desc())
+        .limit(limit)
+    )
+    tasks = result.scalars().all()
+    return [
+        {
+            "id": t.id,
+            "session_id": t.session_id,
+            "text": t.text,
+            "completed": t.completed,
+            "created_at": t.created_at,
+        }
+        for t in tasks
+    ]
+
+
 @router.post("")
 async def create_task(
     body: TaskCreate,

@@ -16,6 +16,13 @@ import type { Message } from "@/types";
 import { Menu, Brain, X } from "lucide-react";
 import api from "@/api/client";
 
+interface PendingTask {
+  id: string;
+  session_id: string;
+  text: string;
+  completed: boolean;
+}
+
 export default function Chat() {
   const { sessionId } = useParams<{ sessionId?: string }>();
   const navigate = useNavigate();
@@ -34,12 +41,26 @@ export default function Chat() {
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [showMoodTracker, setShowMoodTracker] = useState(false);
   const [initialExchangeCount, setInitialExchangeCount] = useState(0);
+  const [pendingTask, setPendingTask] = useState<PendingTask | null>(null);
+  const [taskDismissed, setTaskDismissed] = useState(false);
 
   useEffect(() => {
     if (user && (user as any).name === "") {
       navigate("/onboarding", { replace: true });
     }
   }, [user, navigate]);
+
+  // Fetch pending tasks from previous sessions
+  useEffect(() => {
+    if (!sessionId) return;
+    api.get<PendingTask[]>("/tasks/pending").then(({ data }) => {
+      const fromOtherSession = data.find((t) => t.session_id !== sessionId);
+      if (fromOtherSession) {
+        setPendingTask(fromOtherSession);
+        setTaskDismissed(false);
+      }
+    }).catch(() => {});
+  }, [sessionId]);
 
   const memoryEnabled = (user as any)?.profile?.memory_enabled ?? true;
 
@@ -51,6 +72,13 @@ export default function Chat() {
       // ignore
     }
   };
+
+  const handleCompleteTask = useCallback(async (taskId: string) => {
+    try {
+      await api.patch(`/tasks/${taskId}/complete`);
+      setPendingTask(null);
+    } catch {}
+  }, []);
 
   const handleMessageComplete = useCallback(
     (msg: Message) => {
@@ -166,10 +194,14 @@ export default function Chat() {
     navigate(`/chat/${result.new_session_id}`);
   };
 
-  const handleFinishFromLimit = (moodValue: number | null) => {
+  const handleFinishFromLimit = (moodValue: number | null, exerciseCompleted?: boolean | null) => {
     setShowLimitModal(false);
     if (moodValue) {
       api.post("/mood", { value: moodValue, session_id: sessionId }).catch(() => {});
+    }
+    if (exerciseCompleted === false && pendingTask) {
+      // task stays incomplete, just dismiss
+      setPendingTask(null);
     }
   };
 
@@ -187,6 +219,10 @@ export default function Chat() {
   const displayExchangeCount = exchangeCount || initialExchangeCount;
   const displayMaxExchanges = maxExchanges || currentSession?.max_exchanges || 20;
   const isSessionCompleted = displayExchangeCount > 0 && displayExchangeCount >= displayMaxExchanges;
+  const completedSessions = sessions?.length ?? 0;
+
+  // Pending task banner (show at top of chat if task from another session)
+  const showTaskBanner = !!pendingTask && !taskDismissed && !showLimitModal;
 
   useKeyboardShortcuts({
     onNewChat: handleNewChat,
@@ -277,6 +313,37 @@ export default function Chat() {
 
         <SessionProgress current={displayExchangeCount} max={displayMaxExchanges} isSessionCompleted={isSessionCompleted} />
 
+        {/* Pending task banner */}
+        {showTaskBanner && (
+          <div className="flex items-start gap-3 border-b border-[#E8DDD0] bg-[#FDF5EE] px-4 py-3 dark:border-[#4A4038] dark:bg-[#2E2620]">
+            <span className="mt-0.5 text-[16px]">📋</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-medium text-[#5A5048] dark:text-[#F5EDE4]">
+                Упражнение из прошлой сессии
+              </p>
+              <p className="mt-0.5 truncate text-[12px] text-[#8A7A6A]">
+                {pendingTask!.text.length > 80
+                  ? pendingTask!.text.slice(0, 80) + "…"
+                  : pendingTask!.text}
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <button
+                onClick={() => handleCompleteTask(pendingTask!.id)}
+                className="rounded-lg bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100"
+              >
+                ✅ Сделал(а)
+              </button>
+              <button
+                onClick={() => setTaskDismissed(true)}
+                className="rounded-lg bg-[#F5EDE4] px-2.5 py-1 text-[11px] font-medium text-[#8A7A6A] hover:bg-[#EEE0D4]"
+              >
+                Позже
+              </button>
+            </div>
+          </div>
+        )}
+
         <MessageList
           messages={localMessages}
           streamingContent={streamingContent}
@@ -310,6 +377,10 @@ export default function Chat() {
             onContinue={handleContinueFromLimit}
             onFinish={handleFinishFromLimit}
             isContinuing={continueSession.isPending}
+            completedSessions={completedSessions}
+            pendingTaskId={pendingTask?.id ?? null}
+            pendingTaskText={pendingTask?.text ?? null}
+            onCompleteTask={handleCompleteTask}
           />
         </div>
       )}
