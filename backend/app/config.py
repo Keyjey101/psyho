@@ -38,22 +38,12 @@ class Settings(BaseSettings):
     CLASSIFICATION_MAX_TOKENS: int = 200
     SESSION_MAX_EXCHANGES: int = 20
 
-    SMTP_HOST: str = ""
-    SMTP_PORT: int = 587
-    SMTP_USER: str = ""
-    SMTP_PASS: str = ""
-    SMTP_FROM: str = "noreply@psyho.app"
-    SMTP_TLS: bool = True
-
-    TEST_PASSWORD_CODE: str = ""
+    TEST_PASSWORD_CODE: str = ""  # Development only — must be empty in production
 
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_BOT_USERNAME: str = ""
 
     OTP_EXPIRE_MINUTES: int = 10
-    OTP_MAX_ATTEMPTS: int = 5
-    OTP_RATE_LIMIT_COUNT: int = 3
-    OTP_RATE_LIMIT_MINUTES: int = 10
 
     model_config = {"env_file": (".env", "../.env"), "env_file_encoding": "utf-8", "extra": "ignore"}
 
@@ -67,6 +57,13 @@ class Settings(BaseSettings):
     def secret_key_must_be_strong(cls, v: str) -> str:
         if v == "change-me-to-a-long-random-secret-key-in-production" and os.getenv("ENVIRONMENT") == "production":
             raise ValueError("SECRET_KEY must be changed in production")
+        return v
+
+    @field_validator("TEST_PASSWORD_CODE")
+    @classmethod
+    def test_code_must_be_empty_in_production(cls, v: str) -> str:
+        if v and os.getenv("ENVIRONMENT") == "production":
+            raise ValueError("TEST_PASSWORD_CODE must be empty in production")
         return v
 
     @property

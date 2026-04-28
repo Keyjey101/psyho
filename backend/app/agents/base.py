@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+import structlog
 from openai import AsyncOpenAI
 
 from app.config import get_settings
 
 settings = get_settings()
+logger = structlog.get_logger()
 
 client = AsyncOpenAI(
     api_key=settings.ZAI_API_KEY,
@@ -53,5 +55,13 @@ class BaseAgent(ABC):
             temperature=0.7,
             messages=messages,
         )
+        if hasattr(response, "usage") and response.usage:
+            logger.info(
+                "agent_tokens",
+                agent=self.__class__.__name__,
+                prompt_tokens=response.usage.prompt_tokens,
+                completion_tokens=response.usage.completion_tokens,
+                total_tokens=response.usage.total_tokens,
+            )
         content = response.choices[0].message.content
         return content if content else ""

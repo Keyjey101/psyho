@@ -1,9 +1,11 @@
 import json
+import re
+import time as _time
 import asyncio
 import structlog
+from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
-from time import time
 
 from app.agents.base import BaseAgent, client
 from app.agents.cbt import CBTAgent
@@ -15,6 +17,33 @@ from app.agents.somatic import SomaticAgent
 from app.config import get_settings
 
 settings = get_settings()
+logger = structlog.get_logger()
+
+
+class _TTLCache:
+    """LRU cache with TTL. Thread-safe for asyncio (single-threaded)."""
+    def __init__(self, maxsize: int = 1000, ttl: int = 1800):
+        self._maxsize = maxsize
+        self._ttl = ttl
+        self._cache: OrderedDict[str, tuple[list[str], int, float]] = OrderedDict()
+
+    def get(self, key: str) -> tuple[list[str], int] | None:
+        entry = self._cache.get(key)
+        if entry is None:
+            return None
+        topics, msg_count, expires_at = entry
+        if _time.monotonic() > expires_at:
+            del self._cache[key]
+            return None
+        self._cache.move_to_end(key)
+        return topics, msg_count
+
+    def set(self, key: str, topics: list[str], msg_count: int) -> None:
+        if key in self._cache:
+            self._cache.move_to_end(key)
+        self._cache[key] = (topics, msg_count, _time.monotonic() + self._ttl)
+        while len(self._cache) > self._maxsize:
+            self._cache.popitem(last=False)
 
 
 class SessionPhase(Enum):
@@ -47,32 +76,6 @@ PHASE_INSTRUCTIONS = {
     ),
 }
 
-CRISIS_KEYWORDS_RU = [
-    "самоубийств", "суицид", "не хочу жить", "покончить с собой",
-    "убить себя", "покончу с собой", "умереть хочу", "нет смысла жить",
-    "прыгну", "выброшусь", "повешусь", "отравлюсь", "выпью таблетки",
-    "порежу вены", "крыша", "третий этаж", "ножом по венам",
-]
-
-CRISIS_KEYWORDS_EN = [
-    "suicide", "kill myself", "end my life", "don't want to live",
-    "no reason to live", "better off dead",
-]
-
-CRISIS_RESPONSE = """Я здесь, и я слышу тебя. То, о чём ты говоришь, очень важно, и я не оставлю это без внимания.
-
-Пожалуйста, обратись за помощью — тебе не нужно справляться с этим одной:
-
-**Россия:**
-- Единый телефон доверия: **8-800-333-44-34** (бесплатно)
-- Телефон доверия для детей и подростков: **8-800-2000-122**
-- Центр экстренной психологической помощи МЧС: **+7 (495) 989-50-50**
-
-**Международный:**
-- Befrienders Worldwide: **befrienders.org**
-
-Ты важна. Пожалуйста, свяжись с профессионалами, которые могут помочь прямо сейчас."""
-
 TOPIC_AGENT_MAP: dict[str, list[str]] = {
     "anxiety": ["cbt", "somatic"],
     "depression": ["cbt", "act"],
@@ -98,28 +101,22 @@ TOPIC_AGENT_MAP: dict[str, list[str]] = {
 }
 
 
-def _check_crisis(message: str) -> bool:
-    lower = message.lower()
-    for kw in CRISIS_KEYWORDS_RU + CRISIS_KEYWORDS_EN:
-        if kw in lower:
-            return True
-    return False
-
-
-MEMORY_INJECTION_PATTERNS = [
-    "запомни:", "запомни что", "запомни —",
-    "always respond", "always reply", "ignore previous",
-    "system:", "[system]", "new instruction",
-    "отныне ты", "теперь ты", "забудь всё",
-]
+_INJECTION_PATTERNS = re.compile(
+    r"(запомни[:\s]|system\s*:|ignore\s+previous|отныне\s+ты|теперь\s+ты|забудь\s+всё"
+    r"|always\s+respond|always\s+reply|\[system\]|new\s+instruction)",
+    re.IGNORECASE | re.UNICODE,
+)
+_MAX_MEMORY_LENGTH = 500
 
 
 def _sanitize_memory(memory: str) -> str:
-    lower = memory.lower()
-    for pattern in MEMORY_INJECTION_PATTERNS:
-        if pattern in lower:
-            return ""
-    return memory
+    if not memory or not memory.strip():
+        return ""
+    if len(memory) > _MAX_MEMORY_LENGTH:
+        memory = memory[:_MAX_MEMORY_LENGTH]
+    if _INJECTION_PATTERNS.search(memory):
+        return ""
+    return memory.strip()
 
 
 class Orchestrator:
@@ -132,7 +129,7 @@ class Orchestrator:
             "narrative": NarrativeAgent(),
             "somatic": SomaticAgent(),
         }
-        self._session_topic_cache: dict[str, tuple[list[str], int]] = {}
+        self._session_topic_cache: _TTLCache = _TTLCache(maxsize=1000, ttl=1800)
         self._load_orchestrator_prompt()
 
     def _load_orchestrator_prompt(self):
@@ -158,7 +155,7 @@ class Orchestrator:
         msg_count = len(history)
         if session_id:
             cached = self._session_topic_cache.get(session_id)
-            if cached and abs(msg_count - cached[1]) <= 2:
+            if cached is not None and abs(msg_count - cached[1]) <= 2:
                 return cached[0]
 
         topics_list = ", ".join(TOPIC_AGENT_MAP.keys())
@@ -180,6 +177,13 @@ class Orchestrator:
             temperature=0.1,
             messages=[{"role": "user", "content": classify_prompt}],
         )
+        if hasattr(response, "usage") and response.usage:
+            logger.info(
+                "classify_tokens",
+                prompt_tokens=response.usage.prompt_tokens,
+                completion_tokens=response.usage.completion_tokens,
+                total_tokens=response.usage.total_tokens,
+            )
         topics: list[str] = []
         try:
             text = response.choices[0].message.content
@@ -193,7 +197,7 @@ class Orchestrator:
         except (json.JSONDecodeError, IndexError, AttributeError):
             pass
         if session_id and topics:
-            self._session_topic_cache[session_id] = (topics, msg_count)
+            self._session_topic_cache.set(session_id, topics, msg_count)
         return topics
 
     def _select_agents(self, topics: list[str]) -> list[tuple[str, BaseAgent]]:
@@ -234,11 +238,6 @@ class Orchestrator:
         max_exchanges: int = 20,
         session_id: str = "",
     ):
-        if _check_crisis(message):
-            yield {"type": "agents_used", "agents": ["crisis"]}
-            yield {"type": "token", "content": CRISIS_RESPONSE}
-            return
-
         topics = await self._classify_topics(message, history, session_id)
 
         phase = self._get_phase(exchange_number, max_exchanges) if exchange_number > 0 and max_exchanges > 0 else SessionPhase.WORK
