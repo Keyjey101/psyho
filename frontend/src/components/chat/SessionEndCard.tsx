@@ -18,9 +18,9 @@ interface SessionEndCardProps {
 }
 
 const MOOD_EMOJIS = [
-  { emoji: "😊", icon: "/illustrations/icons/icon_face_happy.webp", value: 5, label: "Хорошо" },
-  { emoji: "😐", icon: "/illustrations/icons/icon_face_neutral.webp", value: 3, label: "Нормально" },
-  { emoji: "😔", icon: "/illustrations/icons/icon_face_worried.webp", value: 2, label: "Грустно" },
+  { emoji: "😊", value: 5, label: "Хорошо" },
+  { emoji: "😐", value: 3, label: "Нормально" },
+  { emoji: "😔", value: 2, label: "Грустно" },
 ];
 
 export default function SessionEndCard({
@@ -65,7 +65,7 @@ export default function SessionEndCard({
 
       <div className="mt-4 flex items-center justify-center gap-4 text-sm text-[#8A7A6A]">
         <span className="flex items-center gap-1.5">
-          <img src="/illustrations/icons/icon_speech.webp" alt="" className="h-4 w-4 object-contain" /> {exchangeCount} обменов
+          💬 {exchangeCount} обменов
         </span>
       </div>
 
@@ -129,13 +129,7 @@ export default function SessionEndCard({
                   : "hover:bg-[#FAF6F1]"
               }`}
             >
-              <span className="text-2xl">
-                {m.icon ? (
-                  <img src={m.icon} alt={m.label} className="h-6 w-6 object-contain" />
-                ) : (
-                  m.emoji
-                )}
-              </span>
+              <span className="text-2xl">{m.emoji}</span>
               <span className="text-[11px] text-[#8A7A6A]">{m.label}</span>
             </button>
           ))}

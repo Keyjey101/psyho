@@ -19,11 +19,7 @@ export default function AgentBadge({ agent }: AgentBadgeProps) {
       <span
         className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${agent.bgColor} ${agent.color}`}
       >
-        {agent.icon ? (
-          <img src={agent.icon} alt={agent.name} className="h-3.5 w-3.5 object-contain" />
-        ) : (
-          <span>{agent.emoji}</span>
-        )}
+        <span>{agent.emoji}</span>
         {agent.name}
       </span>
       <AnimatePresence>

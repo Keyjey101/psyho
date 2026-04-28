@@ -1,12 +1,12 @@
 import { motion } from "framer-motion";
 
 const pipeline = [
-  { icon: "/illustrations/icons/icon_speech.webp", label: "Твоё сообщение", desc: "Пишешь как другу" },
-  { icon: "/illustrations/icons/icon_search.webp", label: "Анализ темы", desc: "Что за этим стоит?" },
-  { icon: "/illustrations/icons/icon_target.webp", label: "Выбор специалистов", desc: "1–2 из 6 экспертов" },
-  { icon: "/illustrations/icons/icon_lightning.webp", label: "Параллельный анализ", desc: "Каждый со своей стороны" },
-  { icon: "/illustrations/icons/icon_crystal.webp", label: "Синтез ответа", desc: "Взгляды объединяются" },
-  { icon: "/illustrations/opt/ai_avatar.webp", label: "Ника отвечает", desc: "Глубоко и точно" },
+  { icon: "💬", label: "Твоё сообщение", desc: "Пишешь как другу" },
+  { icon: "🔍", label: "Анализ темы", desc: "Что за этим стоит?" },
+  { icon: "🎯", label: "Выбор специалистов", desc: "1–2 из 6 экспертов" },
+  { icon: "⚡", label: "Параллельный анализ", desc: "Каждый со своей стороны" },
+  { icon: "🔮", label: "Синтез ответа", desc: "Взгляды объединяются" },
+  { icon: "🌸", label: "Ника отвечает", desc: "Глубоко и точно" },
 ];
 
 const containerVariants = {
@@ -76,13 +76,9 @@ export default function AgentSystem() {
                   <motion.div
                     animate={i === pipeline.length - 1 ? { scale: [1, 1.12, 1] } : {}}
                     transition={{ duration: 1.6, repeat: Infinity, repeatDelay: 2 }}
-                    className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm border border-[#E8DDD0]"
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-[22px] shadow-sm border border-[#E8DDD0]"
                   >
-                    {step.icon.startsWith("/") ? (
-                      <img src={step.icon} alt={step.label} className="h-6 w-6 object-contain" />
-                    ) : (
-                      <span className="text-[22px]">{step.icon}</span>
-                    )}
+                    {step.icon}
                   </motion.div>
                   <p className="text-[11px] font-semibold leading-tight text-[#5A5048]">{step.label}</p>
                   <p className="text-[10px] leading-tight text-[#B8A898]">{step.desc}</p>
@@ -114,13 +110,7 @@ export default function AgentSystem() {
                   variants={itemVariants}
                   className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-sm border border-[#E8DDD0]"
                 >
-                  <span className="text-[20px]">
-                    {step.icon.startsWith("/") ? (
-                      <img src={step.icon} alt={step.label} className="h-5 w-5 object-contain" />
-                    ) : (
-                      step.icon
-                    )}
-                  </span>
+                  <span className="text-[20px]">{step.icon}</span>
                   <div>
                     <p className="text-[13px] font-semibold text-[#5A5048]">{step.label}</p>
                     <p className="text-[11px] text-[#B8A898]">{step.desc}</p>
