@@ -51,7 +51,7 @@ class SendCodeResponse(BaseModel):
 
 class VerifyCodeRequest(BaseModel):
     email: EmailStr
-    code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+    code: str = Field(min_length=4, max_length=10, pattern=r"^\d+$")
 
 
 class VerifyCodeResponse(BaseModel):
@@ -59,3 +59,52 @@ class VerifyCodeResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     is_new_user: bool
+
+
+class TelegramAuthRequest(BaseModel):
+    init_data: str
+
+
+class TelegramAuthResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    is_new_user: bool
+    tg_name: str = ""
+
+
+class LinkTelegramRequest(BaseModel):
+    init_data: str
+
+
+class TgRequestCodeRequest(BaseModel):
+    telegram_username: str | None = None
+
+
+class TgRequestCodeResponse(BaseModel):
+    request_id: str
+    code: str
+    bot_username: str
+    expires_in: int = 600
+
+
+class TgCheckResponse(BaseModel):
+    status: str
+    access_token: str | None = None
+    refresh_token: str | None = None
+    is_new_user: bool | None = None
+
+
+class TgMiniAppRequest(BaseModel):
+    telegram_id: str
+    first_name: str = ""
+    username: str | None = None
+
+
+class LinkEmailSendRequest(BaseModel):
+    email: EmailStr
+
+
+class LinkEmailVerifyRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=4, max_length=10, pattern=r"^\d+$")

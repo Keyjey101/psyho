@@ -3,6 +3,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
 COPY . .
+ARG VITE_TG_BOT_USERNAME
+ENV VITE_TG_BOT_USERNAME=$VITE_TG_BOT_USERNAME
 RUN npm run build
 
 FROM nginx:1.25-alpine
@@ -16,7 +18,7 @@ RUN echo 'server { \
     location / { \
         try_files $uri $uri/ /index.html; \
     } \
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ { \
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|webp)$ { \
         expires 1y; \
         add_header Cache-Control "public, immutable"; \
         max_ranges 0; \

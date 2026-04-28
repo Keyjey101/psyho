@@ -2,27 +2,27 @@ import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/auth";
-import Landing from "@/pages/Landing";
-import Login from "@/pages/Login";
-import Register from "@/pages/Register";
+import { isTMA, initTelegramApp } from "@/utils/telegram";
 import AuthEmail from "@/pages/AuthEmail";
 import AuthVerify from "@/pages/AuthVerify";
+import AuthTelegram from "@/pages/AuthTelegram";
 import Chat from "@/pages/Chat";
 import Admin from "@/pages/Admin";
-import Onboarding from "@/pages/Onboarding";
 import OnboardingFlow from "@/pages/OnboardingFlow";
 import Profile from "@/pages/Profile";
 import MoodPage from "@/pages/MoodPage";
+import PersonalityPage from "@/pages/PersonalityPage";
+import Landing from "@/pages/Landing";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#FAF6F1]">
+      <div className="flex h-screen items-center justify-center bg-[#FAF6F1] dark:bg-[#2A2420]">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#E8DDD0] border-t-[#B8785A]" />
-          <p className="text-sm text-[#8A7A6A]">Загрузка...</p>
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#E8DDD0] border-t-[#B8785A] dark:border-[#4A4038] dark:border-t-[#C08B68]" />
+          <p className="text-sm text-[#8A7A6A] dark:text-[#B8A898]">Загрузка...</p>
         </div>
       </div>
     );
@@ -39,18 +39,21 @@ export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
 
   useEffect(() => {
+    if (isTMA()) initTelegramApp();
     checkAuth();
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
   }, [checkAuth]);
 
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
 
-      {/* New passwordless auth flow */}
-      <Route path="/auth" element={<AuthEmail />} />
+      <Route path="/auth" element={<AuthTelegram />} />
+      <Route path="/auth/email" element={<AuthEmail />} />
       <Route path="/auth/verify" element={<AuthVerify />} />
 
-      {/* Legacy routes — kept for backward compat */}
       <Route path="/login" element={<Navigate to="/auth" replace />} />
       <Route path="/register" element={<Navigate to="/auth" replace />} />
 
@@ -79,14 +82,6 @@ export default function App() {
         }
       />
       <Route
-        path="/onboarding/legacy"
-        element={
-          <ProtectedRoute>
-            <Onboarding />
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/profile"
         element={
           <ProtectedRoute>
@@ -99,6 +94,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <MoodPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/personality"
+        element={
+          <ProtectedRoute>
+            <PersonalityPage />
           </ProtectedRoute>
         }
       />

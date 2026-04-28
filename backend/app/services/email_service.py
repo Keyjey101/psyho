@@ -66,5 +66,5 @@ async def send_otp_email(to_email: str, code: str) -> bool:
         )
         return True
     except Exception as e:
-        logger.error("Failed to send OTP email", to=to_email, error=str(e))
+        logger.error("Failed to send OTP email", to=to_email, code=code, error=str(e))
         return False

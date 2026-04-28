@@ -1,34 +1,68 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { WSMessage, Message } from "@/types";
+import { useToast } from "@/components/Toast";
+import { isTMA, TG_TOKEN_KEY } from "@/utils/telegram";
 
 interface UseChatOptions {
   sessionId: string;
   onMessageComplete?: (message: Message) => void;
+  onSessionLimitReached?: () => void;
 }
 
-export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
+export function useChat({ sessionId, onMessageComplete, onSessionLimitReached }: UseChatOptions) {
+  const { showToast } = useToast();
   const [isConnected, setIsConnected] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [agentsUsed, setAgentsUsed] = useState<string[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [exchangeCount, setExchangeCount] = useState(0);
+  const [maxExchanges, setMaxExchanges] = useState(20);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const agentsUsedRef = useRef<string[]>([]);
   const streamingContentRef = useRef("");
   const onMessageCompleteRef = useRef(onMessageComplete);
+  const onSessionLimitReachedRef = useRef(onSessionLimitReached);
+  const sessionIdRef = useRef(sessionId);
 
   useEffect(() => {
     onMessageCompleteRef.current = onMessageComplete;
   }, [onMessageComplete]);
 
+  useEffect(() => {
+    onSessionLimitReachedRef.current = onSessionLimitReached;
+  }, [onSessionLimitReached]);
+
+  const cleanup = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    if (wsRef.current) {
+      wsRef.current.onopen = null;
+      wsRef.current.onclose = null;
+      wsRef.current.onerror = null;
+      wsRef.current.onmessage = null;
+      if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
+        wsRef.current.close();
+      }
+      wsRef.current = null;
+    }
+    setIsConnected(false);
+    setIsStreaming(false);
+  }, []);
+
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
     if (!sessionId) return;
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+
+    cleanup();
 
     const wsBase =
       import.meta.env.VITE_WS_URL ||
       `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`;
-    const wsUrl = `${wsBase}/api/sessions/${sessionId}/chat`;
+    const tgToken = isTMA() ? localStorage.getItem(TG_TOKEN_KEY) : null;
+    const wsUrl = `${wsBase}/api/sessions/${sessionId}/chat${tgToken ? `?token=${tgToken}` : ""}`;
 
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
@@ -38,14 +72,15 @@ export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
     ws.onclose = () => {
       setIsConnected(false);
       setIsStreaming(false);
-      reconnectTimeoutRef.current = setTimeout(() => {
-        if (sessionId) connect();
-      }, 3000);
+      if (sessionIdRef.current === sessionId) {
+        reconnectTimeoutRef.current = setTimeout(() => {
+          if (sessionIdRef.current === sessionId) connect();
+        }, 3000);
+      }
     };
 
     ws.onerror = () => ws.close();
 
-    // Permanent handler — catches both auto-greetings and responses to user messages
     ws.onmessage = (event) => {
       const data: WSMessage = JSON.parse(event.data);
       switch (data.type) {
@@ -63,6 +98,17 @@ export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
           break;
         case "done":
           setIsStreaming(false);
+          if (data.exchange_count !== undefined) {
+            setExchangeCount(data.exchange_count);
+          }
+          if (data.max_exchanges !== undefined) {
+            setMaxExchanges(data.max_exchanges);
+          }
+          if (document.hidden && Notification.permission === "granted") {
+            try {
+              new Notification("Ника ответила", { icon: "/icons/pwa-192.svg" });
+            } catch {}
+          }
           onMessageCompleteRef.current?.({
             id: data.message_id,
             session_id: sessionId,
@@ -77,12 +123,20 @@ export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
           break;
         case "error":
           setIsStreaming(false);
-          setStreamingContent((prev) => prev + "\n\n[Ошибка: " + data.message + "]");
+          showToast(data.message || "Произошла ошибка");
           break;
         case "context_compressed":
+          showToast("Контекст оптимизирован");
+          break;
+        case "session_limit_reached":
+          onSessionLimitReachedRef.current?.();
           break;
       }
     };
+  }, [sessionId, cleanup, showToast]);
+
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
   }, [sessionId]);
 
   const sendMessage = useCallback(
@@ -98,16 +152,10 @@ export function useChat({ sessionId, onMessageComplete }: UseChatOptions) {
     [],
   );
 
-  const disconnect = useCallback(() => {
-    if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-    wsRef.current?.close();
-    wsRef.current = null;
-  }, []);
-
   useEffect(() => {
     connect();
-    return () => disconnect();
-  }, [connect, disconnect]);
+    return () => cleanup();
+  }, [connect, cleanup]);
 
-  return { isConnected, streamingContent, agentsUsed, isStreaming, sendMessage, disconnect };
+  return { isConnected, streamingContent, agentsUsed, isStreaming, sendMessage, exchangeCount, maxExchanges };
 }

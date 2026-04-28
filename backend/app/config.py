@@ -30,6 +30,13 @@ class Settings(BaseSettings):
     CONTEXT_COMPRESSION_THRESHOLD: int = 40
     CONTEXT_KEEP_MESSAGES: int = 20
 
+    AGENT_TIMEOUT_SECONDS: int = 15
+    AGENT_MAX_TOKENS: int = 2048
+    SYNTHESIS_MAX_TOKENS: int = 4096
+    MAX_MESSAGE_LENGTH: int = 4000
+    CLASSIFICATION_MAX_TOKENS: int = 200
+    SESSION_MAX_EXCHANGES: int = 20
+
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
@@ -39,12 +46,20 @@ class Settings(BaseSettings):
 
     TEST_PASSWORD_CODE: str = ""
 
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_BOT_USERNAME: str = ""
+
     OTP_EXPIRE_MINUTES: int = 10
     OTP_MAX_ATTEMPTS: int = 5
     OTP_RATE_LIMIT_COUNT: int = 3
     OTP_RATE_LIMIT_MINUTES: int = 10
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+    model_config = {"env_file": (".env", "../.env"), "env_file_encoding": "utf-8", "extra": "ignore"}
+
+    @field_validator("TELEGRAM_BOT_USERNAME")
+    @classmethod
+    def strip_bot_username_at(cls, v: str) -> str:
+        return v.lstrip("@")
 
     @field_validator("SECRET_KEY")
     @classmethod

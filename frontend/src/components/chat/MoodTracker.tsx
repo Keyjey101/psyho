@@ -23,12 +23,12 @@ export default function MoodTracker({ onSubmit, onSkip }: MoodTrackerProps) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
-        className="mx-auto max-w-md rounded-2xl border border-surface-100 bg-white p-6 shadow-sm"
+        className="mx-auto max-w-md rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm"
       >
-        <h3 className="mb-2 text-center text-lg font-semibold text-surface-900">
+        <h3 className="mb-2 text-center text-lg font-semibold text-[#5A5048]">
           Как ты себя чувствуешь после сессии?
         </h3>
-        <p className="mb-6 text-center text-sm text-surface-500">
+        <p className="mb-6 text-center text-sm text-[#8A7A6A]">
           Это поможет отследить твой прогресс
         </p>
 
@@ -39,24 +39,27 @@ export default function MoodTracker({ onSubmit, onSkip }: MoodTrackerProps) {
               onClick={() => setSelected(mood.value)}
               className={`flex flex-col items-center gap-1 rounded-xl px-3 py-2 transition-all ${
                 selected === mood.value
-                  ? "bg-primary-50 ring-2 ring-primary-400"
-                  : "hover:bg-surface-50"
+                  ? "bg-[#FAF0E8] ring-2 ring-[#B8785A]"
+                  : "hover:bg-[#FAF6F1]"
               }`}
             >
               <span className="text-2xl">{mood.emoji}</span>
-              <span className="text-xs text-surface-500">{mood.label}</span>
+              <span className="text-xs text-[#8A7A6A]">{mood.label}</span>
             </button>
           ))}
         </div>
 
         <div className="flex gap-3">
-          <button onClick={onSkip} className="btn-secondary flex-1">
+          <button
+            onClick={onSkip}
+            className="flex-1 rounded-full border border-[#D8CDC0] px-4 py-2.5 text-sm font-medium text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1]"
+          >
             Пропустить
           </button>
           <button
             onClick={() => selected && onSubmit(selected)}
             disabled={!selected}
-            className="btn-primary flex-1"
+            className="flex-1 rounded-full bg-[#B8785A] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#9E6349] disabled:opacity-50"
           >
             Оценить
           </button>

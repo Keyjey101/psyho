@@ -1,4 +1,5 @@
 import json
+import asyncio
 import structlog
 from datetime import datetime, timezone
 
@@ -11,13 +12,86 @@ from app.models.models import ChatSession, Message, User, UserProfile
 from app.schemas.message import MessageResponse, MessageListResponse
 from app.middleware.auth import get_current_user
 from app.services.auth import decode_token
-from app.agents.orchestrator import Orchestrator
+from app.agents.orchestrator import Orchestrator, SessionPhase
+from app.agents.base import client as ai_client
 from app.services.context import maybe_compress_context, generate_session_title
 from app.services.memory_service import extract_and_update_memory
+from app.services.personality_service import compute_personality_snapshot, should_compute_snapshot
+
+from app.config import get_settings
 
 router = APIRouter()
 
 orchestrator = Orchestrator()
+settings = get_settings()
+
+FAREWELL_KEYWORDS = {
+    "пока", "до свидания", "досвидания", "до встречи", "спасибо большое",
+    "всё, спасибо", "всё спасибо", "спасибо, всё", "на этом всё",
+    "bye", "goodbye", "до следующего раза", "спасибо за сессию",
+}
+
+def _is_farewell(message: str, exchange_count: int) -> bool:
+    if exchange_count < 5:
+        return False
+    msg = message.lower().strip()
+    return any(kw in msg for kw in FAREWELL_KEYWORDS) and len(msg) < 80
+
+_memory_counters: dict[str, int] = {}
+
+TASK_EXTRACT_PROMPT = """Из ответа терапевта ниже извлеки конкретную домашнюю задачу / практику, которую предложили пользователю.
+Верни только текст задачи, 1 предложение. Если задачи нет — верни пустую строку.
+
+Ответ терапевта:
+{response}"""
+
+
+async def _background_memory_update(current_memory: str | None, messages: list[dict], user_id: str):
+    try:
+        async with async_session() as mem_db:
+            await extract_and_update_memory(current_memory, messages, mem_db, user_id)
+    except Exception as e:
+        structlog.get_logger().error("Background memory update error", error=str(e))
+
+
+async def _background_personality_update(user_id: str):
+    try:
+        async with async_session() as p_db:
+            if await should_compute_snapshot(user_id, p_db):
+                await compute_personality_snapshot(user_id, p_db)
+    except Exception as e:
+        structlog.get_logger().error("Background personality update error", error=str(e))
+
+
+async def _extract_and_save_task(user_id: str, session_id: str, response_text: str):
+    try:
+        settings_local = get_settings()
+        prompt = TASK_EXTRACT_PROMPT.format(response=response_text[:1000])
+        task_response = await ai_client.chat.completions.create(
+            model=settings_local.ZAI_SMALL_MODEL,
+            max_tokens=100,
+            temperature=0.1,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        task_text = task_response.choices[0].message.content.strip()
+        if task_text and len(task_text) > 10:
+            from app.models.models import SessionTask
+            async with async_session() as t_db:
+                existing = await t_db.execute(
+                    select(func.count()).select_from(SessionTask).where(
+                        SessionTask.session_id == session_id
+                    )
+                )
+                if (existing.scalar() or 0) == 0:
+                    task = SessionTask(
+                        user_id=user_id,
+                        session_id=session_id,
+                        text=task_text,
+                    )
+                    t_db.add(task)
+                    await t_db.commit()
+    except Exception as e:
+        structlog.get_logger().error("Task extraction error", error=str(e))
 
 
 @router.get("/{session_id}/messages", response_model=MessageListResponse)
@@ -59,7 +133,7 @@ async def list_messages(
 
 @router.websocket("/{session_id}/chat")
 async def websocket_chat(websocket: WebSocket, session_id: str):
-    token = websocket.query_params.get("token") or websocket.cookies.get("access_token")
+    token = websocket.cookies.get("access_token") or websocket.query_params.get("token")
     if not token:
         await websocket.close(code=4001, reason="Missing token")
         return
@@ -108,26 +182,34 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
             prev_title = "нашу предыдущую сессию"
 
         if insights:
+            try:
+                parsed = json.loads(insights)
+                continue_from = parsed.get("continue_from", "")
+                main_theme = parsed.get("main_theme", "")
+                key_insights = parsed.get("key_insights", [])
+                homework = parsed.get("homework", "")
+            except Exception:
+                continue_from = ""
+                main_theme = ""
+                key_insights = []
+                homework = ""
+
             continuation_prompt = f"""КОНТЕКСТ ДЛЯ НИКА (не показывать пользователю):
 Это продолжение предыдущей сессии «{prev_title}».
-Инсайты и итоги прошлой работы:
-{insights}
+Главная тема: {main_theme}
+Ключевые инсайты: {', '.join(key_insights) if key_insights else 'нет'}
+{'Домашняя практика: ' + homework if homework else ''}
 
-ЗАДАЧА: Начни новую сессию естественно. Поприветствуй пользователя,
-кратко напомни о чём говорили (не перечисляй всё — выбери главное),
-спроси как он/она себя чувствует после того разговора,
-и мягко предложи продолжить работу или попробовать что-то новое.
-Говори как Ника — тепло, без официоза."""
+ЗАДАЧА: Начни новую сессию естественно. {continue_from or 'Поприветствуй пользователя и спроси как он/она себя чувствует.'}
+Говори как Ника — тепло, без официоза. НЕ перечисляй всё подряд — выбери главное."""
 
             greeting_content = ""
             try:
                 from app.agents.base import client as ai_client
-                from app.config import get_settings
-                settings = get_settings()
 
                 stream = await ai_client.chat.completions.create(
                     model=settings.ZAI_MODEL,
-                    max_tokens=512,
+                    max_tokens=settings.SYNTHESIS_MAX_TOKENS,
                     temperature=0.7,
                     messages=[
                         {"role": "system", "content": orchestrator.system_prompt},
@@ -167,7 +249,7 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
             if not content:
                 continue
 
-            if len(content) > 4000:
+            if len(content) > settings.MAX_MESSAGE_LENGTH:
                 await websocket.send_json({"type": "error", "message": "Сообщение слишком длинное (максимум 4000 символов)"})
                 continue
 
@@ -180,17 +262,25 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                 db.add(user_msg)
                 await db.commit()
 
+                count_result = await db.execute(
+                    select(func.count()).where(
+                        Message.session_id == session_id,
+                        Message.role == "user",
+                    )
+                )
+                exchange_count = count_result.scalar() or 0
+
                 msg_result = await db.execute(
                     select(Message)
-                    .join(ChatSession, Message.session_id == ChatSession.id)
-                    .where(Message.session_id == session_id, ChatSession.user_id == user_id)
-                    .order_by(Message.created_at)
+                    .where(Message.session_id == session_id)
+                    .order_by(Message.created_at.desc())
+                    .limit(20)
                 )
-                all_messages = list(msg_result.scalars().all())
+                recent_messages = list(reversed(msg_result.scalars().all()))
 
                 history_dicts = [
                     {"role": m.role, "content": m.content, "agents_used": m.agents_used}
-                    for m in all_messages
+                    for m in recent_messages
                 ]
 
                 sess_result = await db.execute(
@@ -198,6 +288,7 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                 )
                 fresh_session = sess_result.scalar_one_or_none()
                 summary_text = fresh_session.summary if fresh_session else ""
+                max_exchanges = fresh_session.max_exchanges if fresh_session else settings.SESSION_MAX_EXCHANGES
 
             agents_used_list = []
             full_response = ""
@@ -206,6 +297,9 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                 async for event in orchestrator.process(
                     content, history_dicts, summary_text, preferred_style, long_term_memory,
                     therapy_goals, address_form, gender,
+                    exchange_number=exchange_count,
+                    max_exchanges=max_exchanges,
+                    session_id=session_id,
                 ):
                     if event["type"] == "token":
                         await websocket.send_json({"type": "token", "content": event["content"]})
@@ -246,19 +340,42 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                 if compressed:
                     await websocket.send_json({"type": "context_compressed"})
 
-                await websocket.send_json({"type": "done", "message_id": assistant_msg.id})
+                await websocket.send_json({
+                    "type": "done",
+                    "message_id": assistant_msg.id,
+                    "exchange_count": exchange_count,
+                    "max_exchanges": max_exchanges,
+                })
 
             if profile and profile.memory_enabled and full_response:
-                try:
-                    async with async_session() as mem_db:
-                        await extract_and_update_memory(
-                            profile.long_term_memory,
-                            history_dicts,
-                            mem_db,
-                            user_id,
-                        )
-                except Exception as e:
-                    structlog.get_logger().error("Memory update error", error=str(e))
+                _memory_counters[session_id] = _memory_counters.get(session_id, 0) + 1
+                if _memory_counters[session_id] % 3 == 0:
+                    memory_task_mem = profile.long_term_memory
+                    memory_task_history = list(history_dicts)
+                    asyncio.create_task(
+                        _background_memory_update(memory_task_mem, memory_task_history, user_id)
+                    )
+
+            if full_response:
+                asyncio.create_task(_background_personality_update(user_id))
+
+            if exchange_count > 0 and max_exchanges > 0:
+                phase = SessionPhase.WORK
+                pct = exchange_count / max_exchanges
+                if pct >= 0.90:
+                    phase = SessionPhase.CLOSE
+                elif pct >= 0.75:
+                    phase = SessionPhase.INTEGRATION
+                if phase in (SessionPhase.CLOSE, SessionPhase.INTEGRATION) and full_response:
+                    asyncio.create_task(
+                        _extract_and_save_task(user_id, session_id, full_response)
+                    )
+
+            if exchange_count >= max_exchanges:
+                await websocket.send_json({"type": "session_limit_reached"})
+
+            if _is_farewell(content, exchange_count) and exchange_count < max_exchanges:
+                await websocket.send_json({"type": "session_limit_reached"})
 
     except WebSocketDisconnect:
         pass

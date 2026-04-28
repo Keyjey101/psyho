@@ -1,5 +1,8 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthStore } from "@/store/auth";
+import { getInitData, getTelegramUser } from "@/utils/telegram";
 import Hero from "@/components/landing/Hero";
 import Techniques from "@/components/landing/Techniques";
 import UserGuide from "@/components/landing/UserGuide";
@@ -7,6 +10,42 @@ import AgentSystem from "@/components/landing/AgentSystem";
 
 export default function Landing() {
   const { isAuthenticated } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const telegramAuth = useAuthStore((s) => s.telegramAuth);
+  const telegramMiniAppAuth = useAuthStore((s) => s.telegramMiniAppAuth);
+  const navigate = useNavigate();
+
+  const handleStart = async () => {
+    const initData = getInitData();
+    if (initData) {
+      setLoading(true);
+      try {
+        const data = await telegramAuth(initData);
+        navigate(data.is_new_user ? "/onboarding" : "/chat", { replace: true });
+        return;
+      } catch {
+        // fall through to initDataUnsafe fallback
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    const tgUser = getTelegramUser();
+    if (tgUser?.id) {
+      setLoading(true);
+      try {
+        const data = await telegramMiniAppAuth(String(tgUser.id), tgUser.first_name, tgUser.username);
+        navigate(data.is_new_user ? "/onboarding" : "/chat", { replace: true });
+        return;
+      } catch {
+        // fall through to OTP
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    navigate("/auth");
+  };
 
   return (
     <div className="min-h-screen">
@@ -21,9 +60,17 @@ export default function Landing() {
                 Открыть чат
               </Link>
             ) : (
-              <Link to="/auth" className="btn-primary">
-                Начать разговор
-              </Link>
+              <button
+                onClick={handleStart}
+                disabled={loading}
+                className="btn-primary inline-flex items-center gap-2"
+              >
+                {loading ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                ) : (
+                  "Начать разговор"
+                )}
+              </button>
             )}
           </div>
         </div>

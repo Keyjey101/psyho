@@ -5,6 +5,8 @@ export interface User {
   is_active: boolean;
   created_at: string;
   profile?: UserProfile | null;
+  telegram_username?: string | null;
+  has_real_email?: boolean;
 }
 
 export interface UserProfile {
@@ -27,10 +29,12 @@ export interface Session {
   updated_at: string;
   summary: string | null;
   continuation_context?: string | null;
+  max_exchanges?: number;
 }
 
 export interface SessionDetail extends Session {
   messages: Message[];
+  exchange_count?: number;
 }
 
 export interface Message {
@@ -61,6 +65,8 @@ export interface WS_agents_used {
 export interface WSDoneMessage {
   type: "done";
   message_id: string;
+  exchange_count?: number;
+  max_exchanges?: number;
 }
 
 export interface WSErrorMessage {
@@ -72,12 +78,17 @@ export interface WSContextCompressed {
   type: "context_compressed";
 }
 
+export interface WSSessionLimitReached {
+  type: "session_limit_reached";
+}
+
 export type WSMessage =
   | WSTokenMessage
   | WS_agents_used
   | WSDoneMessage
   | WSErrorMessage
-  | WSContextCompressed;
+  | WSContextCompressed
+  | WSSessionLimitReached;
 
 export interface AgentInfo {
   id: string;
@@ -85,6 +96,7 @@ export interface AgentInfo {
   emoji: string;
   color: string;
   bgColor: string;
+  tooltip: string;
 }
 
 export const AGENTS: AgentInfo[] = [
@@ -92,43 +104,49 @@ export const AGENTS: AgentInfo[] = [
     id: "cbt",
     name: "КПТ",
     emoji: "🧠",
-    color: "text-chalk-800",
-    bgColor: "bg-chalk-50",
+    color: "text-[#5B3E8A]",
+    bgColor: "bg-[#EDE5F7]",
+    tooltip: "мысли и паттерны",
   },
   {
     id: "jungian",
     name: "Юнг",
     emoji: "🌙",
-    color: "text-warm-800",
-    bgColor: "bg-warm-50",
+    color: "text-[#7A4A2E]",
+    bgColor: "bg-[#F5EDE4]",
+    tooltip: "глубинные образы и символы",
   },
   {
     id: "act",
     name: "ACT",
     emoji: "🧭",
-    color: "text-primary-800",
-    bgColor: "bg-primary-50",
+    color: "text-[#6B4220]",
+    bgColor: "bg-[#FDF0E6]",
+    tooltip: "принятие и ценности",
   },
   {
     id: "ifs",
     name: "IFS",
     emoji: "🎭",
-    color: "text-chalk-700",
-    bgColor: "bg-chalk-50",
+    color: "text-[#5B3E8A]",
+    bgColor: "bg-[#EDE5F7]",
+    tooltip: "внутренние части личности",
   },
   {
     id: "narrative",
     name: "Нарратив",
     emoji: "📖",
-    color: "text-warm-700",
-    bgColor: "bg-warm-50",
+    color: "text-[#5A3825]",
+    bgColor: "bg-[#F5EDE4]",
+    tooltip: "истории и смыслы",
   },
   {
     id: "somatic",
     name: "Соматика",
     emoji: "🌿",
-    color: "text-surface-700",
-    bgColor: "bg-surface-50",
+    color: "text-[#2D5A3D]",
+    bgColor: "bg-[#E6F0E9]",
+    tooltip: "тело и нервная система",
   },
   {
     id: "orchestrator",
@@ -136,13 +154,15 @@ export const AGENTS: AgentInfo[] = [
     emoji: "🌸",
     color: "text-[#B8785A]",
     bgColor: "bg-[#FAF6F1]",
+    tooltip: "",
   },
   {
     id: "crisis",
     name: "Кризисная поддержка",
     emoji: "🆘",
-    color: "text-[#C4786A]",
-    bgColor: "bg-[#FDF5F3]",
+    color: "text-[#A03030]",
+    bgColor: "bg-[#FDE8E8]",
+    tooltip: "экстренная помощь",
   },
 ];
 

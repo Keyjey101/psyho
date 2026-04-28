@@ -5,12 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from sqlalchemy.orm import selectinload
-
+from app.config import get_settings
 from app.database import get_db
 from app.models.models import ChatSession, Message, User
 from app.schemas.session import SessionCreate, SessionUpdate, SessionResponse, SessionListResponse, SessionDetailResponse
 from app.middleware.auth import get_current_user
+
+settings = get_settings()
 
 router = APIRouter()
 
@@ -27,7 +28,7 @@ async def list_sessions(user: User = Depends(get_current_user), db: AsyncSession
 
 @router.post("", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)
 async def create_session(body: SessionCreate, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    session = ChatSession(user_id=user.id, title=body.title)
+    session = ChatSession(user_id=user.id, title=body.title, max_exchanges=settings.SESSION_MAX_EXCHANGES)
     db.add(session)
     await db.commit()
     await db.refresh(session)
@@ -39,12 +40,36 @@ async def get_session(session_id: str, user: User = Depends(get_current_user), d
     result = await db.execute(
         select(ChatSession)
         .where(ChatSession.id == session_id, ChatSession.user_id == user.id)
-        .options(selectinload(ChatSession.messages))
     )
     session = result.scalar_one_or_none()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    return session
+
+    msg_result = await db.execute(
+        select(Message)
+        .where(Message.session_id == session_id)
+        .order_by(Message.created_at.desc())
+        .limit(50)
+    )
+    messages = list(reversed(msg_result.scalars().all()))
+
+    count_result = await db.execute(
+        select(func.count()).where(Message.session_id == session_id, Message.role == "user")
+    )
+    exchange_count = count_result.scalar() or 0
+
+    from app.schemas.message import MessageResponse
+    return SessionDetailResponse(
+        id=session.id,
+        title=session.title,
+        created_at=session.created_at,
+        updated_at=session.updated_at,
+        summary=session.summary,
+        continuation_context=session.continuation_context,
+        max_exchanges=session.max_exchanges,
+        exchange_count=exchange_count,
+        messages=[MessageResponse.model_validate(m) for m in messages],
+    )
 
 
 @router.patch("/{session_id}", response_model=SessionResponse)
@@ -92,15 +117,18 @@ async def continue_session(
 
     msg_result = await db.execute(
         select(Message)
-        .where(Message.session_id == session_id, Message.role == "assistant")
+        .where(Message.session_id == session_id)
         .order_by(Message.created_at.desc())
-        .limit(10)
+        .limit(20)
     )
-    assistant_messages = list(msg_result.scalars().all())
+    all_messages = list(reversed(msg_result.scalars().all()))
 
     insights = ""
-    if assistant_messages:
-        combined = "\n".join([m.content[:500] for m in reversed(assistant_messages)])
+    if all_messages:
+        pairs_text = ""
+        for m in all_messages[-10:]:
+            role = "Пользователь" if m.role == "user" else "Ника"
+            pairs_text += f"{role}: {m.content[:300]}\n"
 
         from app.agents.base import client
         from app.config import get_settings
@@ -114,21 +142,29 @@ async def continue_session(
                 messages=[
                     {
                         "role": "user",
-                        "content": f"""Ты — Ника, ИИ-психолог. Из этой сессии создай краткую выжимку для продолжения:
-- Главная тема работы
-- Ключевые инсайты и открытия
-- Что было сделано (техники, упражнения)
-- С чего стоит продолжить
-Пиши от первого лица (я — Ника), как будто готовишься к следующей встрече.
+                        "content": f"""Из этой сессии извлеки выжимку для следующей встречи.
 
-Ответы терапевта из сессии:
-{combined}""",
+Верни JSON:
+{{
+  "main_theme": "одна фраза — главная тема",
+  "user_request": "что человек хотел получить от сессии",
+  "key_insights": ["инсайт 1", "инсайт 2"],
+  "homework": "конкретная практика если была",
+  "continue_from": "с чего начать следующий разговор — 1 предложение"
+}}
+
+Диалог:
+{pairs_text}""",
                     }
                 ],
             )
-            insights = response.choices[0].message.content.strip()
+            raw = response.choices[0].message.content.strip()
+            if raw.startswith("```"):
+                raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+            json.loads(raw)
+            insights = raw
         except Exception:
-            insights = "Сессия завершена. Продолжим с того места, где остановились."
+            insights = '{"main_theme": "Сессия завершена", "user_request": "", "key_insights": [], "homework": "", "continue_from": "Продолжим с того места, где остановились."}'
 
     continuation_ctx = json.dumps({
         "previous_title": prev_session.title or "Без названия",
@@ -140,6 +176,7 @@ async def continue_session(
         user_id=user.id,
         title=None,
         continuation_context=continuation_ctx,
+        max_exchanges=settings.SESSION_MAX_EXCHANGES,
     )
     db.add(new_session)
     await db.commit()

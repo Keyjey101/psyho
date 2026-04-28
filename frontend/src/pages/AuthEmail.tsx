@@ -40,6 +40,7 @@ export default function AuthEmail() {
             src="/illustrations/opt/ai_avatar.webp"
             alt=""
             className="h-full w-full object-contain"
+            onError={(e) => { e.currentTarget.src = "/illustrations/ai_avatar.png" }}
           />
         </div>
 

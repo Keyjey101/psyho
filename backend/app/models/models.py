@@ -24,6 +24,8 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    telegram_id: Mapped[str | None] = mapped_column(String(20), nullable=True, unique=True, index=True)
+    telegram_username: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
     profile = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -39,6 +41,7 @@ class ChatSession(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
     summary: Mapped[str | None] = mapped_column(Text)
     continuation_context: Mapped[str | None] = mapped_column(Text)
+    max_exchanges: Mapped[int] = mapped_column(Integer, default=20, server_default="20")
 
     user = relationship("User", back_populates="sessions")
     messages = relationship("Message", back_populates="session", cascade="all, delete-orphan", order_by="Message.created_at")
@@ -86,6 +89,19 @@ class EmailVerificationCode(Base):
     used: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
 
+class TelegramVerificationCode(Base):
+    __tablename__ = "telegram_verification_codes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    telegram_username: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    code: Mapped[str] = mapped_column(String(6), nullable=False)
+    telegram_id: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    used: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+
+
 class MoodEntry(Base):
     __tablename__ = "mood_entries"
 
@@ -98,3 +114,30 @@ class MoodEntry(Base):
 
     user = relationship("User")
     session = relationship("ChatSession")
+
+
+class PersonalitySnapshot(Base):
+    __tablename__ = "personality_snapshots"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    self_awareness: Mapped[int] = mapped_column(Integer, default=50)
+    emotional_regulation: Mapped[int] = mapped_column(Integer, default=50)
+    self_compassion: Mapped[int] = mapped_column(Integer, default=50)
+    acceptance: Mapped[int] = mapped_column(Integer, default=50)
+    values_clarity: Mapped[int] = mapped_column(Integer, default=50)
+    resourcefulness: Mapped[int] = mapped_column(Integer, default=50)
+    dominant_theme: Mapped[str | None] = mapped_column(String(50))
+    summary_note: Mapped[str | None] = mapped_column(Text)
+
+
+class SessionTask(Base):
+    __tablename__ = "session_tasks"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    session_id: Mapped[str] = mapped_column(String(36), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

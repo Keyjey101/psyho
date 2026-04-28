@@ -1,18 +1,18 @@
 import { useState, useRef, useEffect } from "react";
-import { Send } from "lucide-react";
+import { Send, ChevronUp } from "lucide-react";
 import VoiceInput from "./VoiceInput";
-import ActionPanel from "./ActionPanel";
 
 interface InputBarProps {
   onSend: (content: string) => void;
   disabled?: boolean;
-  sessionId?: string;
+  isActionsOpen?: boolean;
+  onToggleActions?: () => void;
 }
 
 const MAX_LENGTH = 4000;
 const COUNTER_THRESHOLD = 2000;
 
-export default function InputBar({ onSend, disabled, sessionId }: InputBarProps) {
+export default function InputBar({ onSend, disabled, isActionsOpen, onToggleActions }: InputBarProps) {
   const [content, setContent] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -22,6 +22,12 @@ export default function InputBar({ onSend, disabled, sessionId }: InputBarProps)
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 160) + "px";
     }
   }, [content]);
+
+  const handleFocus = () => {
+    setTimeout(() => {
+      textareaRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }, 100);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (e.target.value.length <= MAX_LENGTH) {
@@ -53,13 +59,22 @@ export default function InputBar({ onSend, disabled, sessionId }: InputBarProps)
 
   return (
     <div
-      className="border-t border-[#E8DDD0] bg-white px-4 pt-3 lg:px-6"
+      className="border-t border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#2A2420] px-4 pt-3 lg:px-6"
       style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
     >
       <div className="mx-auto max-w-3xl">
         <div className="flex items-end gap-2">
-          <ActionPanel sessionId={sessionId} disabled={disabled} />
-          <div className="flex flex-1 items-center gap-2 rounded-[24px] border border-[#D8CDC0] bg-white px-4 py-2">
+          <button
+            disabled={disabled}
+            onClick={onToggleActions}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#D8CDC0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] text-[#8A7A6A] dark:text-[#B8A898] transition-all hover:bg-[#F5EDE4] dark:hover:bg-[#4A4038] disabled:opacity-40 disabled:pointer-events-none"
+            title="Действия"
+          >
+            <ChevronUp
+              className={`h-5 w-5 transition-transform duration-200 ${isActionsOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          <div className="flex flex-1 items-center gap-2 rounded-[24px] border border-[#D8CDC0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] px-4 py-2">
             <VoiceInput
               onTranscript={(text) => setContent((prev) => {
                 const next = prev ? prev + " " + text : text;
@@ -72,10 +87,11 @@ export default function InputBar({ onSend, disabled, sessionId }: InputBarProps)
               value={content}
               onChange={handleChange}
               onKeyDown={handleKeyDown}
+              onFocus={handleFocus}
               placeholder="Напиши что угодно..."
               disabled={disabled}
               rows={1}
-              className="flex-1 resize-none border-0 bg-transparent py-1 text-sm text-[#5A5048] placeholder:italic placeholder:text-[#B8A898] focus:outline-none focus:ring-0 max-h-40"
+              className="flex-1 resize-none border-0 bg-transparent py-1 text-sm text-[#5A5048] dark:text-[#F5EDE4] placeholder:italic placeholder:text-[#B8A898] dark:placeholder:text-[#6A5A4A] focus:outline-none focus:ring-0 max-h-40"
             />
             <div className="flex shrink-0 flex-col items-end gap-1">
               {showCounter && (

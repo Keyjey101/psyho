@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 const techniques = [
   {
     img: "/illustrations/opt/method_cbt.webp",
+    fallback: "/illustrations/method_cbt.png",
     name: "Когнитивно-поведенческая терапия",
     shortName: "КПТ",
     description: "Работа с мыслями, которые мешают жить",
@@ -10,6 +11,7 @@ const techniques = [
   },
   {
     img: "/illustrations/opt/method_jung.webp",
+    fallback: "/illustrations/method_jung.png",
     name: "Юнгианский анализ",
     shortName: "Юнг",
     description: "Понимание глубинных слоёв личности и снов",
@@ -17,6 +19,7 @@ const techniques = [
   },
   {
     img: "/illustrations/opt/method_act.webp",
+    fallback: "/illustrations/method_act.png",
     name: "Терапия принятия и ответственности",
     shortName: "ACT",
     description: "Действовать по ценностям, не убегая от чувств",
@@ -24,6 +27,7 @@ const techniques = [
   },
   {
     img: "/illustrations/opt/method_ifs.webp",
+    fallback: "/illustrations/method_ifs.png",
     name: "Системная семейная терапия",
     shortName: "IFS",
     description: "Примирение внутренних частей личности",
@@ -31,6 +35,7 @@ const techniques = [
   },
   {
     img: "/illustrations/opt/method_narrative.webp",
+    fallback: "/illustrations/method_narrative.png",
     name: "Нарративная терапия",
     shortName: "Нарратив",
     description: "Переписать историю о себе по-новому",
@@ -38,6 +43,7 @@ const techniques = [
   },
   {
     img: "/illustrations/opt/method_somatic.webp",
+    fallback: "/illustrations/method_somatic.png",
     name: "Соматическая терапия",
     shortName: "Соматика",
     description: "Телесное осознание и работа с напряжением",
@@ -68,7 +74,7 @@ export default function Techniques() {
               className="rounded-2xl border border-[#E8DDD0] bg-white p-5 transition-all duration-300 hover:border-[#D8CDC0] hover:bg-[#FAF6F1]"
               style={{ boxShadow: "0 2px 12px rgba(90,80,72,0.06)" }}
             >
-              <img src={t.img} alt={t.shortName} className="h-12 w-12 object-contain" />
+              <img src={t.img} alt={t.shortName} className="h-12 w-12 object-contain" onError={(e) => { if (t.fallback) e.currentTarget.src = t.fallback }} />
               <h4 className="mt-3 font-serif text-[16px] font-semibold text-[#5A5048]">
                 {t.shortName}
               </h4>

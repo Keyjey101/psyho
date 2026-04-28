@@ -1,18 +1,25 @@
 import { motion } from "framer-motion";
 
+const RAW_BOT = (import.meta.env.VITE_TG_BOT_USERNAME || "").replace(/^@/, "");
+const BOT_DISPLAY = RAW_BOT ? `@${RAW_BOT}` : null;
+const BOT_LINK = RAW_BOT ? `https://t.me/${RAW_BOT}` : null;
+
 const cards = [
   {
-    emoji: "📧",
-    title: "Вход по email",
-    body: "Введи почту — придёт 6-значный код. Пароль не нужен. Каждый раз входишь по новому коду — быстро и безопасно.",
+    img: "/illustrations/opt/guide_email.webp",
+    fallback: "/illustrations/guide_email.png",
+    title: "Вход через Telegram",
+    tg: true,
   },
   {
-    emoji: "💬",
+    img: "/illustrations/opt/guide_chat.webp",
+    fallback: "/illustrations/guide_chat.png",
     title: "Просто пиши",
     body: "Пиши как другу, не нужно формулировать «правильно». Ника задаёт уточняющие вопросы и отвечает без осуждения.",
   },
   {
-    emoji: "✨",
+    img: "/illustrations/opt/guide_actions.webp",
+    fallback: "/illustrations/guide_actions.png",
     title: "Плитки действий",
     body: null,
     actions: [
@@ -24,17 +31,20 @@ const cards = [
     note: "Кнопка ↑ рядом с полем ввода открывает меню:",
   },
   {
-    emoji: "🧠",
+    img: "/illustrations/opt/guide_memory.webp",
+    fallback: "/illustrations/guide_memory.png",
     title: "Долговременная память",
     body: "Ника запоминает важное между сессиями: твои цели, особенности, прогресс. Иконка мозга в заголовке чата включает и отключает эту функцию.",
   },
   {
-    emoji: "🔗",
+    img: "/illustrations/opt/guide_continue.webp",
+    fallback: "/illustrations/guide_continue.png",
     title: "Продолжить сессию",
     body: "На экране нового чата есть кнопка «Продолжить». Ника сама восстановит нить предыдущего разговора — не придётся объяснять всё заново.",
   },
   {
-    emoji: "📱",
+    img: "/illustrations/opt/guide_install.webp",
+    fallback: "/illustrations/guide_install.png",
     title: "Добавить на телефон",
     body: null,
     pwa: true,
@@ -60,12 +70,37 @@ export default function UserGuide() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: i * 0.08 }}
-              className="rounded-2xl border border-[#E8DDD0] bg-white p-5 shadow-sm"
+              className="rounded-2xl border border-[#E8DDD0] bg-white p-5 transition-all duration-300 hover:border-[#D8CDC0] hover:bg-[#FAF6F1]"
+              style={{ boxShadow: "0 2px 12px rgba(90,80,72,0.06)" }}
             >
-              <span className="text-2xl">{card.emoji}</span>
+              <img
+                src={card.img}
+                alt={card.title}
+                className="h-11 w-11 object-contain"
+                onError={(e) => { if (card.fallback) e.currentTarget.src = card.fallback }}
+              />
               <h4 className="mt-3 font-serif text-[16px] font-semibold text-[#5A5048]">
                 {card.title}
               </h4>
+
+              {card.tg && (
+                <p className="mt-1 text-[13px] leading-[1.6] text-[#8A7A6A]">
+                  Нажми «Войти», укажи свой ник в Telegram — на экране появится 6-значный код. Отправь его{" "}
+                  {BOT_LINK ? (
+                    <a
+                      href={BOT_LINK}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-[#B8785A] hover:underline"
+                    >
+                      {BOT_DISPLAY}
+                    </a>
+                  ) : (
+                    "боту"
+                  )}
+                  . Пароль не нужен.
+                </p>
+              )}
 
               {card.body && (
                 <p className="mt-1 text-[13px] leading-[1.6] text-[#8A7A6A]">{card.body}</p>

@@ -289,8 +289,8 @@ export default function BreathingExercise() {
     setElapsed(0);
   };
 
-  const prev = () => { if (currentIdx > 0) goTo(currentIdx - 1); };
-  const next = () => { if (currentIdx < EXERCISES.length - 1) goTo(currentIdx + 1); };
+  const prev = () => goTo((currentIdx - 1 + EXERCISES.length) % EXERCISES.length);
+  const next = () => goTo((currentIdx + 1) % EXERCISES.length);
 
   const exercise = EXERCISES[currentIdx];
 
@@ -300,8 +300,7 @@ export default function BreathingExercise() {
       <div className="flex items-center gap-4">
         <button
           onClick={prev}
-          disabled={currentIdx === 0}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#D8CDC0] bg-white text-[#8A7A6A] transition-all hover:bg-[#F5EDE4] disabled:opacity-30"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#D8CDC0] bg-white text-[#8A7A6A] transition-all hover:bg-[#F5EDE4]"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
@@ -311,8 +310,7 @@ export default function BreathingExercise() {
         </div>
         <button
           onClick={next}
-          disabled={currentIdx === EXERCISES.length - 1}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#D8CDC0] bg-white text-[#8A7A6A] transition-all hover:bg-[#F5EDE4] disabled:opacity-30"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#D8CDC0] bg-white text-[#8A7A6A] transition-all hover:bg-[#F5EDE4]"
         >
           <ChevronRight className="h-5 w-5" />
         </button>

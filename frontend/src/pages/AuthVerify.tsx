@@ -101,7 +101,7 @@ export default function AuthVerify() {
         style={{ boxShadow: "0 4px 24px rgba(90,80,72,0.08)" }}
       >
         <button
-          onClick={() => navigate("/auth")}
+          onClick={() => navigate("/auth/email")}
           className="mb-6 flex items-center gap-1.5 text-sm text-[#8A7A6A] hover:text-[#5A5048]"
         >
           <ArrowLeft className="h-4 w-4" />

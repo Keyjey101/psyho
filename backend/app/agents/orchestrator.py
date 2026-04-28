@@ -1,6 +1,9 @@
 import json
 import asyncio
+import structlog
+from enum import Enum
 from pathlib import Path
+from time import time
 
 from app.agents.base import BaseAgent, client
 from app.agents.cbt import CBTAgent
@@ -12,6 +15,37 @@ from app.agents.somatic import SomaticAgent
 from app.config import get_settings
 
 settings = get_settings()
+
+
+class SessionPhase(Enum):
+    INTAKE = "intake"
+    FOCUS = "focus"
+    WORK = "work"
+    INTEGRATION = "integration"
+    CLOSE = "close"
+
+
+PHASE_INSTRUCTIONS = {
+    SessionPhase.INTAKE: (
+        "ЗАДАЧА INTAKE: Задай 1-2 уточняющих вопроса чтобы понять:\n"
+        "1. Что именно беспокоит (конкретная ситуация, не общая тема)\n"
+        "2. Чего человек хочет от этой сессии (понять / решить / просто выговориться)\n"
+        "НЕ давай советов. НЕ анализируй. Слушай и уточняй."
+    ),
+    SessionPhase.FOCUS: "Фокусируйся на одной теме. Углубись, уточни.",
+    SessionPhase.WORK: "Работай конкретно. Давай практические инструменты.",
+    SessionPhase.INTEGRATION: (
+        "ЗАДАЧА INTEGRATION: Начинай закреплять. Предложи 1 конкретное упражнение "
+        "(если соматика — укажи технику из 4-7-8 или 5-4-3-2-1)."
+    ),
+    SessionPhase.CLOSE: (
+        "ЗАДАЧА CLOSE: Мы подходим к завершению сессии, но НЕ прощайся и не заканчивай разговор — "
+        "пользователь может ответить ещё. Сделай:\n"
+        "1. Краткое резюме: что прояснилось в этой сессии\n"
+        "2. 1 конкретная домашняя задача / практика\n"
+        "3. Оставайся открытой — если человек ответит, продолжи естественно."
+    ),
+}
 
 CRISIS_KEYWORDS_RU = [
     "самоубийств", "суицид", "не хочу жить", "покончить с собой",
@@ -44,8 +78,8 @@ TOPIC_AGENT_MAP: dict[str, list[str]] = {
     "depression": ["cbt", "act"],
     "relationships": ["ifs", "narrative"],
     "meaning": ["jungian", "act"],
-    "dreams": ["jungian"],
-    "trauma": ["somatic", "ifs"],
+    "dreams": ["jungian", "somatic"],
+    "trauma": ["somatic", "narrative"],
     "self_criticism": ["ifs", "cbt"],
     "identity": ["jungian", "narrative"],
     "procrastination": ["cbt", "act"],
@@ -55,10 +89,12 @@ TOPIC_AGENT_MAP: dict[str, list[str]] = {
     "fear": ["cbt", "somatic"],
     "loneliness": ["narrative", "ifs"],
     "burnout": ["act", "somatic"],
-    "grief": ["narrative", "somatic"],
+    "grief": ["narrative", "act"],
     "self_esteem": ["cbt", "narrative"],
     "habits": ["cbt", "act"],
     "boundaries": ["ifs", "narrative"],
+    "shame": ["ifs", "narrative"],
+    "perfectionism": ["cbt", "ifs"],
 }
 
 
@@ -68,6 +104,22 @@ def _check_crisis(message: str) -> bool:
         if kw in lower:
             return True
     return False
+
+
+MEMORY_INJECTION_PATTERNS = [
+    "запомни:", "запомни что", "запомни —",
+    "always respond", "always reply", "ignore previous",
+    "system:", "[system]", "new instruction",
+    "отныне ты", "теперь ты", "забудь всё",
+]
+
+
+def _sanitize_memory(memory: str) -> str:
+    lower = memory.lower()
+    for pattern in MEMORY_INJECTION_PATTERNS:
+        if pattern in lower:
+            return ""
+    return memory
 
 
 class Orchestrator:
@@ -80,13 +132,35 @@ class Orchestrator:
             "narrative": NarrativeAgent(),
             "somatic": SomaticAgent(),
         }
+        self._session_topic_cache: dict[str, tuple[list[str], int]] = {}
         self._load_orchestrator_prompt()
 
     def _load_orchestrator_prompt(self):
         path = Path(__file__).parent / "prompts" / "orchestrator.txt"
         self.system_prompt = path.read_text(encoding="utf-8")
 
-    async def _classify_topics(self, message: str, history: list[dict]) -> list[str]:
+    @staticmethod
+    def _get_phase(exchange_number: int, max_exchanges: int) -> SessionPhase:
+        if max_exchanges <= 0:
+            return SessionPhase.WORK
+        pct = exchange_number / max_exchanges
+        if pct < 0.15:
+            return SessionPhase.INTAKE
+        if pct < 0.30:
+            return SessionPhase.FOCUS
+        if pct < 0.75:
+            return SessionPhase.WORK
+        if pct < 0.90:
+            return SessionPhase.INTEGRATION
+        return SessionPhase.CLOSE
+
+    async def _classify_topics(self, message: str, history: list[dict], session_id: str = "") -> list[str]:
+        msg_count = len(history)
+        if session_id:
+            cached = self._session_topic_cache.get(session_id)
+            if cached and abs(msg_count - cached[1]) <= 2:
+                return cached[0]
+
         topics_list = ", ".join(TOPIC_AGENT_MAP.keys())
         classify_prompt = f"""Ты — классификатор тем для психологического чат-бота. Определи, какие психологические темы затрагивает сообщение пользователя.
 
@@ -102,20 +176,25 @@ class Orchestrator:
 
         response = await client.chat.completions.create(
             model=settings.ZAI_SMALL_MODEL,
-            max_tokens=200,
+            max_tokens=settings.CLASSIFICATION_MAX_TOKENS,
             temperature=0.1,
             messages=[{"role": "user", "content": classify_prompt}],
         )
+        topics: list[str] = []
         try:
-            text = response.choices[0].message.content.strip()
-            if text.startswith("```"):
-                text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-            topics = json.loads(text)
-            if isinstance(topics, list):
-                return [t for t in topics if isinstance(t, str) and t in TOPIC_AGENT_MAP]
-        except (json.JSONDecodeError, IndexError):
+            text = response.choices[0].message.content
+            if text:
+                text = text.strip()
+                if text.startswith("```"):
+                    text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+                parsed = json.loads(text)
+                if isinstance(parsed, list):
+                    topics = [t for t in parsed if isinstance(t, str) and t in TOPIC_AGENT_MAP]
+        except (json.JSONDecodeError, IndexError, AttributeError):
             pass
-        return []
+        if session_id and topics:
+            self._session_topic_cache[session_id] = (topics, msg_count)
+        return topics
 
     def _select_agents(self, topics: list[str]) -> list[tuple[str, BaseAgent]]:
         agent_keys: set[str] = set()
@@ -151,37 +230,51 @@ class Orchestrator:
         therapy_goals: str = "",
         address_form: str = "ты",
         gender: str = "",
+        exchange_number: int = 0,
+        max_exchanges: int = 20,
+        session_id: str = "",
     ):
         if _check_crisis(message):
             yield {"type": "agents_used", "agents": ["crisis"]}
             yield {"type": "token", "content": CRISIS_RESPONSE}
             return
 
-        topics = await self._classify_topics(message, history)
-        selected = self._select_agents(topics)
+        topics = await self._classify_topics(message, history, session_id)
 
-        if len(history) < 4:
+        phase = self._get_phase(exchange_number, max_exchanges) if exchange_number > 0 and max_exchanges > 0 else SessionPhase.WORK
+        if phase == SessionPhase.INTAKE:
             selected = []
+        else:
+            selected = self._select_agents(topics)
 
         perspectives: dict[str, str] = {}
         agent_names = [k for k, _ in selected]
 
         if selected:
-            tasks = [
-                agent.analyze(message, history)
-                for _, agent in selected
-            ]
+            async def _run_agent(key: str, agent: BaseAgent):
+                return key, await asyncio.wait_for(
+                    agent.analyze(message, history),
+                    timeout=settings.AGENT_TIMEOUT_SECONDS,
+                )
+
+            tasks = [_run_agent(k, a) for k, a in selected]
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            for (key, _), result in zip(selected, results):
+            for result in results:
                 if isinstance(result, Exception):
+                    structlog.get_logger().warning(
+                        "Agent analysis failed or timed out",
+                        error=type(result).__name__ + (f": {result}" if str(result) else ""),
+                    )
                     continue
-                perspectives[key] = result
+                key, analysis = result
+                perspectives[key] = analysis
 
         yield {"type": "agents_used", "agents": agent_names if agent_names else ["orchestrator"]}
 
         async for token in self._synthesize(
             message, history, perspectives, session_summary,
             preferred_style, long_term_memory, therapy_goals, address_form, gender,
+            exchange_number, max_exchanges, phase,
         ):
             yield token
 
@@ -196,6 +289,9 @@ class Orchestrator:
         therapy_goals: str = "",
         address_form: str = "ты",
         gender: str = "",
+        exchange_number: int = 0,
+        max_exchanges: int = 20,
+        phase: SessionPhase | None = None,
     ):
         perspectives_text = ""
         if perspectives:
@@ -212,24 +308,10 @@ class Orchestrator:
                 parts.append(f"[{agent_name_map.get(name, name)}]\n{text}")
             perspectives_text = "\n\n".join(parts)
 
-        name_map_agents = {
-            "cbt": "КПТ", "jungian": "Юнг", "act": "ACT",
-            "ifs": "IFS", "narrative": "Нарратив", "somatic": "Соматика",
-        }
-
         history_text = ""
         for m in history[-10:]:
             role = "Пользователь" if m["role"] == "user" else "Ника"
-            agents_note = ""
-            if m.get("agents_used"):
-                try:
-                    agents_list = json.loads(m["agents_used"]) if isinstance(m["agents_used"], str) else m["agents_used"]
-                    if agents_list:
-                        readable = [name_map_agents.get(a, a) for a in agents_list]
-                        agents_note = f" [через {', '.join(readable)}]"
-                except Exception:
-                    pass
-            history_text += f"{role}{agents_note}: {m['content']}\n"
+            history_text += f"{role}: {m['content']}\n"
 
         summary_section = ""
         if session_summary:
@@ -247,12 +329,25 @@ class Orchestrator:
 Мнения экспертов:
 {perspectives_text}
 
-Синтезируй единый тёплый, профессиональный и эмпатичный ответ, органично интегрируя наиболее полезные инсайты от экспертов. Ответ должен звучать естественно, как от одного заботливого терапевта."""
+Синтезируй единый тёплый, профессиональный и эмпатичный ответ, органично интегрируя наиболее полезные инсайты от экспертов. Ответ должен звучать естественно, как от одного заботливого терапевта.
+
+Если перспективы экспертов противоречат друг другу — выбери более безопасную или объедини последовательно: сначала телесное заземление, потом когнитивная работа."""
+
+        if exchange_number > 0 and max_exchanges > 0:
+            effective_phase = phase or self._get_phase(exchange_number, max_exchanges)
+            remaining = max_exchanges - exchange_number
+            phase_instruction = PHASE_INSTRUCTIONS.get(effective_phase, "")
+            user_content += f"""
+
+[ПРОГРЕСС СЕССИИ: обмен {exchange_number} из {max_exchanges}. Фаза: {effective_phase.value}. Осталось ~{remaining} обменов]
+{phase_instruction}"""
 
         messages = [{"role": "system", "content": self.system_prompt}]
 
         if long_term_memory:
-            messages[0]["content"] += f"\n\n## Что я знаю об этом человеке\n{long_term_memory}"
+            sanitized_memory = _sanitize_memory(long_term_memory)
+            if sanitized_memory:
+                messages[0]["content"] += f"\n\n## Что я знаю об этом человеке\n{sanitized_memory}"
 
         if therapy_goals:
             messages[0]["content"] += f"\n\n## Цели пользователя в терапии\n{therapy_goals}"
@@ -279,7 +374,7 @@ class Orchestrator:
 
         stream = await client.chat.completions.create(
             model=settings.ZAI_MODEL,
-            max_tokens=3000,
+            max_tokens=settings.SYNTHESIS_MAX_TOKENS,
             temperature=0.7,
             messages=messages,
             stream=True,
