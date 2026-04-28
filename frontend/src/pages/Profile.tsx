@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/api/client";
-import { ArrowLeft, Save, Send } from "lucide-react";
+import { ArrowLeft, Save, Send, Bell } from "lucide-react";
 import type { User } from "@/types";
-import { isTMA, getInitData, TG_TOKEN_KEY, TG_REFRESH_KEY } from "@/utils/telegram";
-import { useAuthStore } from "@/store/auth";
+import { isTMA, getInitData } from "@/utils/telegram";
 import Achievements from "@/components/Achievements";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 interface ProfileData {
   user: User | null;
@@ -29,7 +29,9 @@ const GENDERS = [
 ];
 
 export default function Profile() {
-  const { checkAuth } = useAuthStore();
+  const { subscribe, isSupported } = usePushNotifications();
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
   const [profile, setProfile] = useState<ProfileData>({
     user: null,
     preferred_style: "balanced",
@@ -44,6 +46,12 @@ export default function Profile() {
   const [tgLinkLoading, setTgLinkLoading] = useState(false);
   const [linkError, setLinkError] = useState("");
   const [linkSuccess, setLinkSuccess] = useState("");
+
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "granted") {
+      setPushSubscribed(true);
+    }
+  }, []);
 
   useEffect(() => {
     api.get("/user/me").then(({ data }) => {
@@ -88,6 +96,13 @@ export default function Profile() {
     } finally {
       setTgLinkLoading(false);
     }
+  };
+
+  const handleSubscribePush = async () => {
+    setPushLoading(true);
+    const sub = await subscribe();
+    if (sub) setPushSubscribed(true);
+    setPushLoading(false);
   };
 
   const hasRealEmail = profile.user?.has_real_email ?? true;
@@ -252,6 +267,34 @@ export default function Profile() {
           )}
 
           <Achievements />
+
+          {isSupported() && !pushSubscribed && (
+            <div className="rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm">
+              <h2 className="mb-1 text-lg font-semibold text-[#5A5048]">Уведомления</h2>
+              <p className="mb-4 text-sm text-[#8A7A6A]">Получай напоминания и ответы Ники</p>
+              <button
+                onClick={handleSubscribePush}
+                disabled={pushLoading}
+                className="flex items-center gap-2 rounded-xl bg-[#FAF0E8] px-4 py-2.5 text-sm font-medium text-[#B8785A] hover:bg-[#F5E4D0] disabled:opacity-50"
+              >
+                {pushLoading ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#B8785A]/30 border-t-[#B8785A]" />
+                ) : (
+                  <Bell className="h-4 w-4" />
+                )}
+                Включить уведомления
+              </button>
+            </div>
+          )}
+
+          {isSupported() && pushSubscribed && (
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 shadow-sm">
+              <div className="flex items-center gap-2 text-sm text-emerald-700">
+                <Bell className="h-4 w-4" />
+                Уведомления включены
+              </div>
+            </div>
+          )}
 
           <button onClick={handleSave} className="btn-primary w-full flex items-center justify-center gap-2">
             <Save className="h-4 w-4" />

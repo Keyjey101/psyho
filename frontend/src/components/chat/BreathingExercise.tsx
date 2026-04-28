@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 type Phase = { label: string; duration: number; color: string };
@@ -271,6 +271,8 @@ export default function BreathingExercise() {
   const [elapsed, setElapsed] = useState(0);
   const startedAtRef = useRef<number>(performance.now());
   const rafRef = useRef<number>(0);
+  const dragX = useMotionValue(0);
+  const dragOpacity = useTransform(dragX, [-80, 0, 80], [0.6, 1, 0.6]);
 
   // Auto-start animation loop
   useEffect(() => {
@@ -294,6 +296,18 @@ export default function BreathingExercise() {
 
   const exercise = EXERCISES[currentIdx];
 
+  const handleDragEnd = (_: unknown, info: { offset: { x: number }; velocity: { x: number } }) => {
+    const { offset, velocity } = info;
+    animate(dragX, 0, { duration: 0.3, ease: "easeOut" });
+    if (offset.x < -50 || velocity.x < -300) {
+      next();
+      if (navigator.vibrate) navigator.vibrate(10);
+    } else if (offset.x > 50 || velocity.x > 300) {
+      prev();
+      if (navigator.vibrate) navigator.vibrate(10);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center gap-5 px-4 py-6">
       {/* Carousel navigation */}
@@ -316,8 +330,15 @@ export default function BreathingExercise() {
         </button>
       </div>
 
-      {/* Animated exercise view */}
-      <div className="relative overflow-hidden">
+      {/* Animated exercise view with swipe support */}
+      <motion.div
+        className="relative overflow-hidden cursor-grab active:cursor-grabbing"
+        style={{ x: dragX, opacity: dragOpacity, touchAction: "pan-y" }}
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.2}
+        onDragEnd={handleDragEnd}
+      >
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={currentIdx}
@@ -329,7 +350,7 @@ export default function BreathingExercise() {
             <ExerciseView exercise={exercise} elapsed={elapsed} />
           </motion.div>
         </AnimatePresence>
-      </div>
+      </motion.div>
 
       {/* Dot indicators */}
       <div className="flex gap-2">
