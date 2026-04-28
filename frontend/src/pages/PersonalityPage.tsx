@@ -3,6 +3,10 @@ import { useNavigate } from "react-router-dom";
 import api from "@/api/client";
 import { ArrowLeft, BarChart2 } from "lucide-react";
 
+function SkeletonBlock({ h = "h-4", w = "w-full", className = "" }: { h?: string; w?: string; className?: string }) {
+  return <div className={`animate-pulse rounded-lg bg-[#E8DDD0] ${h} ${w} ${className}`} />;
+}
+
 interface PersonalityData {
   id: string;
   self_awareness: number;
@@ -242,8 +246,23 @@ export default function PersonalityPage() {
         </div>
 
         {loading && (
-          <div className="flex justify-center py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#E8DDD0] border-t-[#B8785A]" />
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm">
+              <SkeletonBlock h="h-64" className="rounded-xl" />
+            </div>
+            <div className="space-y-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="rounded-xl border border-[#E8DDD0] bg-white px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <SkeletonBlock h="h-4" w="w-32" />
+                    <div className="flex-1">
+                      <SkeletonBlock h="h-2.5" />
+                    </div>
+                    <SkeletonBlock h="h-4" w="w-8" />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

@@ -182,7 +182,7 @@ export default function MoodPage() {
         )}
 
         {/* Exercise correlation */}
-        {avgWithExercise !== null && avgWithoutExercise !== null && (
+        {!loading && avgWithExercise !== null && avgWithoutExercise !== null && (
           <div className="mb-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
             <h2 className="mb-2 text-[14px] font-semibold text-emerald-800">💡 Упражнения и настроение</h2>
             <div className="flex gap-6 text-[13px]">
@@ -204,7 +204,7 @@ export default function MoodPage() {
         )}
 
         {/* Chart */}
-        {recentEntries.length > 0 && (
+        {!loading && recentEntries.length > 0 && (
           <div className="mb-6 rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-[15px] font-semibold text-[#5A5048]">История</h2>
             <div className="flex h-36 items-end gap-1.5">
@@ -257,7 +257,7 @@ export default function MoodPage() {
         )}
 
         {/* Session details list */}
-        {recentEntries.length > 0 && (
+        {!loading && recentEntries.length > 0 && (
           <div className="mb-6 rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-[15px] font-semibold text-[#5A5048]">По сессиям</h2>
             <div className="space-y-2">
@@ -287,13 +287,13 @@ export default function MoodPage() {
           </div>
         )}
 
-        {entries.length > 1 && (
+        {!loading && entries.length > 1 && (
           <p className="mb-6 text-center text-[13px] text-[#B8A898]">
             Ты уже {entries.length} раз{entries.length === 1 ? "" : "а"} отмечал(а) настроение — продолжай! 🌱
           </p>
         )}
 
-        {entries.length === 0 && (
+        {!loading && entries.length === 0 && (
           <div className="rounded-2xl border border-[#E8DDD0] bg-white p-8 text-center shadow-sm">
             <p className="mb-2 text-3xl">🌤️</p>
             <p className="text-[15px] font-medium text-[#5A5048]">Пока нет записей</p>

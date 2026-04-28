@@ -16,6 +16,22 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+let isRefreshing = false;
+let refreshSubscribers: Array<(token: string) => void> = [];
+
+function subscribeTokenRefresh(cb: (token: string) => void) {
+  refreshSubscribers.push(cb);
+}
+
+function onTokenRefreshed(token: string) {
+  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers = [];
+}
+
+function onRefreshFailed() {
+  refreshSubscribers = [];
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -29,21 +45,43 @@ api.interceptors.response.use(
     const onPublicPage = publicExact.includes(path) || publicPrefixes.some((p) => path.startsWith(p));
 
     if (error.response?.status === 401 && !error.config._retry && !isAuthEndpoint) {
+      if (isRefreshing) {
+        return new Promise((resolve) => {
+          subscribeTokenRefresh((token: string) => {
+            if (token) {
+              error.config.headers.Authorization = `Bearer ${token}`;
+            }
+            resolve(api(error.config));
+          });
+        });
+      }
+
       error.config._retry = true;
+      isRefreshing = true;
+
       try {
         await api.post("/auth/refresh", {});
+        onTokenRefreshed("");
+        isRefreshing = false;
         return api(error.config);
       } catch {
         const tgRefresh = localStorage.getItem("tg_refresh_token");
         if (tgRefresh) {
           try {
             const { data } = await api.post("/auth/refresh", { refresh_token: tgRefresh });
-            localStorage.setItem("tg_access_token", data.access_token);
+            const newToken = data.access_token || "";
+            localStorage.setItem("tg_access_token", newToken);
             if (data.refresh_token) localStorage.setItem("tg_refresh_token", data.refresh_token);
-            error.config.headers.Authorization = `Bearer ${data.access_token}`;
+            error.config.headers.Authorization = `Bearer ${newToken}`;
+            onTokenRefreshed(newToken);
+            isRefreshing = false;
             return api(error.config);
-          } catch {}
+          } catch {
+            // fall through
+          }
         }
+        isRefreshing = false;
+        onRefreshFailed();
         if (!onAuthPage && !onPublicPage) {
           window.location.href = "/auth";
         }
