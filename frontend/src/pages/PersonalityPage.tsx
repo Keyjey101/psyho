@@ -249,7 +249,7 @@ export default function PersonalityPage() {
 
         {!loading && !snapshot && (
           <div className="rounded-2xl border border-[#E8DDD0] bg-white p-8 text-center shadow-sm dark:border-[#4A4038] dark:bg-[#352E2A]">
-            <p className="mb-3 text-4xl">🌱</p>
+            <img src="/illustrations/opt/profile_flower.webp" alt="" className="mb-3 mx-auto h-16 w-16 object-contain" />
             <p className="text-[15px] font-medium text-[#5A5048] dark:text-[#F5EDE4]">Психопортрет в пути</p>
             <p className="mt-2 text-[13px] text-[#8A7A6A] dark:text-[#B8A898]">
               Психопортрет станет доступен после 3 завершённых сессий. Продолжай общаться с Никой!
@@ -268,7 +268,7 @@ export default function PersonalityPage() {
               }`}>
                 <p className="text-[15px] font-semibold">
                   {overallTrend === "up"
-                    ? "🌱 Ты растёшь — общий показатель улучшился!"
+                    ? <><img src="/illustrations/opt/profile_flower.webp" alt="" className="inline h-4 w-4 object-contain align-middle mr-1" /> Ты растёшь — общий показатель улучшился!</>
                     : "💫 Продолжай работать — это тоже часть пути"}
                 </p>
               </div>
@@ -341,7 +341,7 @@ export default function PersonalityPage() {
                     <div key={d.key} className="rounded-xl bg-[#FAF6F1] p-3 dark:bg-[#2A2420]">
                       <p className="text-[13px] font-medium text-[#5A5048] dark:text-[#F5EDE4]">{d.label}</p>
                       <p className="mt-0.5 text-[12px] text-[#8A7A6A] dark:text-[#B8A898]">
-                        💡 Попробуй: {d.tip}
+                        <img src="/illustrations/opt/action_insight.webp" alt="" className="inline h-3.5 w-3.5 object-contain align-middle mr-0.5" /> Попробуй: {d.tip}
                       </p>
                     </div>
                   ))}

@@ -317,7 +317,7 @@ export default function Chat() {
         {/* Pending task banner */}
         {showTaskBanner && (
           <div className="flex items-start gap-3 border-b border-[#E8DDD0] bg-[#FDF5EE] px-4 py-3 dark:border-[#4A4038] dark:bg-[#2E2620]">
-            <span className="mt-0.5 text-[16px]">📋</span>
+            <img src="/illustrations/opt/action_exercise.webp" alt="" className="mt-0.5 h-5 w-5 object-contain" />
             <div className="flex-1 min-w-0">
               <p className="text-[12px] font-medium text-[#5A5048] dark:text-[#F5EDE4]">
                 Упражнение из прошлой сессии

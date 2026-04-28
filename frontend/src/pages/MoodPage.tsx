@@ -31,6 +31,14 @@ const MOOD_EMOJIS: Record<number, string> = {
   5: "😊",
 };
 
+const MOOD_ICONS: Record<number, string> = {
+  1: "/illustrations/icons/icon_face_pain.webp",
+  2: "/illustrations/icons/icon_face_worried.webp",
+  3: "/illustrations/icons/icon_face_neutral.webp",
+  4: "/illustrations/icons/icon_face_smile.webp",
+  5: "/illustrations/icons/icon_face_happy.webp",
+};
+
 const MOOD_LABELS: Record<number, string> = {
   1: "Ужасно",
   2: "Плохо",
@@ -123,14 +131,14 @@ export default function MoodPage() {
             <div className="rounded-2xl border border-[#E8DDD0] bg-white p-5 shadow-sm">
               <p className="text-[12px] text-[#8A7A6A]">Среднее</p>
               <div className="mt-1.5 flex items-center gap-2">
-                <span className="text-3xl">{MOOD_EMOJIS[Math.round(Number(avg))]}</span>
+                <img src={MOOD_ICONS[Math.round(Number(avg))]} alt="" className="h-8 w-8 object-contain" />
                 <span className="text-2xl font-bold text-[#5A5048]">{avg}</span>
               </div>
             </div>
             <div className="rounded-2xl border border-[#E8DDD0] bg-white p-5 shadow-sm">
               <p className="text-[12px] text-[#8A7A6A]">Записей</p>
               <div className="mt-1.5 flex items-center gap-2">
-                <span className="text-3xl">📝</span>
+                <img src="/illustrations/opt/action_journal.webp" alt="" className="h-8 w-8 object-contain" />
                 <span className="text-2xl font-bold text-[#5A5048]">{entries.length}</span>
               </div>
             </div>
@@ -138,7 +146,7 @@ export default function MoodPage() {
               <div className="rounded-2xl border border-orange-100 bg-orange-50 p-5 shadow-sm">
                 <p className="text-[12px] text-orange-600">Серия дней</p>
                 <div className="mt-1.5 flex items-center gap-2">
-                  <span className="text-3xl">🔥</span>
+                  <img src="/illustrations/icons/icon_lightning.webp" alt="" className="h-8 w-8 object-contain" />
                   <span className="text-2xl font-bold text-orange-600">{streak}</span>
                 </div>
               </div>
@@ -149,20 +157,20 @@ export default function MoodPage() {
         {/* Exercise correlation */}
         {avgWithExercise !== null && avgWithoutExercise !== null && (
           <div className="mb-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
-            <h2 className="mb-2 text-[14px] font-semibold text-emerald-800">💡 Упражнения и настроение</h2>
+            <h2 className="mb-2 flex items-center gap-1.5 text-[14px] font-semibold text-emerald-800"><img src="/illustrations/opt/action_insight.webp" alt="" className="h-4 w-4 object-contain" /> Упражнения и настроение</h2>
             <div className="flex gap-6 text-[13px]">
               <div>
                 <span className="text-emerald-700 font-medium">После выполненных упражнений:</span>
-                <span className="ml-1 font-bold text-emerald-800">{avgWithExercise.toFixed(1)} {MOOD_EMOJIS[Math.round(avgWithExercise)]}</span>
+                <span className="ml-1 font-bold text-emerald-800">{avgWithExercise.toFixed(1)} <img src={MOOD_ICONS[Math.round(avgWithExercise)]} alt="" className="inline h-4 w-4 object-contain align-middle" /></span>
               </div>
               <div>
                 <span className="text-gray-600">Без выполнения:</span>
-                <span className="ml-1 font-bold text-gray-700">{avgWithoutExercise.toFixed(1)} {MOOD_EMOJIS[Math.round(avgWithoutExercise)]}</span>
+                <span className="ml-1 font-bold text-gray-700">{avgWithoutExercise.toFixed(1)} <img src={MOOD_ICONS[Math.round(avgWithoutExercise)]} alt="" className="inline h-4 w-4 object-contain align-middle" /></span>
               </div>
             </div>
             {avgWithExercise > avgWithoutExercise + 0.3 && (
               <p className="mt-2 text-[12px] text-emerald-700">
-                ✨ Когда ты выполняешь упражнения, настроение заметно лучше!
+                <img src="/illustrations/icons/icon_crystal.webp" alt="" className="inline h-3.5 w-3.5 object-contain align-middle mr-0.5" /> Когда ты выполняешь упражнения, настроение заметно лучше!
               </p>
             )}
           </div>
@@ -182,7 +190,7 @@ export default function MoodPage() {
                     className="group relative flex flex-1 flex-col items-center gap-1"
                     title={sessionTitle ? `${sessionTitle}${task ? (task.completed ? " ✅" : " ❌") : ""}` : undefined}
                   >
-                    <span className="text-base leading-none">{MOOD_EMOJIS[entry.value]}</span>
+                    <span className="leading-none"><img src={MOOD_ICONS[entry.value]} alt="" className="h-4 w-4 object-contain" /></span>
                     <div
                       className="w-full rounded-t transition-all group-hover:opacity-80"
                       style={{
@@ -231,7 +239,7 @@ export default function MoodPage() {
                 const task = entry.session_id ? taskMap[entry.session_id] : null;
                 return (
                   <div key={entry.id} className="flex items-start gap-3 rounded-xl bg-[#FAF6F1] px-4 py-3">
-                    <span className="mt-0.5 text-xl shrink-0">{MOOD_EMOJIS[entry.value]}</span>
+                    <span className="mt-0.5 shrink-0"><img src={MOOD_ICONS[entry.value]} alt="" className="h-5 w-5 object-contain" /></span>
                     <div className="flex-1 min-w-0">
                       <p className="truncate text-[13px] font-medium text-[#5A5048]">
                         {sessionTitle || "Сессия"}
@@ -254,13 +262,13 @@ export default function MoodPage() {
 
         {entries.length > 1 && (
           <p className="mb-6 text-center text-[13px] text-[#B8A898]">
-            Ты уже {entries.length} раз{entries.length === 1 ? "" : "а"} отмечал(а) настроение — продолжай! 🌱
+            Ты уже {entries.length} раз{entries.length === 1 ? "" : "а"} отмечал(а) настроение — продолжай! <img src="/illustrations/opt/profile_flower.webp" alt="" className="inline h-4 w-4 object-contain align-middle" />
           </p>
         )}
 
         {entries.length === 0 && (
           <div className="rounded-2xl border border-[#E8DDD0] bg-white p-8 text-center shadow-sm">
-            <p className="mb-2 text-3xl">🌤️</p>
+            <img src="/illustrations/icons/icon_sun_cloud.webp" alt="" className="mx-auto mb-2 h-10 w-10 object-contain" />
             <p className="text-[15px] font-medium text-[#5A5048]">Пока нет записей</p>
             <p className="mt-1 text-[13px] text-[#8A7A6A]">Оценивай настроение после каждой сессии — это поможет отслеживать прогресс.</p>
           </div>

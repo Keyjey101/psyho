@@ -2,11 +2,11 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const MOODS = [
-  { emoji: "😫", value: 1, label: "Ужасно" },
-  { emoji: "😟", value: 2, label: "Плохо" },
-  { emoji: "😐", value: 3, label: "Нормально" },
-  { emoji: "🙂", value: 4, label: "Хорошо" },
-  { emoji: "😊", value: 5, label: "Отлично" },
+  { emoji: "😫", icon: "/illustrations/icons/icon_face_pain.webp", value: 1, label: "Ужасно" },
+  { emoji: "😟", icon: "/illustrations/icons/icon_face_worried.webp", value: 2, label: "Плохо" },
+  { emoji: "😐", icon: "/illustrations/icons/icon_face_neutral.webp", value: 3, label: "Нормально" },
+  { emoji: "🙂", icon: "/illustrations/icons/icon_face_smile.webp", value: 4, label: "Хорошо" },
+  { emoji: "😊", icon: "/illustrations/icons/icon_face_happy.webp", value: 5, label: "Отлично" },
 ];
 
 interface MoodTrackerProps {
@@ -43,7 +43,7 @@ export default function MoodTracker({ onSubmit, onSkip }: MoodTrackerProps) {
                   : "hover:bg-[#FAF6F1]"
               }`}
             >
-              <span className="text-2xl">{mood.emoji}</span>
+              <img src={mood.icon} alt={mood.label} className="h-6 w-6 object-contain" />
               <span className="text-xs text-[#8A7A6A]">{mood.label}</span>
             </button>
           ))}

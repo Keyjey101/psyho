@@ -95,6 +95,7 @@ export interface AgentInfo {
   id: string;
   name: string;
   emoji: string;
+  icon?: string;
   color: string;
   bgColor: string;
   tooltip: string;
@@ -105,6 +106,7 @@ export const AGENTS: AgentInfo[] = [
     id: "cbt",
     name: "КПТ",
     emoji: "🧠",
+    icon: "/illustrations/opt/method_cbt.webp",
     color: "text-[#5B3E8A]",
     bgColor: "bg-[#EDE5F7]",
     tooltip: "мысли и паттерны",
@@ -113,6 +115,7 @@ export const AGENTS: AgentInfo[] = [
     id: "jungian",
     name: "Юнг",
     emoji: "🌙",
+    icon: "/illustrations/opt/method_jung.webp",
     color: "text-[#7A4A2E]",
     bgColor: "bg-[#F5EDE4]",
     tooltip: "глубинные образы и символы",
@@ -121,6 +124,7 @@ export const AGENTS: AgentInfo[] = [
     id: "act",
     name: "ACT",
     emoji: "🧭",
+    icon: "/illustrations/opt/method_act.webp",
     color: "text-[#6B4220]",
     bgColor: "bg-[#FDF0E6]",
     tooltip: "принятие и ценности",
@@ -129,6 +133,7 @@ export const AGENTS: AgentInfo[] = [
     id: "ifs",
     name: "IFS",
     emoji: "🎭",
+    icon: "/illustrations/opt/method_ifs.webp",
     color: "text-[#5B3E8A]",
     bgColor: "bg-[#EDE5F7]",
     tooltip: "внутренние части личности",
@@ -137,6 +142,7 @@ export const AGENTS: AgentInfo[] = [
     id: "narrative",
     name: "Нарратив",
     emoji: "📖",
+    icon: "/illustrations/opt/method_narrative.webp",
     color: "text-[#5A3825]",
     bgColor: "bg-[#F5EDE4]",
     tooltip: "истории и смыслы",
@@ -145,6 +151,7 @@ export const AGENTS: AgentInfo[] = [
     id: "somatic",
     name: "Соматика",
     emoji: "🌿",
+    icon: "/illustrations/opt/method_somatic.webp",
     color: "text-[#2D5A3D]",
     bgColor: "bg-[#E6F0E9]",
     tooltip: "тело и нервная система",
@@ -153,6 +160,7 @@ export const AGENTS: AgentInfo[] = [
     id: "orchestrator",
     name: "Ника",
     emoji: "🌸",
+    icon: "/illustrations/opt/ai_avatar.webp",
     color: "text-[#B8785A]",
     bgColor: "bg-[#FAF6F1]",
     tooltip: "",

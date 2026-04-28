@@ -27,6 +27,7 @@ const specialists = [
   },
   {
     emoji: "🎭",
+    icon: "/illustrations/opt/method_ifs.webp",
     name: "IFS-терапевт",
     school: "Внутренние семейные системы",
     description: "Исследует внутренние части личности и помогает наладить диалог между ними. Для внутренних конфликтов.",
@@ -79,7 +80,12 @@ export default function Specialists() {
               transition={{ delay: i * 0.08 }}
               className={`group rounded-2xl border p-6 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${spec.color}`}
             >
-              <div className="mb-4 text-4xl">{spec.emoji}</div>
+              <div className="mb-4">
+                {"icon" in spec && spec.icon
+                  ? <img src={spec.icon as string} alt={spec.name} className="h-10 w-10 object-contain" />
+                  : <span className="text-4xl">{spec.emoji}</span>
+                }
+              </div>
               <h3 className="mb-1 text-lg font-bold text-surface-900">{spec.name}</h3>
               <p className={`mb-3 text-sm font-medium ${spec.textColor}`}>{spec.school}</p>
               <p className="text-sm leading-relaxed text-surface-600">{spec.description}</p>

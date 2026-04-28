@@ -197,7 +197,7 @@ function StepName({ name, setName, onNext, canNext }: {
 }) {
   return (
     <div>
-      <p className="mb-1 text-center text-[32px]">🌸</p>
+      <img src="/illustrations/opt/ai_avatar.webp" alt="" className="mb-1 mx-auto h-10 w-10 object-contain" />
       <h2 className="mb-2 text-center font-serif text-[22px] font-bold text-[#4A4038]">
         Как тебя зовут?
       </h2>
@@ -378,7 +378,7 @@ function StepGender({ gender, setGender, onFinish, onSkip, saving, onBack }: {
   return (
     <div>
       <BackButton onClick={onBack} />
-      <p className="mb-1 text-center text-[32px]">✨</p>
+      <img src="/illustrations/icons/icon_crystal.webp" alt="" className="mb-1 mx-auto h-10 w-10 object-contain" />
       <h2 className="mb-2 text-center font-serif text-[22px] font-bold text-[#4A4038]">
         Как к тебе обращаться?
       </h2>
