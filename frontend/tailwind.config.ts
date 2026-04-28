@@ -58,7 +58,7 @@ export default {
       },
       fontFamily: {
         sans: ["Inter", "Noto Sans", "system-ui", "sans-serif"],
-        serif: ["Literata", "Georgia", "Noto Serif", "serif"],
+        serif: ["Merriweather", "Literata", "Georgia", "Noto Serif", "serif"],
       },
       borderRadius: {
         pill: "24px",
