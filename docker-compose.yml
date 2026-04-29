@@ -21,6 +21,7 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - ADMIN_EMAILS=${ADMIN_EMAILS:-}
       - ENVIRONMENT=production
+      - ADMIN_TELEGRAM_USERNAMES=${ADMIN_TELEGRAM_USERNAMES:-}
       - DATABASE_URL=sqlite+aiosqlite:////data/psyho.db
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
       - TEST_PASSWORD_CODE=${TEST_PASSWORD_CODE:-}
