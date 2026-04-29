@@ -8,10 +8,8 @@ import Chat from "@/pages/Chat";
 import Admin from "@/pages/Admin";
 import OnboardingFlow from "@/pages/OnboardingFlow";
 import Profile from "@/pages/Profile";
-import MoodPage from "@/pages/MoodPage";
 import PersonalityPage from "@/pages/PersonalityPage";
 import Landing from "@/pages/Landing";
-import EmotionMap from "@/pages/EmotionMap";
 import DiaryPage from "@/pages/DiaryPage";
 import TimeCapsulePage from "@/pages/TimeCapsulePage";
 
@@ -88,27 +86,13 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/mood"
-        element={
-          <ProtectedRoute>
-            <MoodPage />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/mood" element={<Navigate to="/diary" replace />} />
+      <Route path="/emotion-map" element={<Navigate to="/diary" replace />} />
       <Route
         path="/personality"
         element={
           <ProtectedRoute>
             <PersonalityPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/emotion-map"
-        element={
-          <ProtectedRoute>
-            <EmotionMap />
           </ProtectedRoute>
         }
       />

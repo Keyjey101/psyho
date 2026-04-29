@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, LogOut, MessageSquare, Settings, Download, Smile, BarChart2, Moon, Sun, Shield, Lightbulb } from "lucide-react";
+import { Plus, Trash2, X, LogOut, MessageSquare, Settings, Download, BookOpen, BarChart2, Moon, Sun, Shield, Lightbulb, Clock } from "lucide-react";
 import type { Session } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { useThemeStore } from "@/store/theme";
@@ -205,22 +205,29 @@ export default function Sidebar({
             Профиль
           </button>
           <button
-            onClick={() => navigate("/mood")}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A]"
+            onClick={() => navigate("/diary")}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A] dark:text-[#B8A898] dark:hover:bg-[#2A2420] dark:hover:text-[#C08B68]"
           >
-            <Smile className="h-4 w-4" />
-            Настроение
+            <BookOpen className="h-4 w-4" />
+            Дневник
           </button>
           <button
             onClick={() => navigate("/personality")}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A]"
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A] dark:text-[#B8A898] dark:hover:bg-[#2A2420] dark:hover:text-[#C08B68]"
           >
             <BarChart2 className="h-4 w-4" />
             Психопортрет
           </button>
           <button
+            onClick={() => navigate("/time-capsule")}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A] dark:text-[#B8A898] dark:hover:bg-[#2A2420] dark:hover:text-[#C08B68]"
+          >
+            <Clock className="h-4 w-4" />
+            Капсула времени
+          </button>
+          <button
             onClick={() => { window.location.href = "/#insights"; }}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A]"
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A] dark:text-[#B8A898] dark:hover:bg-[#2A2420] dark:hover:text-[#C08B68]"
           >
             <Lightbulb className="h-4 w-4" />
             Поделиться мыслью

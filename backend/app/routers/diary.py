@@ -49,6 +49,43 @@ async def list_diary_entries(
     ]
 
 
+@router.post("/generate")
+async def generate_diary_auto(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    sess_result = await db.execute(
+        select(ChatSession)
+        .where(ChatSession.user_id == user.id)
+        .order_by(ChatSession.created_at.desc())
+        .limit(1)
+    )
+    session = sess_result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Нет доступных сессий")
+
+    content = await generate_diary_entry(session.id, db)
+    entry = DiaryEntry(
+        user_id=user.id,
+        session_id=session.id,
+        content=content,
+    )
+    db.add(entry)
+    await db.commit()
+    await db.refresh(entry)
+
+    return {
+        "id": entry.id,
+        "session_id": entry.session_id,
+        "content": entry.content,
+        "user_note": entry.user_note,
+        "topics": entry.topics,
+        "mood_score": entry.mood_score,
+        "created_at": entry.created_at,
+        "updated_at": entry.updated_at,
+    }
+
+
 @router.post("/generate/{session_id}")
 async def generate_diary(
     session_id: str,
