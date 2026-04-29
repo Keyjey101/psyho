@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Send, RefreshCw, Copy, Check } from "lucide-react";
 import { useAuthStore } from "@/store/auth";
 import { isTMA, getInitData, getTelegramUser } from "@/utils/telegram";
@@ -24,6 +24,8 @@ export default function AuthTelegram() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { requestTgCode, checkTgCode, telegramAuth, telegramMiniAppAuth } = useAuthStore();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const nextPath = searchParams.get("next") || null;
 
   // В Telegram Mini App — авторизуемся автоматически, OTP не нужен
   useEffect(() => {
@@ -32,7 +34,7 @@ export default function AuthTelegram() {
     if (initData) {
       telegramAuth(initData)
         .then((data) => {
-          navigate(data.is_new_user ? "/onboarding" : "/chat", { replace: true });
+          navigate(data.is_new_user ? "/onboarding" : (nextPath || "/chat"), { replace: true });
         })
         .catch(() => { setStep("input"); });
       return;
@@ -42,7 +44,7 @@ export default function AuthTelegram() {
     if (tgUser?.id) {
       telegramMiniAppAuth(String(tgUser.id), tgUser.first_name, tgUser.username)
         .then((data) => {
-          navigate(data.is_new_user ? "/onboarding" : "/chat", { replace: true });
+          navigate(data.is_new_user ? "/onboarding" : (nextPath || "/chat"), { replace: true });
         })
         .catch(() => { setStep("input"); });
       return;
@@ -101,7 +103,7 @@ export default function AuthTelegram() {
         if (data.status === "verified") {
           stopPolling();
           stopTimer();
-          navigate(data.is_new_user ? "/onboarding" : "/chat", { replace: true });
+          navigate(data.is_new_user ? "/onboarding" : (nextPath || "/chat"), { replace: true });
         } else if (data.status === "expired") {
           stopPolling();
           stopTimer();

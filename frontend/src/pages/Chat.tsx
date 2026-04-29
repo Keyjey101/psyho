@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessions, useSession, useCreateSession, useDeleteSession, useContinueSession } from "@/hooks/useSessions";
 import { useChat } from "@/hooks/useChat";
@@ -274,7 +274,7 @@ export default function Chat() {
             <Menu className="h-5 w-5" />
           </button>
 
-          <div className="flex h-10 w-10 shrink-0 overflow-hidden rounded-full">
+          <Link to="/" className="flex h-10 w-10 shrink-0 overflow-hidden rounded-full transition-opacity hover:opacity-80">
             <img
               src="/illustrations/opt/ai_avatar.webp"
               alt="Ника"
@@ -290,7 +290,7 @@ export default function Chat() {
                 }
               }}
             />
-          </div>
+          </Link>
 
           <div>
             <p className="text-[15px] font-semibold leading-none text-[#5A5048] dark:text-[#F5EDE4]">Ника</p>

@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, LogOut, MessageSquare, Settings, Download, Smile, BarChart2, Moon, Sun, Shield } from "lucide-react";
+import { Plus, Trash2, X, LogOut, MessageSquare, Settings, Download, Smile, BarChart2, Moon, Sun, Shield, Lightbulb } from "lucide-react";
 import type { Session } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { useThemeStore } from "@/store/theme";
@@ -217,6 +217,13 @@ export default function Sidebar({
           >
             <BarChart2 className="h-4 w-4" />
             Психопортрет
+          </button>
+          <button
+            onClick={() => { window.location.href = "/#insights"; }}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A]"
+          >
+            <Lightbulb className="h-4 w-4" />
+            Поделиться мыслью
           </button>
           {isAdmin && (
             <button
