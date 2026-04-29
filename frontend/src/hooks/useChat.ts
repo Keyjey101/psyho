@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import type { WSMessage, Message } from "@/types";
 import { useToast } from "@/components/Toast";
 import { isTMA, TG_TOKEN_KEY } from "@/utils/telegram";
+import api from "@/api/client";
 
 interface UseChatOptions {
   sessionId: string;
@@ -69,10 +70,34 @@ export function useChat({ sessionId, onMessageComplete, onSessionLimitReached }:
 
     ws.onopen = () => setIsConnected(true);
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
       setIsConnected(false);
       setIsStreaming(false);
       if (sessionIdRef.current === sessionId) {
+        // WS auth error — refresh token then reconnect
+        if (event.code === 4401) {
+          const tgRefresh = localStorage.getItem("tg_refresh_token");
+          if (tgRefresh) {
+            api.post("/auth/refresh", { refresh_token: tgRefresh })
+              .then(({ data }) => {
+                if (data.access_token) localStorage.setItem(TG_TOKEN_KEY, data.access_token);
+                if (data.refresh_token) localStorage.setItem("tg_refresh_token", data.refresh_token);
+              })
+              .catch(() => {})
+              .finally(() => {
+                reconnectTimeoutRef.current = setTimeout(() => {
+                  if (sessionIdRef.current === sessionId) connect();
+                }, 1000);
+              });
+          } else {
+            api.post("/auth/refresh", {}).catch(() => {}).finally(() => {
+              reconnectTimeoutRef.current = setTimeout(() => {
+                if (sessionIdRef.current === sessionId) connect();
+              }, 1000);
+            });
+          }
+          return;
+        }
         reconnectTimeoutRef.current = setTimeout(() => {
           if (sessionIdRef.current === sessionId) connect();
         }, 3000);
@@ -123,7 +148,16 @@ export function useChat({ sessionId, onMessageComplete, onSessionLimitReached }:
           break;
         case "error":
           setIsStreaming(false);
-          showToast(data.message || "Произошла ошибка");
+          if (data.message?.toLowerCase().includes("auth") || data.message?.toLowerCase().includes("unauthorized")) {
+            // Auth error — try token refresh and reconnect
+            api.post("/auth/refresh", {}).catch(() => {}).finally(() => {
+              if (wsRef.current) {
+                wsRef.current.close();
+              }
+            });
+          } else {
+            showToast(data.message || "Произошла ошибка");
+          }
           break;
         case "context_compressed":
           showToast("Контекст оптимизирован");

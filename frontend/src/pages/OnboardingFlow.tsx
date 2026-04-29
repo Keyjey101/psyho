@@ -70,7 +70,7 @@ export default function OnboardingFlow() {
   const { refreshUser } = useAuthStore();
 
   const draft = loadDraft();
-  const [step, setStep] = useState(draft?.step ?? 1);
+  const [step, setStep] = useState(0);
   const [name, setName] = useState(draft?.name ?? "");
   const [addressForm, setAddressForm] = useState<"ты" | "вы">(draft?.addressForm as "ты" | "вы" ?? "ты");
   const [selectedGoals, setSelectedGoals] = useState<string[]>(draft?.selectedGoals ?? []);
@@ -79,7 +79,9 @@ export default function OnboardingFlow() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    saveDraft({ step, name, addressForm, selectedGoals, style, gender });
+    if (step > 0) {
+      saveDraft({ step, name, addressForm, selectedGoals, style, gender });
+    }
   }, [step, name, addressForm, selectedGoals, style, gender]);
 
   useEffect(() => {
@@ -89,7 +91,7 @@ export default function OnboardingFlow() {
         setName(tgUser.first_name);
       }
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleGoal = (id: string) => {
     setSelectedGoals((prev) =>
@@ -111,6 +113,8 @@ export default function OnboardingFlow() {
   const handleBack = () => {
     if (step > 1) {
       setStep((s) => s - 1);
+    } else if (step === 1) {
+      setStep(0);
     }
   };
 
@@ -144,10 +148,26 @@ export default function OnboardingFlow() {
     }
   };
 
+  const handleQuickStart = async () => {
+    setSaving(true);
+    try {
+      await api.patch("/user/me", {
+        name: name.trim() || undefined,
+      });
+      clearDraft();
+      await refreshUser();
+      navigate("/chat", { replace: true });
+    } catch {
+      navigate("/chat", { replace: true });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-[#FAF6F1] px-6 py-12">
       <div className="w-full max-w-sm">
-        <ProgressBar step={step} />
+        {step > 0 && <ProgressBar step={step} />}
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -158,8 +178,16 @@ export default function OnboardingFlow() {
             exit="exit"
             transition={{ duration: 0.25 }}
           >
+            {step === 0 && (
+              <StepWelcome
+                isTma={isTMA()}
+                onQuickStart={handleQuickStart}
+                onSetupProfile={() => setStep(1)}
+                saving={saving}
+              />
+            )}
             {step === 1 && (
-              <StepName name={name} setName={setName} onNext={handleNext} canNext={canProceed()} />
+              <StepName name={name} setName={setName} onNext={handleNext} canNext={canProceed()} onBack={handleBack} />
             )}
             {step === 2 && (
               <StepAddress addressForm={addressForm} setAddressForm={setAddressForm} onNext={handleNext} onBack={handleBack} />
@@ -180,6 +208,62 @@ export default function OnboardingFlow() {
   );
 }
 
+function StepWelcome({ isTma, onQuickStart, onSetupProfile, saving }: {
+  isTma: boolean; onQuickStart: () => void; onSetupProfile: () => void; saving: boolean;
+}) {
+  return (
+    <div className="text-center">
+      <img src="/illustrations/opt/ai_avatar.webp" alt="" className="mb-4 mx-auto h-16 w-16 object-contain" />
+      <h2 className="mb-2 font-serif text-[26px] font-bold text-[#4A4038]">
+        Привет! Я Ника
+      </h2>
+      {isTma ? (
+        <>
+          <p className="mb-8 text-[14px] leading-[1.6] text-[#8A7A6A]">
+            Нажми «Начать разговор» и общайся бесплатно — прямо сейчас, без лишних шагов.
+          </p>
+          <button
+            onClick={onQuickStart}
+            disabled={saving}
+            className="btn-primary w-full flex items-center justify-center gap-2 mb-3"
+          >
+            {saving ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            ) : (
+              <>Начать разговор <ArrowRight className="h-4 w-4" /></>
+            )}
+          </button>
+          <button
+            onClick={onSetupProfile}
+            className="w-full text-center text-[13px] text-[#B8A898] hover:text-[#8A7A6A]"
+          >
+            Настроить профиль (1 мин)
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="mb-8 text-[14px] leading-[1.6] text-[#8A7A6A]">
+            Настрою пару деталей, чтобы общение было удобнее — это займёт около минуты.
+          </p>
+          <button
+            onClick={onSetupProfile}
+            className="btn-primary w-full flex items-center justify-center gap-2 mb-3"
+          >
+            Начать <ArrowRight className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onQuickStart}
+            disabled={saving}
+            className="w-full text-center text-[13px] text-[#B8A898] hover:text-[#8A7A6A]"
+          >
+            Пропустить и начать разговор
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
     <button
@@ -192,11 +276,12 @@ function BackButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-function StepName({ name, setName, onNext, canNext }: {
-  name: string; setName: (v: string) => void; onNext: () => void; canNext: boolean;
+function StepName({ name, setName, onNext, canNext, onBack }: {
+  name: string; setName: (v: string) => void; onNext: () => void; canNext: boolean; onBack: () => void;
 }) {
   return (
     <div>
+      <BackButton onClick={onBack} />
       <img src="/illustrations/opt/ai_avatar.webp" alt="" className="mb-1 mx-auto h-10 w-10 object-contain" />
       <h2 className="mb-2 text-center font-serif text-[22px] font-bold text-[#4A4038]">
         Как тебя зовут?

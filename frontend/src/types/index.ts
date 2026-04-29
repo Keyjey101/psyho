@@ -157,16 +157,8 @@ export const AGENTS: AgentInfo[] = [
     bgColor: "bg-[#FAF6F1]",
     tooltip: "",
   },
-  {
-    id: "crisis",
-    name: "Кризисная поддержка",
-    emoji: "🆘",
-    color: "text-[#A03030]",
-    bgColor: "bg-[#FDE8E8]",
-    tooltip: "экстренная помощь",
-  },
 ];
 
 export function getAgentInfo(agentId: string): AgentInfo {
-  return AGENTS.find((a) => a.id === agentId) || AGENTS[AGENTS.length - 2];
+  return AGENTS.find((a) => a.id === agentId) ?? AGENTS.find((a) => a.id === "orchestrator")!;
 }

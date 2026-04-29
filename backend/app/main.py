@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.database import init_db, async_session
 from app.routers import auth, sessions, messages, users, mood, actions, personality, tasks
 from app.routers import admin as admin_router
+from app.routers import diary, capsules, achievements, insights, export as export_router
 from app.services.telegram_bot import start_bot, stop_bot
 
 logger = structlog.get_logger()
@@ -57,6 +58,11 @@ app.include_router(mood.router, prefix="/api/mood", tags=["Mood"])
 app.include_router(actions.router, prefix="/api/sessions", tags=["Actions"])
 app.include_router(personality.router, prefix="/api/user", tags=["Personality"])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["Tasks"])
+app.include_router(diary.router, prefix="/api/diary", tags=["Diary"])
+app.include_router(capsules.router, prefix="/api/capsules", tags=["Capsules"])
+app.include_router(achievements.router, prefix="/api/achievements", tags=["Achievements"])
+app.include_router(insights.router, prefix="/api/insights", tags=["Insights"])
+app.include_router(export_router.router, prefix="/api/export", tags=["Export"])
 
 
 @app.get("/health")

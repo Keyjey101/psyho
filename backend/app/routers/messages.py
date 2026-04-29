@@ -1,6 +1,8 @@
 import json
 import asyncio
+import time
 import structlog
+from collections import deque
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
@@ -24,6 +26,24 @@ router = APIRouter()
 
 orchestrator = Orchestrator()
 settings = get_settings()
+
+_ws_rate_limits: dict[str, deque] = {}
+WS_RATE_LIMIT = 30  # per minute
+
+
+def _check_ws_rate_limit(user_id: str) -> bool:
+    now = time.monotonic()
+    window = 60.0
+    if user_id not in _ws_rate_limits:
+        _ws_rate_limits[user_id] = deque()
+    dq = _ws_rate_limits[user_id]
+    while dq and dq[0] < now - window:
+        dq.popleft()
+    if len(dq) >= WS_RATE_LIMIT:
+        return False
+    dq.append(now)
+    return True
+
 
 FAREWELL_KEYWORDS = {
     "пока", "до свидания", "досвидания", "до встречи", "спасибо большое",
@@ -247,6 +267,10 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
 
             content = data.get("content", "").strip()
             if not content:
+                continue
+
+            if not _check_ws_rate_limit(user_id):
+                await websocket.send_json({"type": "error", "message": "Слишком много сообщений. Подожди немного."})
                 continue
 
             if len(content) > settings.MAX_MESSAGE_LENGTH:

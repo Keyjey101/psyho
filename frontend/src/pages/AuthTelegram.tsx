@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Send, RefreshCw, Copy, Check } from "lucide-react";
 import { useAuthStore } from "@/store/auth";
 import { isTMA, getInitData, getTelegramUser } from "@/utils/telegram";
@@ -217,12 +217,6 @@ export default function AuthTelegram() {
               </button>
             </form>
 
-            <Link
-              to="/auth/email"
-              className="mt-6 block text-center text-[12px] text-[#B8A898] hover:text-[#8A7A6A]"
-            >
-              Войти по email →
-            </Link>
           </>
         )}
 

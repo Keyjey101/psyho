@@ -6,8 +6,8 @@ export function useSessions() {
   return useQuery({
     queryKey: ["sessions"],
     queryFn: async () => {
-      const { data } = await api.get<Session[]>("/sessions");
-      return data;
+      const { data } = await api.get<{ sessions: Session[] }>("/sessions");
+      return data.sessions;
     },
   });
 }

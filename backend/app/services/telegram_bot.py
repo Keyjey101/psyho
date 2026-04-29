@@ -1,4 +1,5 @@
 import re
+import hashlib
 import structlog
 from datetime import datetime, timezone
 
@@ -10,6 +11,10 @@ from app.database import async_session
 from app.models.models import TelegramVerificationCode, User
 
 from sqlalchemy import select
+
+
+def _sha256_hex(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()
 
 logger = structlog.get_logger()
 _settings = get_settings()
@@ -31,15 +36,29 @@ async def _handle_message(update: Update, _context):
     now = datetime.now(timezone.utc)
 
     async with async_session() as db:
+        code_hash = _sha256_hex(text)
+        # Try to find by hash first, fall back to plaintext for backward compatibility
         result = await db.execute(
             select(TelegramVerificationCode).where(
-                TelegramVerificationCode.code == text,
+                TelegramVerificationCode.code_hash == code_hash,
                 TelegramVerificationCode.verified == False,  # noqa: E712
                 TelegramVerificationCode.used == False,  # noqa: E712
                 TelegramVerificationCode.expires_at > now,
             )
         )
         record = result.scalar_one_or_none()
+        if record is None:
+            # Backward compatibility: lookup by plaintext code
+            result = await db.execute(
+                select(TelegramVerificationCode).where(
+                    TelegramVerificationCode.code == text,
+                    TelegramVerificationCode.code_hash == None,  # noqa: E711
+                    TelegramVerificationCode.verified == False,  # noqa: E712
+                    TelegramVerificationCode.used == False,  # noqa: E712
+                    TelegramVerificationCode.expires_at > now,
+                )
+            )
+            record = result.scalar_one_or_none()
 
         if record:
             record.verified = True

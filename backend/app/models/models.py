@@ -77,24 +77,13 @@ class UserProfile(Base):
     user = relationship("User", back_populates="profile")
 
 
-class EmailVerificationCode(Base):
-    __tablename__ = "email_verification_codes"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
-    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    code_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
-    used: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
-
-
 class TelegramVerificationCode(Base):
     __tablename__ = "telegram_verification_codes"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
     telegram_username: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     code: Mapped[str] = mapped_column(String(6), nullable=False)
+    code_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     telegram_id: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
@@ -141,3 +130,55 @@ class SessionTask(Base):
     text: Mapped[str] = mapped_column(Text, nullable=False)
     completed: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class DiaryEntry(Base):
+    __tablename__ = "diary_entries"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    session_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    user_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    topics: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    mood_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+    user = relationship("User")
+    session = relationship("ChatSession")
+
+
+class TimeCapsule(Base):
+    __tablename__ = "time_capsules"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    session_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    open_after: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    opened: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    user = relationship("User")
+
+
+class Achievement(Base):
+    __tablename__ = "achievements"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    achievement_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    earned_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    user = relationship("User")
+
+
+class AnonymousInsight(Base):
+    __tablename__ = "anonymous_insights"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    reactions: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    is_approved: Mapped[bool] = mapped_column(Boolean, default=True)

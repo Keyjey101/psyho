@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,14 +16,35 @@ settings = get_settings()
 router = APIRouter()
 
 
-@router.get("", response_model=list[SessionListResponse])
-async def list_sessions(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+@router.get("")
+async def list_sessions(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    offset = (page - 1) * limit
     result = await db.execute(
         select(ChatSession)
         .where(ChatSession.user_id == user.id)
         .order_by(ChatSession.updated_at.desc())
+        .offset(offset)
+        .limit(limit)
     )
-    return result.scalars().all()
+    sessions = result.scalars().all()
+
+    count_result = await db.execute(
+        select(func.count(ChatSession.id)).where(ChatSession.user_id == user.id)
+    )
+    total = count_result.scalar() or 0
+
+    return {
+        "sessions": [SessionListResponse.model_validate(s) for s in sessions],
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "has_next": offset + len(sessions) < total,
+    }
 
 
 @router.post("", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)
@@ -32,6 +53,14 @@ async def create_session(body: SessionCreate, user: User = Depends(get_current_u
     db.add(session)
     await db.commit()
     await db.refresh(session)
+
+    # Check for session-related achievements (fire-and-forget style)
+    try:
+        from app.services.achievement_service import check_and_award
+        await check_and_award(user.id, "session_created", db)
+    except Exception:
+        pass
+
     return session
 
 

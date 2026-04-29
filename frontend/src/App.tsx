@@ -3,8 +3,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/auth";
 import { isTMA, initTelegramApp } from "@/utils/telegram";
-import AuthEmail from "@/pages/AuthEmail";
-import AuthVerify from "@/pages/AuthVerify";
 import AuthTelegram from "@/pages/AuthTelegram";
 import Chat from "@/pages/Chat";
 import Admin from "@/pages/Admin";
@@ -13,6 +11,9 @@ import Profile from "@/pages/Profile";
 import MoodPage from "@/pages/MoodPage";
 import PersonalityPage from "@/pages/PersonalityPage";
 import Landing from "@/pages/Landing";
+import EmotionMap from "@/pages/EmotionMap";
+import DiaryPage from "@/pages/DiaryPage";
+import TimeCapsulePage from "@/pages/TimeCapsulePage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -51,8 +52,6 @@ export default function App() {
       <Route path="/" element={<Landing />} />
 
       <Route path="/auth" element={<AuthTelegram />} />
-      <Route path="/auth/email" element={<AuthEmail />} />
-      <Route path="/auth/verify" element={<AuthVerify />} />
 
       <Route path="/login" element={<Navigate to="/auth" replace />} />
       <Route path="/register" element={<Navigate to="/auth" replace />} />
@@ -102,6 +101,30 @@ export default function App() {
         element={
           <ProtectedRoute>
             <PersonalityPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/emotion-map"
+        element={
+          <ProtectedRoute>
+            <EmotionMap />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/diary"
+        element={
+          <ProtectedRoute>
+            <DiaryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/time-capsule"
+        element={
+          <ProtectedRoute>
+            <TimeCapsulePage />
           </ProtectedRoute>
         }
       />
