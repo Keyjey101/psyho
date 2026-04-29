@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import api from "@/api/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Insight {
   id: string;
@@ -17,6 +19,7 @@ const FALLBACK_INSIGHTS: Insight[] = [
 ];
 
 export default function InsightsFeed() {
+  const { isAuthenticated } = useAuth();
   const [insights, setInsights] = useState<Insight[]>(FALLBACK_INSIGHTS);
   const [newInsight, setNewInsight] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -60,7 +63,7 @@ export default function InsightsFeed() {
   };
 
   return (
-    <section className="bg-white px-6 py-16">
+    <section id="insights" className="bg-white px-6 py-16">
       <div className="mx-auto max-w-4xl">
         <h2 className="font-serif text-[22px] font-bold text-[#4A4038] text-center">
           Анонимные инсайты
@@ -101,10 +104,19 @@ export default function InsightsFeed() {
           ))}
         </div>
 
-        {/* Submit form */}
+        {/* Submit form — only for authenticated users */}
         <div className="mt-8 rounded-2xl border border-[#E8DDD0] bg-[#FAF6F1] p-6">
           <h3 className="mb-3 text-[15px] font-semibold text-[#5A5048]">Поделиться своим инсайтом</h3>
-          {submitted ? (
+          {!isAuthenticated ? (
+            <div className="flex flex-col items-center gap-3 py-2 text-center">
+              <p className="text-[13px] text-[#8A7A6A]">
+                Чтобы поделиться открытием, нужно войти в аккаунт
+              </p>
+              <Link to="/auth?next=/#insights" className="btn-primary text-sm">
+                Войти
+              </Link>
+            </div>
+          ) : submitted ? (
             <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm text-emerald-700">
               Спасибо! Твой инсайт будет опубликован после проверки.
             </div>
