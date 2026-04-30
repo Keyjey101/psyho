@@ -21,6 +21,7 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - ADMIN_EMAILS=${ADMIN_EMAILS:-}
       - ENVIRONMENT=production
+      - SESSION_MAX_EXCHANGES=${SESSION_MAX_EXCHANGES}
       - ADMIN_TELEGRAM_USERNAMES=${ADMIN_TELEGRAM_USERNAMES:-}
       - DATABASE_URL=sqlite+aiosqlite:////data/psyho.db
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
@@ -55,6 +56,7 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_TG_BOT_USERNAME=${VITE_TG_BOT_USERNAME:-}
+        - SESSION_MAX_EXCHANGES=${SESSION_MAX_EXCHANGES}
     restart: unless-stopped
     ports:
       - "${APP_PORT:-8080}:80"
