@@ -8,6 +8,7 @@ import Techniques from "@/components/landing/Techniques";
 import UserGuide from "@/components/landing/UserGuide";
 import AgentSystem from "@/components/landing/AgentSystem";
 import InsightsFeed from "@/components/landing/InsightsFeed";
+import TestsCTA from "@/components/landing/TestsCTA";
 
 export default function Landing() {
   const { isAuthenticated, user } = useAuth();
@@ -141,6 +142,7 @@ export default function Landing() {
         <Hero />
         <Techniques />
         <UserGuide />
+        <TestsCTA />
         <AgentSystem />
         <InsightsFeed />
       </main>

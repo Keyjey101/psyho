@@ -69,11 +69,11 @@ export default function TimeCapsulePage() {
   const sealed = capsules.filter((c) => !c.is_opened && new Date(c.opens_at) > new Date());
 
   return (
-    <div className="min-h-screen bg-[#FAF6F1] p-6 lg:p-10">
+    <div className="min-h-screen bg-[#FAF6F1] dark:bg-[#2A2420] p-6 lg:p-10">
       <div className="mx-auto max-w-2xl">
         <button
           onClick={() => navigate("/chat")}
-          className="mb-6 flex items-center gap-2 text-sm text-[#8A7A6A] hover:text-[#5A5048]"
+          className="mb-6 flex items-center gap-2 text-sm text-[#8A7A6A] dark:text-[#B8A898] hover:text-[#5A5048]"
         >
           <ArrowLeft className="h-4 w-4" />
           Назад к чату
@@ -81,8 +81,8 @@ export default function TimeCapsulePage() {
 
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-[#5A5048]">Капсула времени</h1>
-            <p className="mt-1 text-sm text-[#8A7A6A]">Послания себе в будущем</p>
+            <h1 className="text-2xl font-bold text-[#5A5048] dark:text-[#F5EDE4]">Капсула времени</h1>
+            <p className="mt-1 text-sm text-[#8A7A6A] dark:text-[#B8A898]">Послания себе в будущем</p>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
@@ -95,8 +95,8 @@ export default function TimeCapsulePage() {
 
         {/* Create form */}
         {showForm && (
-          <div className="mb-6 rounded-2xl border border-[#B8785A] bg-white p-5 shadow-sm">
-            <h2 className="mb-3 text-[15px] font-semibold text-[#5A5048]">Новая капсула</h2>
+          <div className="mb-6 rounded-2xl border border-[#B8785A] bg-white dark:bg-[#352E2A] p-5 shadow-sm">
+            <h2 className="mb-3 text-[15px] font-semibold text-[#5A5048] dark:text-[#F5EDE4]">Новая капсула</h2>
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -105,7 +105,7 @@ export default function TimeCapsulePage() {
               maxLength={2000}
             />
             <div className="mb-4">
-              <p className="mb-2 text-[13px] font-medium text-[#5A5048]">Открыть через:</p>
+              <p className="mb-2 text-[13px] font-medium text-[#5A5048] dark:text-[#F5EDE4]">Открыть через:</p>
               <div className="flex flex-wrap gap-2">
                 {DAYS_OPTIONS.map((d) => (
                   <button
@@ -114,7 +114,7 @@ export default function TimeCapsulePage() {
                     className={`rounded-full px-3 py-1.5 text-[13px] font-medium transition-all ${
                       days === d
                         ? "bg-[#B8785A] text-white"
-                        : "bg-[#F5EDE4] text-[#5A5048] hover:bg-[#EBD9C8]"
+                        : "bg-[#F5EDE4] dark:bg-[#4A4038] text-[#5A5048] dark:text-[#F5EDE4] hover:bg-[#EBD9C8]"
                     }`}
                   >
                     {d === 1 ? "1 день" : d === 30 ? "1 месяц" : `${d} дней`}
@@ -136,7 +136,7 @@ export default function TimeCapsulePage() {
               </button>
               <button
                 onClick={() => setShowForm(false)}
-                className="rounded-pill border border-[#E8DDD0] px-4 py-2 text-sm text-[#8A7A6A] hover:bg-[#F5EDE4]"
+                className="rounded-pill border border-[#E8DDD0] dark:border-[#4A4038] px-4 py-2 text-sm text-[#8A7A6A] dark:text-[#B8A898] hover:bg-[#F5EDE4] dark:hover:bg-[#4A4038]"
               >
                 Отмена
               </button>
@@ -147,7 +147,7 @@ export default function TimeCapsulePage() {
         {loading && (
           <div className="space-y-4">
             {[1, 2].map((i) => (
-              <div key={i} className="rounded-2xl border border-[#E8DDD0] bg-white p-5 shadow-sm">
+              <div key={i} className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-5 shadow-sm">
                 <SkeletonBlock h="h-3" w="w-24" className="mb-3" />
                 <SkeletonBlock h="h-4" w="w-full" className="mb-2" />
                 <SkeletonBlock h="h-3" w="w-1/2" />
@@ -157,10 +157,10 @@ export default function TimeCapsulePage() {
         )}
 
         {!loading && capsules.length === 0 && !showForm && (
-          <div className="rounded-2xl border border-[#E8DDD0] bg-white p-8 text-center shadow-sm">
+          <div className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-8 text-center shadow-sm">
             <p className="mb-2 text-4xl">⏳</p>
-            <p className="text-[15px] font-medium text-[#5A5048]">Капсул пока нет</p>
-            <p className="mt-1 text-[13px] text-[#8A7A6A]">
+            <p className="text-[15px] font-medium text-[#5A5048] dark:text-[#F5EDE4]">Капсул пока нет</p>
+            <p className="mt-1 text-[13px] text-[#8A7A6A] dark:text-[#B8A898]">
               Напиши послание себе будущему — оно откроется через выбранное время
             </p>
           </div>
@@ -169,21 +169,21 @@ export default function TimeCapsulePage() {
         {/* Sealed capsules */}
         {!loading && sealed.length > 0 && (
           <div className="mb-6">
-            <h2 className="mb-3 text-[14px] font-semibold text-[#5A5048]">Запечатаны</h2>
+            <h2 className="mb-3 text-[14px] font-semibold text-[#5A5048] dark:text-[#F5EDE4]">Запечатаны</h2>
             <div className="space-y-3">
               {sealed.map((c) => (
                 <div
                   key={c.id}
-                  className="rounded-2xl border border-[#E8DDD0] bg-white p-5 shadow-sm"
+                  className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-5 shadow-sm"
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <Lock className="h-4 w-4 text-[#8A7A6A]" />
-                    <span className="text-[13px] font-medium text-[#5A5048]">Запечатана</span>
+                    <Lock className="h-4 w-4 text-[#8A7A6A] dark:text-[#B8A898]" />
+                    <span className="text-[13px] font-medium text-[#5A5048] dark:text-[#F5EDE4]">Запечатана</span>
                   </div>
-                  <div className="rounded-xl bg-[#FAF6F1] px-4 py-3 text-center">
-                    <p className="text-[12px] text-[#8A7A6A]">Откроется через</p>
+                  <div className="rounded-xl bg-[#FAF6F1] dark:bg-[#2A2420] px-4 py-3 text-center">
+                    <p className="text-[12px] text-[#8A7A6A] dark:text-[#B8A898]">Откроется через</p>
                     <p className="text-xl font-bold text-[#B8785A]">{countdown(c.opens_at)}</p>
-                    <p className="text-[11px] text-[#B8A898]">
+                    <p className="text-[11px] text-[#B8A898] dark:text-[#8A7A6A]">
                       {new Date(c.opens_at).toLocaleDateString("ru-RU", {
                         day: "numeric",
                         month: "long",
@@ -191,7 +191,7 @@ export default function TimeCapsulePage() {
                       })}
                     </p>
                   </div>
-                  <p className="mt-2 text-[11px] text-[#B8A898]">
+                  <p className="mt-2 text-[11px] text-[#B8A898] dark:text-[#8A7A6A]">
                     Создана {new Date(c.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
                   </p>
                 </div>
@@ -203,7 +203,7 @@ export default function TimeCapsulePage() {
         {/* Opened capsules */}
         {!loading && opened.length > 0 && (
           <div>
-            <h2 className="mb-3 text-[14px] font-semibold text-[#5A5048]">Открытые послания</h2>
+            <h2 className="mb-3 text-[14px] font-semibold text-[#5A5048] dark:text-[#F5EDE4]">Открытые послания</h2>
             <div className="space-y-3">
               {opened.map((c) => (
                 <div
@@ -217,7 +217,7 @@ export default function TimeCapsulePage() {
                       {new Date(c.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" })}
                     </span>
                   </div>
-                  <p className="text-[14px] leading-relaxed text-[#5A5048] whitespace-pre-wrap">
+                  <p className="text-[14px] leading-relaxed text-[#5A5048] dark:text-[#F5EDE4] whitespace-pre-wrap">
                     {c.content}
                   </p>
                 </div>

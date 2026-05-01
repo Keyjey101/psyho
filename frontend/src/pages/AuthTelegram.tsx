@@ -19,6 +19,7 @@ export default function AuthTelegram() {
   const [polling, setPolling] = useState(false);
   const [expired, setExpired] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [autoCopiedNotice, setAutoCopiedNotice] = useState(false);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -114,6 +115,21 @@ export default function AuthTelegram() {
       }
     }, 2000);
   }, [requestId, checkTgCode, navigate, stopPolling, stopTimer]);
+
+  // Auto-copy the code as soon as user lands on the code step
+  useEffect(() => {
+    if (step !== "code" || !code) return;
+    if (!navigator.clipboard?.writeText) return;
+    navigator.clipboard.writeText(code).then(
+      () => {
+        setAutoCopiedNotice(true);
+        setTimeout(() => setAutoCopiedNotice(false), 4000);
+      },
+      () => {
+        // clipboard blocked (e.g. permission) — silently ignore
+      },
+    );
+  }, [step, code]);
 
   useEffect(() => {
     if (step === "code" && requestId && !expired) {
@@ -235,9 +251,16 @@ export default function AuthTelegram() {
             <h1 className="mb-1 text-center font-serif text-[22px] font-bold text-[#4A4038]">
               Твой код
             </h1>
-            <p className="mb-6 text-center text-[13px] text-[#8A7A6A]">
+            <p className="mb-3 text-center text-[13px] text-[#8A7A6A]">
               Отправь этот код боту — и вход выполнится автоматически
             </p>
+
+            {autoCopiedNotice && (
+              <div className="mx-auto mb-4 flex max-w-[260px] items-center justify-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-[11.5px] font-medium text-emerald-700">
+                <Check className="h-3.5 w-3.5" />
+                Код скопирован — открывай бот и вставляй
+              </div>
+            )}
 
             <div className="mb-2 flex justify-center gap-2.5">
               {code.split("").map((digit, i) => (

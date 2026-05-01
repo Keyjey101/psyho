@@ -12,6 +12,7 @@ from app.database import init_db, async_session
 from app.routers import auth, sessions, messages, users, mood, actions, personality, tasks
 from app.routers import admin as admin_router
 from app.routers import diary, capsules, achievements, insights, export as export_router
+from app.routers import tests as tests_router
 from app.services.telegram_bot import start_bot, stop_bot
 
 logger = structlog.get_logger()
@@ -63,6 +64,7 @@ app.include_router(capsules.router, prefix="/api/capsules", tags=["Capsules"])
 app.include_router(achievements.router, prefix="/api/achievements", tags=["Achievements"])
 app.include_router(insights.router, prefix="/api/insights", tags=["Insights"])
 app.include_router(export_router.router, prefix="/api/export", tags=["Export"])
+app.include_router(tests_router.router, prefix="/api/tests", tags=["Tests"])
 
 
 @app.get("/health")

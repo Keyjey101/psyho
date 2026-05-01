@@ -27,11 +27,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   checkAuth: async () => {
+    // Guarantee isLoading flips off even if the network request hangs — the
+    // login flow gracefully recovers from a missing user, but a stuck spinner
+    // is what users see as "page never loads".
+    const safetyTimer = setTimeout(() => {
+      set((s) => (s.isLoading ? { ...s, isLoading: false } : s));
+    }, 8000);
     try {
       const { data } = await api.get("/user/me");
       set({ user: data, isAuthenticated: true, isLoading: false });
     } catch {
       set({ user: null, isAuthenticated: false, isLoading: false });
+    } finally {
+      clearTimeout(safetyTimer);
     }
   },
 

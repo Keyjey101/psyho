@@ -49,7 +49,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               className={`pointer-events-auto flex items-center gap-2 rounded-[14px] px-4 py-3 text-[13px] shadow-lg ${
                 toast.type === "error"
                   ? "bg-[#C4786A] text-white"
-                  : "bg-white text-[#5A5048] border border-[#E8DDD0]"
+                  : "bg-white text-[#5A5048] border border-[#E8DDD0] dark:bg-[#352E2A] dark:text-[#F5EDE4] dark:border-[#4A4038]"
               }`}
             >
               <span className="flex-1">{toast.message}</span>

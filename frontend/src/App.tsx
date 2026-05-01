@@ -14,6 +14,8 @@ import Landing from "@/pages/Landing";
 import EmotionMap from "@/pages/EmotionMap";
 import DiaryPage from "@/pages/DiaryPage";
 import TimeCapsulePage from "@/pages/TimeCapsulePage";
+import TestsPage from "@/pages/TestsPage";
+import TestRunnerPage from "@/pages/TestRunnerPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -40,11 +42,20 @@ export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
 
   useEffect(() => {
-    if (isTMA()) initTelegramApp();
+    // Telegram Web App SDK is loaded async. Try immediately and again once
+    // the script has had a chance to attach window.Telegram (it's small and
+    // usually arrives within a second).
+    const tryInitTma = () => {
+      if (isTMA()) initTelegramApp();
+    };
+    tryInitTma();
+    const tmaTimer = setTimeout(tryInitTma, 1500);
+
     checkAuth();
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
+    return () => clearTimeout(tmaTimer);
   }, [checkAuth]);
 
   return (
@@ -128,6 +139,10 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+      {/* Tests are intentionally public — anonymous users can take them
+          (results are kept in localStorage) and are nudged to sign in afterwards. */}
+      <Route path="/tests" element={<TestsPage />} />
+      <Route path="/tests/:testId" element={<TestRunnerPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

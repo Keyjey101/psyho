@@ -174,6 +174,19 @@ class Achievement(Base):
     user = relationship("User")
 
 
+class TestResult(Base):
+    __tablename__ = "test_results"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    test_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    level: Mapped[str] = mapped_column(String(80), nullable=False)
+    completed_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    user = relationship("User")
+
+
 class AnonymousInsight(Base):
     __tablename__ = "anonymous_insights"
 

@@ -51,13 +51,13 @@ export default function PendingTaskCard({ tasks, onDismiss }: PendingTaskCardPro
           key={task.id}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-[#E8DDD0] bg-white p-5 shadow-sm"
+          className="rounded-2xl border border-[#E8DDD0] bg-white p-5 shadow-sm dark:border-[#4A4038] dark:bg-[#352E2A]"
         >
           <div className="mb-3 flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-[#B8785A]" />
-            <span className="text-sm font-semibold text-[#B8785A]">Маяк с прошлой сессии</span>
+            <MapPin className="h-4 w-4 text-[#B8785A] dark:text-[#C08B68]" />
+            <span className="text-sm font-semibold text-[#B8785A] dark:text-[#C08B68]">Маяк с прошлой сессии</span>
           </div>
-          <p className="mb-4 text-sm leading-relaxed text-[#5A5048]">«{task.text}»</p>
+          <p className="mb-4 text-sm leading-relaxed text-[#5A5048] dark:text-[#F5EDE4]">«{task.text}»</p>
           <div className="flex gap-2">
             <button
               onClick={() => handleComplete(task.id)}
@@ -69,7 +69,7 @@ export default function PendingTaskCard({ tasks, onDismiss }: PendingTaskCardPro
             </button>
             <button
               onClick={() => handleSkip(task.id)}
-              className="flex items-center gap-1.5 rounded-pill bg-[#F5EDE4] px-4 py-2 text-xs font-medium text-[#8A7A6A] transition-colors hover:bg-[#E8DDD0]"
+              className="flex items-center gap-1.5 rounded-pill bg-[#F5EDE4] px-4 py-2 text-xs font-medium text-[#8A7A6A] transition-colors hover:bg-[#E8DDD0] dark:bg-[#4A4038] dark:text-[#B8A898] dark:hover:bg-[#5A5048]"
             >
               <SkipForward className="h-3.5 w-3.5" />
               Пропустить

@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, LogOut, MessageSquare, Settings, Download, Smile, BarChart2, Moon, Sun, Shield, Lightbulb } from "lucide-react";
+import { Plus, Trash2, X, LogOut, MessageSquare, Settings, Download, Smile, BarChart2, Moon, Sun, Shield, Lightbulb, Home, ClipboardList } from "lucide-react";
 import type { Session } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { useThemeStore } from "@/store/theme";
@@ -197,6 +197,20 @@ export default function Sidebar({
           <span className="truncate text-sm font-medium text-[#5A5048] dark:text-[#F5EDE4]">{userName}</span>
         </div>
         <div className="space-y-1">
+          <button
+            onClick={() => navigate("/")}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A]"
+          >
+            <Home className="h-4 w-4" />
+            Главная
+          </button>
+          <button
+            onClick={() => navigate("/tests")}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A]"
+          >
+            <ClipboardList className="h-4 w-4" />
+            Тесты
+          </button>
           <button
             onClick={() => navigate("/profile")}
             className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A]"

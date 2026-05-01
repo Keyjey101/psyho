@@ -45,21 +45,21 @@ export default function OnboardingTour({ onComplete }: { onComplete: () => void 
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="relative w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl"
+          className="relative w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl dark:bg-[#352E2A]"
         >
           <button
             onClick={onComplete}
-            className="absolute right-4 top-4 rounded-lg p-1 text-surface-400 hover:bg-surface-100"
+            className="absolute right-4 top-4 rounded-lg p-1 text-surface-400 hover:bg-surface-100 dark:text-[#B8A898] dark:hover:bg-[#4A4038]"
           >
             <X className="h-5 w-5" />
           </button>
 
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-100">
-              <StepIcon className="h-8 w-8 text-primary-600" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-100 dark:bg-[#3E342B]">
+              <StepIcon className="h-8 w-8 text-primary-600 dark:text-[#C08B68]" />
             </div>
-            <h2 className="mb-2 text-xl font-bold text-surface-900">{STEPS[step].title}</h2>
-            <p className="text-surface-500">{STEPS[step].description}</p>
+            <h2 className="mb-2 text-xl font-bold text-surface-900 dark:text-[#F5EDE4]">{STEPS[step].title}</h2>
+            <p className="text-surface-500 dark:text-[#B8A898]">{STEPS[step].description}</p>
           </div>
 
           <div className="mb-6 flex justify-center gap-2">
