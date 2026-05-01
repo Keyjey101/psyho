@@ -62,11 +62,11 @@ export default function DiaryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF6F1] p-6 lg:p-10">
+    <div className="min-h-screen bg-[#FAF6F1] dark:bg-[#2A2420] p-6 lg:p-10">
       <div className="mx-auto max-w-2xl">
         <button
           onClick={() => navigate("/chat")}
-          className="mb-6 flex items-center gap-2 text-sm text-[#8A7A6A] hover:text-[#5A5048]"
+          className="mb-6 flex items-center gap-2 text-sm text-[#8A7A6A] dark:text-[#B8A898] hover:text-[#5A5048]"
         >
           <ArrowLeft className="h-4 w-4" />
           Назад к чату
@@ -74,8 +74,8 @@ export default function DiaryPage() {
 
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-[#5A5048]">Дневник</h1>
-            <p className="mt-1 text-sm text-[#8A7A6A]">Записи на основе твоих сессий</p>
+            <h1 className="text-2xl font-bold text-[#5A5048] dark:text-[#F5EDE4]">Дневник</h1>
+            <p className="mt-1 text-sm text-[#8A7A6A] dark:text-[#B8A898]">Записи на основе твоих сессий</p>
           </div>
           <button
             onClick={handleGenerate}
@@ -94,7 +94,7 @@ export default function DiaryPage() {
         {loading && (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-2xl border border-[#E8DDD0] bg-white p-5 shadow-sm">
+              <div key={i} className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-5 shadow-sm">
                 <SkeletonBlock h="h-3" w="w-24" className="mb-3" />
                 <SkeletonBlock h="h-4" w="w-3/4" className="mb-2" />
                 <SkeletonBlock h="h-3" w="w-full" className="mb-1" />
@@ -105,10 +105,10 @@ export default function DiaryPage() {
         )}
 
         {!loading && entries.length === 0 && (
-          <div className="rounded-2xl border border-[#E8DDD0] bg-white p-8 text-center shadow-sm">
+          <div className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-8 text-center shadow-sm">
             <p className="mb-2 text-3xl">📓</p>
-            <p className="text-[15px] font-medium text-[#5A5048]">Дневник пуст</p>
-            <p className="mt-1 text-[13px] text-[#8A7A6A]">
+            <p className="text-[15px] font-medium text-[#5A5048] dark:text-[#F5EDE4]">Дневник пуст</p>
+            <p className="mt-1 text-[13px] text-[#8A7A6A] dark:text-[#B8A898]">
               Нажми «Создать запись», чтобы сгенерировать дневниковую запись на основе последней сессии
             </p>
           </div>
@@ -124,10 +124,10 @@ export default function DiaryPage() {
               return (
                 <div
                   key={entry.id}
-                  className="rounded-2xl border border-[#E8DDD0] bg-white p-5 shadow-sm"
+                  className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-5 shadow-sm"
                 >
                   <div className="mb-2 flex items-start justify-between gap-3">
-                    <span className="text-[11px] text-[#B8A898]">
+                    <span className="text-[11px] text-[#B8A898] dark:text-[#8A7A6A]">
                       {new Date(entry.created_at).toLocaleDateString("ru-RU", {
                         day: "numeric",
                         month: "long",
@@ -139,7 +139,7 @@ export default function DiaryPage() {
                         {entry.topics.slice(0, 3).map((t) => (
                           <span
                             key={t}
-                            className="rounded-full bg-[#F5EDE4] px-2 py-0.5 text-[10px] font-medium text-[#B8785A]"
+                            className="rounded-full bg-[#F5EDE4] dark:bg-[#4A4038] px-2 py-0.5 text-[10px] font-medium text-[#B8785A]"
                           >
                             {t}
                           </span>
@@ -148,7 +148,7 @@ export default function DiaryPage() {
                     )}
                   </div>
 
-                  <p className="text-[14px] leading-relaxed text-[#5A5048]">
+                  <p className="text-[14px] leading-relaxed text-[#5A5048] dark:text-[#F5EDE4]">
                     {isExpanded ? entry.content : preview}
                     {!isExpanded && hasMore && "..."}
                   </p>
@@ -186,7 +186,7 @@ export default function DiaryPage() {
                           </button>
                           <button
                             onClick={() => setEditingNote(null)}
-                            className="rounded-lg px-3 py-1.5 text-[12px] text-[#8A7A6A] hover:bg-[#F5EDE4]"
+                            className="rounded-lg px-3 py-1.5 text-[12px] text-[#8A7A6A] dark:text-[#B8A898] hover:bg-[#F5EDE4] dark:hover:bg-[#4A4038]"
                           >
                             Отмена
                           </button>
@@ -198,9 +198,9 @@ export default function DiaryPage() {
                         className="cursor-pointer"
                       >
                         {entry.note ? (
-                          <p className="text-[12px] italic text-[#8A7A6A]">{entry.note}</p>
+                          <p className="text-[12px] italic text-[#8A7A6A] dark:text-[#B8A898]">{entry.note}</p>
                         ) : (
-                          <p className="text-[12px] text-[#B8A898] hover:text-[#8A7A6A]">+ Добавить заметку</p>
+                          <p className="text-[12px] text-[#B8A898] dark:text-[#8A7A6A] hover:text-[#8A7A6A]">+ Добавить заметку</p>
                         )}
                       </div>
                     )}

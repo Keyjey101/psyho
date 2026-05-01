@@ -57,13 +57,13 @@ export default function SessionEndCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="mx-auto my-6 max-w-md rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-[0_2px_12px_rgba(90,80,72,0.08)]"
+      className="mx-auto my-6 max-w-md rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-[0_2px_12px_rgba(90,80,72,0.08)] dark:border-[#4A4038] dark:bg-[#352E2A]"
     >
-      <h3 className="mb-1 text-center text-[17px] font-semibold text-[#5A5048]">
+      <h3 className="mb-1 text-center text-[17px] font-semibold text-[#5A5048] dark:text-[#F5EDE4]">
         Сессия завершена
       </h3>
 
-      <div className="mt-4 flex items-center justify-center gap-4 text-sm text-[#8A7A6A]">
+      <div className="mt-4 flex items-center justify-center gap-4 text-sm text-[#8A7A6A] dark:text-[#B8A898]">
         <span className="flex items-center gap-1.5">
           💬 {exchangeCount} обменов
         </span>
@@ -80,14 +80,14 @@ export default function SessionEndCard({
 
       {/* Pending exercise from previous session */}
       {pendingTaskId && pendingTaskText && (
-        <div className="mt-4 rounded-xl border border-[#E8DDD0] bg-[#FAF6F1] p-4">
-          <p className="mb-2 text-[12px] font-medium uppercase tracking-wide text-[#B8A898]">
+        <div className="mt-4 rounded-xl border border-[#E8DDD0] bg-[#FAF6F1] p-4 dark:border-[#4A4038] dark:bg-[#2A2420]">
+          <p className="mb-2 text-[12px] font-medium uppercase tracking-wide text-[#B8A898] dark:text-[#8A7A6A]">
             Упражнение из прошлой сессии
           </p>
-          <p className="mb-3 text-[13px] leading-[1.5] text-[#5A5048]">
+          <p className="mb-3 text-[13px] leading-[1.5] text-[#5A5048] dark:text-[#F5EDE4]">
             {pendingTaskText.length > 100 ? pendingTaskText.slice(0, 100) + "…" : pendingTaskText}
           </p>
-          <p className="mb-2 text-[12px] text-[#8A7A6A]">Ты выполнил(а) его?</p>
+          <p className="mb-2 text-[12px] text-[#8A7A6A] dark:text-[#B8A898]">Ты выполнил(а) его?</p>
           <div className="flex gap-2">
             <button
               onClick={() => {
@@ -97,7 +97,7 @@ export default function SessionEndCard({
               className={`flex-1 rounded-lg py-1.5 text-[13px] font-medium transition-all ${
                 exerciseCompleted === true
                   ? "bg-emerald-500 text-white"
-                  : "border border-[#E8DDD0] text-[#5A5048] hover:bg-[#F5EDE4]"
+                  : "border border-[#E8DDD0] text-[#5A5048] hover:bg-[#F5EDE4] dark:border-[#4A4038] dark:text-[#F5EDE4] dark:hover:bg-[#4A4038]"
               }`}
             >
               ✅ Да
@@ -107,7 +107,7 @@ export default function SessionEndCard({
               className={`flex-1 rounded-lg py-1.5 text-[13px] font-medium transition-all ${
                 exerciseCompleted === false
                   ? "bg-red-100 text-red-600 border border-red-200"
-                  : "border border-[#E8DDD0] text-[#5A5048] hover:bg-[#F5EDE4]"
+                  : "border border-[#E8DDD0] text-[#5A5048] hover:bg-[#F5EDE4] dark:border-[#4A4038] dark:text-[#F5EDE4] dark:hover:bg-[#4A4038]"
               }`}
             >
               ❌ Нет
@@ -116,8 +116,8 @@ export default function SessionEndCard({
         </div>
       )}
 
-      <div className="mt-5 border-t border-[#F5EDE4] pt-4">
-        <p className="mb-3 text-center text-sm text-[#8A7A6A]">Как ты сейчас?</p>
+      <div className="mt-5 border-t border-[#F5EDE4] pt-4 dark:border-[#4A4038]">
+        <p className="mb-3 text-center text-sm text-[#8A7A6A] dark:text-[#B8A898]">Как ты сейчас?</p>
         <div className="flex justify-center gap-4">
           {MOOD_EMOJIS.map((m) => (
             <button
@@ -125,30 +125,30 @@ export default function SessionEndCard({
               onClick={() => setMoodValue(m.value)}
               className={`flex flex-col items-center gap-1 rounded-xl px-4 py-2 transition-all ${
                 moodValue === m.value
-                  ? "bg-[#FAF0E8] ring-2 ring-[#B8785A]"
-                  : "hover:bg-[#FAF6F1]"
+                  ? "bg-[#FAF0E8] ring-2 ring-[#B8785A] dark:bg-[#3E342B]"
+                  : "hover:bg-[#FAF6F1] dark:hover:bg-[#2A2420]"
               }`}
             >
               <span className="text-2xl">{m.emoji}</span>
-              <span className="text-[11px] text-[#8A7A6A]">{m.label}</span>
+              <span className="text-[11px] text-[#8A7A6A] dark:text-[#B8A898]">{m.label}</span>
             </button>
           ))}
         </div>
       </div>
 
       {/* Psycho-portrait hint */}
-      <div className="mt-4 rounded-xl bg-[#FAF6F1] px-4 py-3 text-center">
+      <div className="mt-4 rounded-xl bg-[#FAF6F1] px-4 py-3 text-center dark:bg-[#2A2420]">
         {portraitUnlocked ? (
           <button
             onClick={() => navigate("/personality")}
-            className="text-[13px] text-[#B8785A] hover:underline"
+            className="text-[13px] text-[#B8785A] hover:underline dark:text-[#C08B68]"
           >
             🧠 Посмотри, изменился ли твой психопортрет →
           </button>
         ) : (
-          <p className="text-[12px] text-[#B8A898]">
+          <p className="text-[12px] text-[#B8A898] dark:text-[#8A7A6A]">
             🧠 Ещё{" "}
-            <span className="font-semibold text-[#8A7A6A]">
+            <span className="font-semibold text-[#8A7A6A] dark:text-[#B8A898]">
               {sessionsUntilPortrait} {sessionsUntilPortrait === 1 ? "сессия" : "сессии"}
             </span>{" "}
             до твоего психопортрета
@@ -159,7 +159,7 @@ export default function SessionEndCard({
       <div className="mt-5 flex gap-3">
         <button
           onClick={() => onFinish(moodValue, exerciseCompleted)}
-          className="flex-1 rounded-full border border-[#D8CDC0] px-4 py-2.5 text-sm font-medium text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1]"
+          className="flex-1 rounded-full border border-[#D8CDC0] px-4 py-2.5 text-sm font-medium text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] dark:border-[#4A4038] dark:text-[#B8A898] dark:hover:bg-[#2A2420]"
         >
           Завершить
         </button>

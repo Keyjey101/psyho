@@ -117,28 +117,28 @@ export default function EmotionMap() {
   const step = CELL_SIZE + CELL_GAP;
 
   return (
-    <div className="min-h-screen bg-[#FAF6F1] p-6 lg:p-10">
+    <div className="min-h-screen bg-[#FAF6F1] dark:bg-[#2A2420] p-6 lg:p-10">
       <div className="mx-auto max-w-4xl">
         <button
           onClick={() => navigate("/mood")}
-          className="mb-6 flex items-center gap-2 text-sm text-[#8A7A6A] hover:text-[#5A5048]"
+          className="mb-6 flex items-center gap-2 text-sm text-[#8A7A6A] dark:text-[#B8A898] hover:text-[#5A5048]"
         >
           <ArrowLeft className="h-4 w-4" />
           Назад к трекеру
         </button>
 
-        <h1 className="mb-2 text-2xl font-bold text-[#5A5048]">Карта эмоций</h1>
-        <p className="mb-8 text-sm text-[#8A7A6A]">Тепловая карта твоего настроения за последний год</p>
+        <h1 className="mb-2 text-2xl font-bold text-[#5A5048] dark:text-[#F5EDE4]">Карта эмоций</h1>
+        <p className="mb-8 text-sm text-[#8A7A6A] dark:text-[#B8A898]">Тепловая карта твоего настроения за последний год</p>
 
         {loading && (
-          <div className="rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-6 shadow-sm">
             <SkeletonBlock h="h-6" w="w-48" className="mb-4" />
             <SkeletonBlock h="h-32" />
           </div>
         )}
 
         {!loading && (
-          <div className="rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm overflow-x-auto">
+          <div className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-6 shadow-sm overflow-x-auto">
             <div className="relative" style={{ minWidth: weeks.length * step + 30 }}>
               {/* Month labels */}
               <div className="flex mb-1 ml-8" style={{ gap: 0 }}>
@@ -148,7 +148,7 @@ export default function EmotionMap() {
                     <div
                       key={wi}
                       style={{ width: step, flexShrink: 0 }}
-                      className="text-[9px] text-[#B8A898]"
+                      className="text-[9px] text-[#B8A898] dark:text-[#8A7A6A]"
                     >
                       {label?.label || ""}
                     </div>
@@ -163,7 +163,7 @@ export default function EmotionMap() {
                     <div
                       key={d}
                       style={{ height: CELL_SIZE, width: 24 }}
-                      className={`flex items-center text-[8px] text-[#B8A898] ${i % 2 === 0 ? "opacity-0" : ""}`}
+                      className={`flex items-center text-[8px] text-[#B8A898] dark:text-[#8A7A6A] ${i % 2 === 0 ? "opacity-0" : ""}`}
                     >
                       {d}
                     </div>
@@ -216,7 +216,7 @@ export default function EmotionMap() {
             </div>
 
             {/* Legend */}
-            <div className="mt-4 flex items-center gap-3 text-[11px] text-[#8A7A6A]">
+            <div className="mt-4 flex items-center gap-3 text-[11px] text-[#8A7A6A] dark:text-[#B8A898]">
               <span>Плохо</span>
               {["#E07070", "#E8C57A", "#A8D4A0", "#4CAF76"].map((c) => (
                 <div key={c} style={{ width: 12, height: 12, borderRadius: 2, background: c }} />
@@ -233,22 +233,22 @@ export default function EmotionMap() {
         {/* Summary stats */}
         {!loading && entries.length > 0 && (
           <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <div className="rounded-2xl border border-[#E8DDD0] bg-white p-4 shadow-sm text-center">
-              <p className="text-[12px] text-[#8A7A6A]">Всего записей</p>
-              <p className="mt-1 text-2xl font-bold text-[#5A5048]">{entries.length}</p>
+            <div className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-4 shadow-sm text-center">
+              <p className="text-[12px] text-[#8A7A6A] dark:text-[#B8A898]">Всего записей</p>
+              <p className="mt-1 text-2xl font-bold text-[#5A5048] dark:text-[#F5EDE4]">{entries.length}</p>
             </div>
-            <div className="rounded-2xl border border-[#E8DDD0] bg-white p-4 shadow-sm text-center">
-              <p className="text-[12px] text-[#8A7A6A]">Среднее</p>
+            <div className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-4 shadow-sm text-center">
+              <p className="text-[12px] text-[#8A7A6A] dark:text-[#B8A898]">Среднее</p>
               <p className="mt-1 text-2xl font-bold text-[#B8785A]">
                 {(entries.reduce((s, e) => s + e.value, 0) / entries.length).toFixed(1)}
               </p>
             </div>
-            <div className="rounded-2xl border border-[#E8DDD0] bg-white p-4 shadow-sm text-center">
-              <p className="text-[12px] text-[#8A7A6A]">Активных дней</p>
-              <p className="mt-1 text-2xl font-bold text-[#5A5048]">{dayMap.size}</p>
+            <div className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-4 shadow-sm text-center">
+              <p className="text-[12px] text-[#8A7A6A] dark:text-[#B8A898]">Активных дней</p>
+              <p className="mt-1 text-2xl font-bold text-[#5A5048] dark:text-[#F5EDE4]">{dayMap.size}</p>
             </div>
-            <div className="rounded-2xl border border-[#E8DDD0] bg-white p-4 shadow-sm text-center">
-              <p className="text-[12px] text-[#8A7A6A]">Лучший день</p>
+            <div className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-4 shadow-sm text-center">
+              <p className="text-[12px] text-[#8A7A6A] dark:text-[#B8A898]">Лучший день</p>
               <p className="mt-1 text-2xl font-bold text-emerald-600">
                 {Math.max(...entries.map((e) => e.value))}
               </p>
@@ -257,10 +257,10 @@ export default function EmotionMap() {
         )}
 
         {!loading && entries.length === 0 && (
-          <div className="mt-6 rounded-2xl border border-[#E8DDD0] bg-white p-8 text-center shadow-sm">
+          <div className="mt-6 rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-8 text-center shadow-sm">
             <p className="mb-2 text-3xl">🗓️</p>
-            <p className="text-[15px] font-medium text-[#5A5048]">Пока нет данных</p>
-            <p className="mt-1 text-[13px] text-[#8A7A6A]">Отмечай настроение после сессий — карта начнёт заполняться</p>
+            <p className="text-[15px] font-medium text-[#5A5048] dark:text-[#F5EDE4]">Пока нет данных</p>
+            <p className="mt-1 text-[13px] text-[#8A7A6A] dark:text-[#B8A898]">Отмечай настроение после сессий — карта начнёт заполняться</p>
           </div>
         )}
       </div>
@@ -268,19 +268,19 @@ export default function EmotionMap() {
       {/* Tooltip */}
       {tooltip && (
         <div
-          className="fixed z-50 rounded-xl border border-[#E8DDD0] bg-white p-3 shadow-lg text-[12px] pointer-events-none"
+          className="fixed z-50 rounded-xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-3 shadow-lg text-[12px] pointer-events-none"
           style={{
             left: Math.min(tooltip.x + 12, window.innerWidth - 200),
             top: Math.min(tooltip.y - 60, window.innerHeight - 100),
           }}
         >
-          <p className="font-semibold text-[#5A5048]">
+          <p className="font-semibold text-[#5A5048] dark:text-[#F5EDE4]">
             {new Date(tooltip.day.date).toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}
           </p>
-          <p className="text-[#8A7A6A]">
+          <p className="text-[#8A7A6A] dark:text-[#B8A898]">
             Среднее: <span className="font-medium">{tooltip.day.avg.toFixed(1)}</span> — {getMoodLabel(tooltip.day.avg)}
           </p>
-          <p className="text-[#B8A898]">{tooltip.day.entries.length} запис{tooltip.day.entries.length === 1 ? "ь" : "и"}</p>
+          <p className="text-[#B8A898] dark:text-[#8A7A6A]">{tooltip.day.entries.length} запис{tooltip.day.entries.length === 1 ? "ь" : "и"}</p>
         </div>
       )}
     </div>

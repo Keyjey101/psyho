@@ -112,18 +112,18 @@ export default function MoodPage() {
       : null;
 
   return (
-    <div className="min-h-screen bg-[#FAF6F1] p-6 lg:p-10">
+    <div className="min-h-screen bg-[#FAF6F1] dark:bg-[#2A2420] p-6 lg:p-10">
       <div className="mx-auto max-w-3xl">
         <button
           onClick={() => navigate("/chat")}
-          className="mb-6 flex items-center gap-2 text-sm text-[#8A7A6A] hover:text-[#5A5048]"
+          className="mb-6 flex items-center gap-2 text-sm text-[#8A7A6A] dark:text-[#B8A898] hover:text-[#5A5048]"
         >
           <ArrowLeft className="h-4 w-4" />
           Назад к чату
         </button>
 
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-[#5A5048]">Трекер настроения</h1>
+          <h1 className="text-2xl font-bold text-[#5A5048] dark:text-[#F5EDE4]">Трекер настроения</h1>
           <Link
             to="/emotion-map"
             className="text-sm text-[#B8785A] hover:text-[#9A6248]"
@@ -136,13 +136,13 @@ export default function MoodPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="rounded-2xl border border-[#E8DDD0] bg-white p-5 shadow-sm">
+                <div key={i} className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-5 shadow-sm">
                   <SkeletonBlock h="h-3" w="w-16" className="mb-3" />
                   <SkeletonBlock h="h-8" w="w-24" />
                 </div>
               ))}
             </div>
-            <div className="rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm">
+            <div className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-6 shadow-sm">
               <SkeletonBlock h="h-4" w="w-24" className="mb-4" />
               <div className="flex h-36 items-end gap-1.5">
                 {Array.from({ length: 10 }).map((_, i) => (
@@ -155,18 +155,18 @@ export default function MoodPage() {
 
         {!loading && avg && (
           <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <div className="rounded-2xl border border-[#E8DDD0] bg-white p-5 shadow-sm">
-              <p className="text-[12px] text-[#8A7A6A]">Среднее</p>
+            <div className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-5 shadow-sm">
+              <p className="text-[12px] text-[#8A7A6A] dark:text-[#B8A898]">Среднее</p>
               <div className="mt-1.5 flex items-center gap-2">
                 <span className="text-3xl">{MOOD_EMOJIS[Math.round(Number(avg))]}</span>
-                <span className="text-2xl font-bold text-[#5A5048]">{avg}</span>
+                <span className="text-2xl font-bold text-[#5A5048] dark:text-[#F5EDE4]">{avg}</span>
               </div>
             </div>
-            <div className="rounded-2xl border border-[#E8DDD0] bg-white p-5 shadow-sm">
-              <p className="text-[12px] text-[#8A7A6A]">Записей</p>
+            <div className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-5 shadow-sm">
+              <p className="text-[12px] text-[#8A7A6A] dark:text-[#B8A898]">Записей</p>
               <div className="mt-1.5 flex items-center gap-2">
                 <span className="text-3xl">📝</span>
-                <span className="text-2xl font-bold text-[#5A5048]">{entries.length}</span>
+                <span className="text-2xl font-bold text-[#5A5048] dark:text-[#F5EDE4]">{entries.length}</span>
               </div>
             </div>
             {streak > 1 && (
@@ -205,8 +205,8 @@ export default function MoodPage() {
 
         {/* Chart */}
         {!loading && recentEntries.length > 0 && (
-          <div className="mb-6 rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-[15px] font-semibold text-[#5A5048]">История</h2>
+          <div className="mb-6 rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-6 shadow-sm">
+            <h2 className="mb-4 text-[15px] font-semibold text-[#5A5048] dark:text-[#F5EDE4]">История</h2>
             <div className="flex h-36 items-end gap-1.5">
               {recentEntries.map((entry) => {
                 const sessionTitle = entry.session_id ? sessionMap[entry.session_id] : null;
@@ -230,26 +230,26 @@ export default function MoodPage() {
                         {task.completed ? "✅" : "❌"}
                       </span>
                     )}
-                    <span className="text-[9px] text-[#B8A898]">
+                    <span className="text-[9px] text-[#B8A898] dark:text-[#8A7A6A]">
                       {new Date(entry.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
                     </span>
                     {/* Tooltip */}
                     {sessionTitle && (
-                      <div className="pointer-events-none absolute bottom-full mb-2 hidden w-36 rounded-lg border border-[#E8DDD0] bg-white p-2 text-[10px] text-[#5A5048] shadow-md group-hover:block z-10">
+                      <div className="pointer-events-none absolute bottom-full mb-2 hidden w-36 rounded-lg border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-2 text-[10px] text-[#5A5048] dark:text-[#F5EDE4] shadow-md group-hover:block z-10">
                         <p className="font-medium leading-tight">{sessionTitle}</p>
                         {task && (
-                          <p className="mt-0.5 text-[#8A7A6A]">
+                          <p className="mt-0.5 text-[#8A7A6A] dark:text-[#B8A898]">
                             Упражнение: {task.completed ? "выполнено ✅" : "не выполнено ❌"}
                           </p>
                         )}
-                        <p className="mt-0.5 text-[#B8A898]">{MOOD_LABELS[entry.value]}</p>
+                        <p className="mt-0.5 text-[#B8A898] dark:text-[#8A7A6A]">{MOOD_LABELS[entry.value]}</p>
                       </div>
                     )}
                   </div>
                 );
               })}
             </div>
-            <div className="mt-3 flex items-center gap-3 text-[11px] text-[#B8A898]">
+            <div className="mt-3 flex items-center gap-3 text-[11px] text-[#B8A898] dark:text-[#8A7A6A]">
               <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-[#6EBF8B]" /> Упражнение выполнено</span>
               <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-[#B8785A]" /> Без упражнения</span>
             </div>
@@ -258,26 +258,26 @@ export default function MoodPage() {
 
         {/* Session details list */}
         {!loading && recentEntries.length > 0 && (
-          <div className="mb-6 rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-[15px] font-semibold text-[#5A5048]">По сессиям</h2>
+          <div className="mb-6 rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-6 shadow-sm">
+            <h2 className="mb-4 text-[15px] font-semibold text-[#5A5048] dark:text-[#F5EDE4]">По сессиям</h2>
             <div className="space-y-2">
               {recentEntries.slice().reverse().map((entry) => {
                 const sessionTitle = entry.session_id ? sessionMap[entry.session_id] : null;
                 const task = entry.session_id ? taskMap[entry.session_id] : null;
                 return (
-                  <div key={entry.id} className="flex items-start gap-3 rounded-xl bg-[#FAF6F1] px-4 py-3">
+                  <div key={entry.id} className="flex items-start gap-3 rounded-xl bg-[#FAF6F1] dark:bg-[#2A2420] px-4 py-3">
                     <span className="mt-0.5 text-xl shrink-0">{MOOD_EMOJIS[entry.value]}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="truncate text-[13px] font-medium text-[#5A5048]">
+                      <p className="truncate text-[13px] font-medium text-[#5A5048] dark:text-[#F5EDE4]">
                         {sessionTitle || "Сессия"}
                       </p>
                       {task && (
-                        <p className="mt-0.5 truncate text-[11px] text-[#8A7A6A]">
+                        <p className="mt-0.5 truncate text-[11px] text-[#8A7A6A] dark:text-[#B8A898]">
                           {task.completed ? "✅" : "❌"} {task.text.slice(0, 60)}{task.text.length > 60 ? "…" : ""}
                         </p>
                       )}
                     </div>
-                    <span className="shrink-0 text-[11px] text-[#B8A898]">
+                    <span className="shrink-0 text-[11px] text-[#B8A898] dark:text-[#8A7A6A]">
                       {new Date(entry.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
                     </span>
                   </div>
@@ -288,16 +288,16 @@ export default function MoodPage() {
         )}
 
         {!loading && entries.length > 1 && (
-          <p className="mb-6 text-center text-[13px] text-[#B8A898]">
+          <p className="mb-6 text-center text-[13px] text-[#B8A898] dark:text-[#8A7A6A]">
             Ты уже {entries.length} раз{entries.length === 1 ? "" : "а"} отмечал(а) настроение — продолжай! 🌱
           </p>
         )}
 
         {!loading && entries.length === 0 && (
-          <div className="rounded-2xl border border-[#E8DDD0] bg-white p-8 text-center shadow-sm">
+          <div className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-8 text-center shadow-sm">
             <p className="mb-2 text-3xl">🌤️</p>
-            <p className="text-[15px] font-medium text-[#5A5048]">Пока нет записей</p>
-            <p className="mt-1 text-[13px] text-[#8A7A6A]">Оценивай настроение после каждой сессии — это поможет отслеживать прогресс.</p>
+            <p className="text-[15px] font-medium text-[#5A5048] dark:text-[#F5EDE4]">Пока нет записей</p>
+            <p className="mt-1 text-[13px] text-[#8A7A6A] dark:text-[#B8A898]">Оценивай настроение после каждой сессии — это поможет отслеживать прогресс.</p>
           </div>
         )}
       </div>

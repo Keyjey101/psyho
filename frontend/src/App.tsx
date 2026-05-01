@@ -14,6 +14,8 @@ import Landing from "@/pages/Landing";
 import EmotionMap from "@/pages/EmotionMap";
 import DiaryPage from "@/pages/DiaryPage";
 import TimeCapsulePage from "@/pages/TimeCapsulePage";
+import TestsPage from "@/pages/TestsPage";
+import TestRunnerPage from "@/pages/TestRunnerPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -137,6 +139,10 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+      {/* Tests are intentionally public — anonymous users can take them
+          (results are kept in localStorage) and are nudged to sign in afterwards. */}
+      <Route path="/tests" element={<TestsPage />} />
+      <Route path="/tests/:testId" element={<TestRunnerPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
