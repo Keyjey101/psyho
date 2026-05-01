@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, MessageSquare, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, MessageSquare } from "lucide-react";
 import { getTest, getInterpretation, maxPossibleScore, type PsyTest } from "@/data/tests";
 import { appendLocalHistory, type TestHistoryEntry } from "@/utils/testHistory";
 import { pluralizeRu, QUESTIONS_PLURAL, POINTS_PLURAL } from "@/utils/pluralize";
@@ -228,10 +228,6 @@ export default function TestRunnerPage() {
             score={totalScore}
             previousAttempt={previousAttempt}
             isAuthenticated={isAuthenticated}
-            onRetake={() => {
-              setAnswers([]);
-              setPhase("intro");
-            }}
           />
         )}
       </div>
@@ -428,13 +424,12 @@ function QuestionsView({
 
 // ── Result ───────────────────────────────────────────────────────────────────
 function ResultView({
-  test, score, previousAttempt, isAuthenticated, onRetake,
+  test, score, previousAttempt, isAuthenticated,
 }: {
   test: PsyTest;
   score: number;
   previousAttempt: TestHistoryEntry | null;
   isAuthenticated: boolean;
-  onRetake: () => void;
 }) {
   const interp = getInterpretation(test, score);
   const max = maxPossibleScore(test);
@@ -608,13 +603,6 @@ function ResultView({
             </Link>
           </p>
         )}
-        <button
-          onClick={onRetake}
-          className="flex w-full items-center justify-center gap-2 rounded-pill border border-[#D8CDC0] px-6 py-3 text-sm font-medium text-[#8A7A6A] transition-colors hover:bg-[#F5EDE4] dark:border-[#4A4038] dark:text-[#B8A898] dark:hover:bg-[#4A4038]"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Пройти ещё раз
-        </button>
       </div>
     </motion.div>
   );
