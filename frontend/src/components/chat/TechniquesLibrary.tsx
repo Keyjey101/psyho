@@ -36,11 +36,11 @@ export default function TechniquesLibrary() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white dark:bg-[#352E2A] p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-surface-900">Техники и упражнения</h3>
-          <button onClick={() => setIsOpen(false)} className="rounded-lg p-1 text-surface-400 hover:bg-surface-100">
+          <h3 className="text-lg font-semibold text-surface-900 dark:text-[#F5EDE4]">Техники и упражнения</h3>
+          <button onClick={() => setIsOpen(false)} className="rounded-lg p-1 text-surface-400 hover:bg-surface-100 dark:text-[#B8A898] dark:hover:bg-[#4A4038]">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -50,19 +50,19 @@ export default function TechniquesLibrary() {
             <button
               key={i}
               onClick={() => setExpandedIdx(expandedIdx === i ? null : i)}
-              className="w-full rounded-xl border border-surface-200 p-4 text-left transition-all hover:border-surface-300"
+              className="w-full rounded-xl border border-surface-200 dark:border-[#4A4038] p-4 text-left transition-all hover:border-surface-300 dark:hover:border-[#5A5048]"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="mb-1 inline-block rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-600">
+                  <span className="mb-1 inline-block rounded-full bg-primary-50 dark:bg-[#3E342B] px-2 py-0.5 text-xs font-medium text-primary-600 dark:text-[#C08B68]">
                     {tech.category}
                   </span>
-                  <h4 className="mt-1 font-medium text-surface-900">{tech.title}</h4>
+                  <h4 className="mt-1 font-medium text-surface-900 dark:text-[#F5EDE4]">{tech.title}</h4>
                 </div>
-                <span className="text-xs text-surface-400">{tech.duration}</span>
+                <span className="text-xs text-surface-400 dark:text-[#8A7A6A]">{tech.duration}</span>
               </div>
               {expandedIdx === i && (
-                <p className="mt-2 text-sm leading-relaxed text-surface-600">{tech.description}</p>
+                <p className="mt-2 text-sm leading-relaxed text-surface-600 dark:text-[#B8A898]">{tech.description}</p>
               )}
             </button>
           ))}

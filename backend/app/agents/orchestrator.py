@@ -2,6 +2,7 @@ import json
 import re
 import time as _time
 import asyncio
+import unicodedata
 import structlog
 from collections import OrderedDict
 from enum import Enum
@@ -107,6 +108,49 @@ _INJECTION_PATTERNS = re.compile(
     re.IGNORECASE | re.UNICODE,
 )
 _MAX_MEMORY_LENGTH = 500
+
+# Drops codepoints we never want in user-facing answers — most often this is
+# Chinese / Japanese / Korean characters that the model occasionally hallucinates
+# when its context drifts. We *keep* Cyrillic, Latin, digits, whitespace and any
+# punctuation / symbol / mark category. Anything else (CJK, Devanagari, Arabic,
+# private-use, etc.) is silently stripped before it reaches the user.
+_ALLOWED_LETTER_RANGES = (
+    (0x0030, 0x0039),  # digits
+    (0x0041, 0x005A),  # A-Z
+    (0x0061, 0x007A),  # a-z
+    (0x00C0, 0x024F),  # Latin extended (umlauts, etc.)
+    (0x0400, 0x04FF),  # Cyrillic
+    (0x0500, 0x052F),  # Cyrillic Supplement
+)
+
+
+def _is_allowed_char(ch: str) -> bool:
+    cp = ord(ch)
+    if cp < 0x0080:
+        # ASCII — keep all printable / whitespace
+        return True
+    # Allow common Unicode punctuation, symbols, marks, separators (em-dash,
+    # curly quotes, NBSP, emoji modifiers, etc.). Categories starting with
+    # P (punctuation), S (symbol), Z (separator), M (mark), N (number) are kept.
+    cat = unicodedata.category(ch)
+    if cat[0] in ("P", "S", "Z", "M", "N"):
+        return True
+    if cat[0] == "L":
+        for lo, hi in _ALLOWED_LETTER_RANGES:
+            if lo <= cp <= hi:
+                return True
+        return False
+    # Control / format / surrogate / private use — strip
+    return False
+
+
+def _filter_foreign_chars(text: str) -> str:
+    if not text:
+        return text
+    # Fast path: pure ASCII
+    if text.isascii():
+        return text
+    return "".join(ch for ch in text if _is_allowed_char(ch))
 
 
 def _sanitize_memory(memory: str) -> str:
@@ -394,4 +438,6 @@ class Orchestrator:
 
         async for chunk in stream:
             if chunk.choices and chunk.choices[0].delta.content:
-                yield {"type": "token", "content": chunk.choices[0].delta.content}
+                content = _filter_foreign_chars(chunk.choices[0].delta.content)
+                if content:
+                    yield {"type": "token", "content": content}

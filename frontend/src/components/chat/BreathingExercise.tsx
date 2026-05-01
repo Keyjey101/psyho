@@ -1,6 +1,19 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+
+interface CycleFloat {
+  id: number;
+  count: number;
+  color: string;
+}
+
+let _floatId = 0;
+
+const CYCLE_COLORS = ["#B8785A", "#6B9E7A", "#6B7E9E", "#8E6BA8", "#C29A4E", "#7A8E6B"];
+
+const AUTO_ADVANCE_AFTER_CYCLES = 5;
+const SCORE_PER_CYCLE = 10;
 
 type Phase = { label: string; duration: number; color: string };
 type ShapeType = "triangle" | "square" | "circle";
@@ -269,14 +282,19 @@ export default function BreathingExercise() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [direction, setDirection] = useState(1);
   const [elapsed, setElapsed] = useState(0);
+  const [cycles, setCycles] = useState(0);
+  const [totalScore, setTotalScore] = useState(0);
+  const [floats, setFloats] = useState<CycleFloat[]>([]);
   const startedAtRef = useRef<number>(performance.now());
   const rafRef = useRef<number>(0);
+  const lastCycleRef = useRef<number>(0);
   const dragX = useMotionValue(0);
   const dragOpacity = useTransform(dragX, [-80, 0, 80], [0.6, 1, 0.6]);
 
   // Auto-start animation loop
   useEffect(() => {
     startedAtRef.current = performance.now();
+    lastCycleRef.current = 0;
     const tick = (now: number) => {
       setElapsed((now - startedAtRef.current) / 1000);
       rafRef.current = requestAnimationFrame(tick);
@@ -289,12 +307,46 @@ export default function BreathingExercise() {
     setDirection(idx > currentIdx ? 1 : -1);
     setCurrentIdx(idx);
     setElapsed(0);
+    setCycles(0);
   };
 
   const prev = () => goTo((currentIdx - 1 + EXERCISES.length) % EXERCISES.length);
   const next = () => goTo((currentIdx + 1) % EXERCISES.length);
 
   const exercise = EXERCISES[currentIdx];
+
+  // Detect cycle completion: each time elapsed crosses a multiple of total
+  // duration, count a new cycle and award points.
+  useEffect(() => {
+    const total = exercise.phases.reduce((s, p) => s + p.duration, 0);
+    if (total <= 0) return;
+    const completed = Math.floor(elapsed / total);
+    if (completed <= lastCycleRef.current) return;
+
+    const newCycles = completed - lastCycleRef.current;
+    lastCycleRef.current = completed;
+    setCycles(completed);
+    setTotalScore((s) => s + SCORE_PER_CYCLE * newCycles);
+
+    // Floating cycle counter
+    const id = ++_floatId;
+    const color = CYCLE_COLORS[(completed - 1) % CYCLE_COLORS.length];
+    setFloats((f) => [...f, { id, count: completed, color }]);
+    setTimeout(() => {
+      setFloats((f) => f.filter((x) => x.id !== id));
+    }, 1400);
+
+    // Light haptic on cycle complete
+    if (navigator.vibrate) navigator.vibrate(8);
+
+    // Auto-advance to next exercise after AUTO_ADVANCE_AFTER_CYCLES
+    if (completed >= AUTO_ADVANCE_AFTER_CYCLES) {
+      const t = setTimeout(() => {
+        next();
+      }, 700);
+      return () => clearTimeout(t);
+    }
+  }, [elapsed, exercise, next]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDragEnd = (_: unknown, info: { offset: { x: number }; velocity: { x: number } }) => {
     const { offset, velocity } = info;
@@ -314,25 +366,41 @@ export default function BreathingExercise() {
       <div className="flex items-center gap-4">
         <button
           onClick={prev}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#D8CDC0] bg-white text-[#8A7A6A] transition-all hover:bg-[#F5EDE4]"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#D8CDC0] bg-white text-[#8A7A6A] transition-all hover:bg-[#F5EDE4] dark:border-[#4A4038] dark:bg-[#352E2A] dark:text-[#B8A898] dark:hover:bg-[#4A4038]"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <div className="text-center min-w-[120px]">
-          <p className="text-[15px] font-semibold text-[#5A5048]">{exercise.name}</p>
-          <p className="text-[12px] text-[#B8A898]">{exercise.desc}</p>
+        <div className="text-center min-w-[140px]">
+          <p className="text-[15px] font-semibold text-[#5A5048] dark:text-[#F5EDE4]">{exercise.name}</p>
+          <p className="text-[12px] text-[#B8A898] dark:text-[#8A7A6A]">{exercise.desc}</p>
         </div>
         <button
           onClick={next}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#D8CDC0] bg-white text-[#8A7A6A] transition-all hover:bg-[#F5EDE4]"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#D8CDC0] bg-white text-[#8A7A6A] transition-all hover:bg-[#F5EDE4] dark:border-[#4A4038] dark:bg-[#352E2A] dark:text-[#B8A898] dark:hover:bg-[#4A4038]"
         >
           <ChevronRight className="h-5 w-5" />
         </button>
       </div>
 
+      {/* Cycle counter and score */}
+      <div className="flex items-center gap-4 text-[12px] text-[#8A7A6A] dark:text-[#B8A898]">
+        <div className="flex items-center gap-1.5">
+          <span>Циклов:</span>
+          <span className="text-[14px] font-semibold tabular-nums text-[#B8785A] dark:text-[#C08B68]">
+            {cycles}
+            <span className="text-[#B8A898] dark:text-[#6A5A4A]">/{AUTO_ADVANCE_AFTER_CYCLES}</span>
+          </span>
+        </div>
+        <div className="h-3 w-px bg-[#E8DDD0] dark:bg-[#4A4038]" />
+        <div className="flex items-center gap-1.5">
+          <Sparkles className="h-3 w-3 text-[#C29A4E]" />
+          <span className="text-[14px] font-semibold tabular-nums text-[#5A5048] dark:text-[#F5EDE4]">{totalScore}</span>
+        </div>
+      </div>
+
       {/* Animated exercise view with swipe support */}
       <motion.div
-        className="relative overflow-hidden cursor-grab active:cursor-grabbing"
+        className="relative overflow-visible cursor-grab active:cursor-grabbing"
         style={{ x: dragX, opacity: dragOpacity, touchAction: "pan-y" }}
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
@@ -349,6 +417,31 @@ export default function BreathingExercise() {
           >
             <ExerciseView exercise={exercise} elapsed={elapsed} />
           </motion.div>
+        </AnimatePresence>
+
+        {/* Floating cycle-count numbers — pop up, grow, fade away */}
+        <AnimatePresence>
+          {floats.map((f) => (
+            <motion.div
+              key={f.id}
+              initial={{ opacity: 0, scale: 0.4, y: 0 }}
+              animate={{ opacity: 1, scale: 1.4 + f.count * 0.05, y: -40 }}
+              exit={{ opacity: 0, scale: 1.8, y: -90 }}
+              transition={{ duration: 1.2, ease: "easeOut" }}
+              className="pointer-events-none absolute inset-0 flex items-center justify-center"
+            >
+              <span
+                className="font-serif font-bold tabular-nums"
+                style={{
+                  color: f.color,
+                  fontSize: `${48 + f.count * 6}px`,
+                  textShadow: "0 2px 14px rgba(0,0,0,0.10)",
+                }}
+              >
+                {f.count}
+              </span>
+            </motion.div>
+          ))}
         </AnimatePresence>
       </motion.div>
 
@@ -367,8 +460,8 @@ export default function BreathingExercise() {
         ))}
       </div>
 
-      <p className="max-w-[240px] text-center text-sm text-[#8A7A6A]">
-        Следи за точкой — она ведёт тебя через дыхание
+      <p className="max-w-[280px] text-center text-sm text-[#8A7A6A] dark:text-[#B8A898]">
+        Следи за точкой и дыши вместе с ней. После {AUTO_ADVANCE_AFTER_CYCLES} циклов перейдём к следующему.
       </p>
     </div>
   );

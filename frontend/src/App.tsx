@@ -40,11 +40,20 @@ export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
 
   useEffect(() => {
-    if (isTMA()) initTelegramApp();
+    // Telegram Web App SDK is loaded async. Try immediately and again once
+    // the script has had a chance to attach window.Telegram (it's small and
+    // usually arrives within a second).
+    const tryInitTma = () => {
+      if (isTMA()) initTelegramApp();
+    };
+    tryInitTma();
+    const tmaTimer = setTimeout(tryInitTma, 1500);
+
     checkAuth();
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
+    return () => clearTimeout(tmaTimer);
   }, [checkAuth]);
 
   return (

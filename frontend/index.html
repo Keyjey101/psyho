@@ -54,7 +54,13 @@
     }
     </script>
 
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!--
+      Loaded async + defer so a slow Telegram CDN (or DNS issue on a particular
+      device — we have a confirmed report on a Pixel 8a where this script
+      blocks rendering) cannot block the React app from booting. App code
+      tolerates window.Telegram being absent at startup.
+    -->
+    <script src="https://telegram.org/js/telegram-web-app.js" async defer></script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

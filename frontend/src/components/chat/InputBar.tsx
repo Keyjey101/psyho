@@ -2,6 +2,16 @@ import { useState, useRef, useEffect } from "react";
 import { Send, ChevronUp } from "lucide-react";
 import VoiceInput from "./VoiceInput";
 
+// Detect once whether the device looks like a touch / coarse-pointer device.
+// Mobile keyboards usually offer "send" on Enter, but that's terrible UX inside
+// a chat where you may want to write multi-paragraph messages. We treat coarse
+// pointers as "mobile" and let Enter insert a newline; the Send button submits.
+const IS_TOUCH_DEVICE: boolean =
+  typeof window !== "undefined" &&
+  (("matchMedia" in window && window.matchMedia("(pointer: coarse)").matches) ||
+    "ontouchstart" in window ||
+    (typeof navigator !== "undefined" && (navigator as Navigator & { maxTouchPoints?: number }).maxTouchPoints > 0));
+
 interface InputBarProps {
   onSend: (content: string) => void;
   disabled?: boolean;
@@ -46,6 +56,9 @@ export default function InputBar({ onSend, disabled, isActionsOpen, onToggleActi
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // On touch devices Enter is just newline — submission happens via Send button.
+    // On desktop keep the conventional Enter=send / Shift+Enter=newline.
+    if (IS_TOUCH_DEVICE) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -91,6 +104,7 @@ export default function InputBar({ onSend, disabled, isActionsOpen, onToggleActi
               placeholder="Напиши что угодно..."
               disabled={disabled}
               rows={1}
+              enterKeyHint={IS_TOUCH_DEVICE ? "enter" : "send"}
               className="flex-1 resize-none border-0 bg-transparent py-1 text-sm text-[#5A5048] dark:text-[#F5EDE4] placeholder:italic placeholder:text-[#B8A898] dark:placeholder:text-[#6A5A4A] focus:outline-none focus:ring-0 max-h-40"
             />
             <div className="flex shrink-0 flex-col items-end gap-1">

@@ -73,17 +73,17 @@ export default function ActionPanel({ sessionId, disabled, isOpen, onMoodRequest
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ type: "spring", stiffness: 400, damping: 35 }}
-            className="overflow-hidden border-t border-[#E8DDD0]"
+            className="overflow-hidden border-t border-[#E8DDD0] dark:border-[#4A4038]"
           >
-            <div className="flex gap-2 px-4 py-3 bg-[#FAF6F1]">
+            <div className="flex gap-2 px-4 py-3 bg-[#FAF6F1] dark:bg-[#2A2420]">
               {CARDS.map((card) => (
                 <button
                   key={card.id}
                   disabled={disabled}
                   onClick={() => handleAction(card.id)}
                   className="flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-xl
-                             bg-white/60 hover:bg-white active:scale-95 transition-all
-                             text-xs text-[#5A5048] font-medium disabled:opacity-40 disabled:pointer-events-none"
+                             bg-white/60 dark:bg-[#352E2A] hover:bg-white dark:hover:bg-[#4A4038] active:scale-95 transition-all
+                             text-xs text-[#5A5048] dark:text-[#F5EDE4] font-medium disabled:opacity-40 disabled:pointer-events-none"
                 >
                   <img src={`/illustrations/opt/${card.image}.webp`} alt={card.label} className="h-10 w-10 object-contain" />
                   <span>{card.label}</span>
@@ -100,13 +100,13 @@ export default function ActionPanel({ sessionId, disabled, isOpen, onMoodRequest
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex flex-col bg-[#FAF6F1]"
+            className="fixed inset-0 z-40 flex flex-col bg-[#FAF6F1] dark:bg-[#2A2420]"
           >
             <div className="flex items-center justify-between px-5 py-4">
-              <h2 className="text-[17px] font-semibold text-[#5A5048]">Дыхание</h2>
+              <h2 className="text-[17px] font-semibold text-[#5A5048] dark:text-[#F5EDE4]">Дыхание</h2>
               <button
                 onClick={closeBreatheOverlay}
-                className="rounded-full p-2 text-[#8A7A6A] hover:bg-[#E8DDD0]"
+                className="rounded-full p-2 text-[#8A7A6A] hover:bg-[#E8DDD0] dark:text-[#B8A898] dark:hover:bg-[#4A4038]"
               >
                 <ChevronDown className="h-5 w-5" />
               </button>
@@ -124,13 +124,13 @@ export default function ActionPanel({ sessionId, disabled, isOpen, onMoodRequest
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex flex-col bg-[#FAF6F1]"
+            className="fixed inset-0 z-40 flex flex-col bg-[#FAF6F1] dark:bg-[#2A2420]"
           >
             <div className="flex items-center justify-between px-5 py-4">
-              <h2 className="text-[17px] font-semibold text-[#5A5048]">Отвлечься</h2>
+              <h2 className="text-[17px] font-semibold text-[#5A5048] dark:text-[#F5EDE4]">Отвлечься</h2>
               <button
                 onClick={closeOverlay}
-                className="rounded-full p-2 text-[#8A7A6A] hover:bg-[#E8DDD0]"
+                className="rounded-full p-2 text-[#8A7A6A] hover:bg-[#E8DDD0] dark:text-[#B8A898] dark:hover:bg-[#4A4038]"
               >
                 <ChevronDown className="h-5 w-5" />
               </button>

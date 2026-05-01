@@ -6,6 +6,9 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
   withCredentials: true,
+  // Hard cap so a hung connection (we have a Pixel 8a report where the page
+  // never paints because /user/me sits open) cannot freeze the UI forever.
+  timeout: 20000,
 });
 
 api.interceptors.request.use((config) => {
