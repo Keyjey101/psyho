@@ -22,29 +22,43 @@ logger = structlog.get_logger()
 
 
 class _TTLCache:
-    """LRU cache with TTL. Thread-safe for asyncio (single-threaded)."""
+    """LRU cache with TTL. Thread-safe for asyncio (single-threaded).
+
+    Stores (topics, msg_count_at_set, expires_at). Validity is decided by the
+    caller — see `_classify_topics` which combines a 5-minute time window with
+    a soft 6-message drift threshold.
+    """
     def __init__(self, maxsize: int = 1000, ttl: int = 1800):
         self._maxsize = maxsize
         self._ttl = ttl
-        self._cache: OrderedDict[str, tuple[list[str], int, float]] = OrderedDict()
+        self._cache: OrderedDict[str, tuple[list[str], int, float, float]] = OrderedDict()
 
-    def get(self, key: str) -> tuple[list[str], int] | None:
+    def get(self, key: str) -> tuple[list[str], int, float] | None:
+        """Return (topics, msg_count_at_set, set_at_monotonic) or None."""
         entry = self._cache.get(key)
         if entry is None:
             return None
-        topics, msg_count, expires_at = entry
+        topics, msg_count, set_at, expires_at = entry
         if _time.monotonic() > expires_at:
             del self._cache[key]
             return None
         self._cache.move_to_end(key)
-        return topics, msg_count
+        return topics, msg_count, set_at
 
     def set(self, key: str, topics: list[str], msg_count: int) -> None:
         if key in self._cache:
             self._cache.move_to_end(key)
-        self._cache[key] = (topics, msg_count, _time.monotonic() + self._ttl)
+        now = _time.monotonic()
+        self._cache[key] = (topics, msg_count, now, now + self._ttl)
         while len(self._cache) > self._maxsize:
             self._cache.popitem(last=False)
+
+
+# Window during which we trust a cached classification without re-asking the
+# small model — even if a few new messages arrived. After this many seconds
+# OR _MSG_DRIFT messages, we re-classify.
+_TOPIC_CACHE_TIME_WINDOW_S = 300       # 5 minutes
+_TOPIC_CACHE_MSG_DRIFT = 6
 
 
 class SessionPhase(Enum):
@@ -77,28 +91,32 @@ PHASE_INSTRUCTIONS = {
     ),
 }
 
+# Each topic has a *primary* (first item) and a list of candidate secondaries
+# in priority order. We always pick the primary; the secondary is rotated based
+# on which agents have already been used in this session, so a returning user
+# sees different therapeutic perspectives across visits to the same theme.
 TOPIC_AGENT_MAP: dict[str, list[str]] = {
-    "anxiety": ["cbt", "somatic"],
-    "depression": ["cbt", "act"],
-    "relationships": ["ifs", "narrative"],
-    "meaning": ["jungian", "act"],
-    "dreams": ["jungian", "somatic"],
-    "trauma": ["somatic", "narrative"],
-    "self_criticism": ["ifs", "cbt"],
-    "identity": ["jungian", "narrative"],
-    "procrastination": ["cbt", "act"],
-    "anger": ["ifs", "somatic"],
-    "stress": ["somatic", "act"],
-    "emotions": ["ifs", "act"],
-    "fear": ["cbt", "somatic"],
-    "loneliness": ["narrative", "ifs"],
-    "burnout": ["act", "somatic"],
-    "grief": ["narrative", "act"],
-    "self_esteem": ["cbt", "narrative"],
-    "habits": ["cbt", "act"],
-    "boundaries": ["ifs", "narrative"],
-    "shame": ["ifs", "narrative"],
-    "perfectionism": ["cbt", "ifs"],
+    "anxiety":         ["cbt",       "somatic", "act",       "ifs"],
+    "depression":      ["cbt",       "act",     "narrative", "ifs"],
+    "relationships":   ["ifs",       "narrative", "cbt",     "jungian"],
+    "meaning":         ["jungian",   "act",     "narrative", "ifs"],
+    "dreams":          ["jungian",   "somatic", "narrative"],
+    "trauma":          ["somatic",   "narrative", "ifs",     "jungian"],
+    "self_criticism":  ["ifs",       "cbt",     "narrative", "act"],
+    "identity":        ["jungian",   "narrative", "ifs",     "act"],
+    "procrastination": ["cbt",       "act",     "ifs",       "somatic"],
+    "anger":           ["ifs",       "somatic", "cbt",       "narrative"],
+    "stress":          ["somatic",   "act",     "cbt",       "ifs"],
+    "emotions":        ["ifs",       "act",     "somatic",   "narrative"],
+    "fear":            ["cbt",       "somatic", "ifs",       "narrative"],
+    "loneliness":      ["narrative", "ifs",     "act",       "jungian"],
+    "burnout":         ["act",       "somatic", "ifs",       "narrative"],
+    "grief":           ["narrative", "act",     "ifs",       "somatic"],
+    "self_esteem":     ["cbt",       "narrative", "ifs",     "act"],
+    "habits":          ["cbt",       "act",     "ifs",       "somatic"],
+    "boundaries":      ["ifs",       "narrative", "cbt",     "act"],
+    "shame":           ["ifs",       "narrative", "somatic", "act"],
+    "perfectionism":   ["cbt",       "ifs",     "act",       "narrative"],
 }
 
 
@@ -195,12 +213,67 @@ class Orchestrator:
             return SessionPhase.INTEGRATION
         return SessionPhase.CLOSE
 
+    # Farewell markers (lowercase substring match). Triggers an early CLOSE
+    # phase regardless of the % progress.
+    _FAREWELL_MARKERS = (
+        "пока, спасибо",
+        "спасибо, пока",
+        "на сегодня всё",
+        "на сегодня все",
+        "хватит на сегодня",
+        "мне пора",
+        "мне надо идти",
+        "до встречи",
+        "до завтра",
+        "спасибо, хватит",
+    )
+
+    @classmethod
+    def _get_phase_adaptive(
+        cls,
+        exchange_number: int,
+        max_exchanges: int,
+        history: list[dict] | None,
+        current_message: str = "",
+    ) -> SessionPhase:
+        """Wrap the count-based phase with content-driven adjustments.
+
+        - Stay in INTAKE while the user is still giving short, terse answers
+          (avg < 80 chars over last 3 user messages) — they haven't opened up
+          yet, no point pushing toward FOCUS.
+        - Jump straight to CLOSE if the latest user message contains a
+          farewell marker, regardless of how far we are in the session.
+        Other phases pass through unchanged.
+        """
+        nominal = cls._get_phase(exchange_number, max_exchanges)
+
+        text = (current_message or "").lower()
+        if any(marker in text for marker in cls._FAREWELL_MARKERS):
+            return SessionPhase.CLOSE
+
+        if nominal == SessionPhase.FOCUS and history:
+            # Are user messages still very short? Stay in INTAKE.
+            user_msgs = [m for m in history if m.get("role") == "user"]
+            tail = user_msgs[-3:]
+            if tail:
+                avg_len = sum(len((m.get("content") or "").strip()) for m in tail) / len(tail)
+                if avg_len < 80:
+                    return SessionPhase.INTAKE
+
+        return nominal
+
     async def _classify_topics(self, message: str, history: list[dict], session_id: str = "") -> list[str]:
         msg_count = len(history)
         if session_id:
             cached = self._session_topic_cache.get(session_id)
-            if cached is not None and abs(msg_count - cached[1]) <= 2:
-                return cached[0]
+            if cached is not None:
+                cached_topics, cached_msg_count, set_at = cached
+                age = _time.monotonic() - set_at
+                msg_drift = msg_count - cached_msg_count
+                # Trust the cached classification while EITHER the time window
+                # is still open OR very few messages have come in since.
+                if age < _TOPIC_CACHE_TIME_WINDOW_S and msg_drift < _TOPIC_CACHE_MSG_DRIFT:
+                    return cached_topics
 
         topics_list = ", ".join(TOPIC_AGENT_MAP.keys())
         classify_prompt = f"""Ты — классификатор тем для психологического чат-бота. Определи, какие психологические темы затрагивает сообщение пользователя.
@@ -244,22 +317,58 @@ class Orchestrator:
             self._session_topic_cache.set(session_id, topics, msg_count)
         return topics
 
-    def _select_agents(self, topics: list[str]) -> list[tuple[str, BaseAgent]]:
-        agent_keys: set[str] = set()
-        for topic in topics:
-            for key in TOPIC_AGENT_MAP.get(topic, []):
-                agent_keys.add(key)
-                if len(agent_keys) >= 2:
-                    break
-            if len(agent_keys) >= 2:
-                break
+    def _select_agents(
+        self,
+        topics: list[str],
+        history: list[dict] | None = None,
+    ) -> list[tuple[str, BaseAgent]]:
+        """Pick up to 2 agents for the given topics.
 
-        if not agent_keys and topics:
-            for topic in topics:
-                for key in TOPIC_AGENT_MAP.get(topic, []):
-                    agent_keys.add(key)
+        - Primary (first in TOPIC_AGENT_MAP entry) is always taken — it's the
+          most-fitting school for the topic and we want consistency.
+        - Secondary is rotated: among the candidate secondaries we pick the
+          one **least recently used** in this session's `history`. This way a
+          returning user with recurring "anxiety" sees CBT+somatic the first
+          time, CBT+ACT the second, CBT+IFS the third, etc.
+        """
+        if not topics:
+            return []
 
-        return [(k, self.agents[k]) for k in agent_keys if k in self.agents]
+        primary_topic = topics[0]
+        candidates = TOPIC_AGENT_MAP.get(primary_topic, [])
+        if not candidates:
+            return []
+
+        primary = candidates[0]
+        secondary_pool = candidates[1:]
+
+        # Build a "last seen index" per agent from history (lower = older).
+        # If never seen → -1, treated as the freshest pick.
+        last_seen: dict[str, int] = {}
+        for idx, msg in enumerate(history or []):
+            agents_used = msg.get("agents_used")
+            if not agents_used:
+                continue
+            try:
+                used_list = json.loads(agents_used) if isinstance(agents_used, str) else agents_used
+            except (TypeError, ValueError):
+                continue
+            for a in used_list:
+                last_seen[a] = idx
+
+        secondary: str | None = None
+        if secondary_pool:
+            # Sort: agents never used first, then by oldest usage.
+            secondary = min(
+                secondary_pool,
+                key=lambda a: last_seen.get(a, -1),
+            )
+
+        ordered: list[str] = [primary]
+        if secondary and secondary != primary:
+            ordered.append(secondary)
+
+        return [(k, self.agents[k]) for k in ordered if k in self.agents]
 
     def _format_history_for_classify(self, history: list[dict]) -> str:
         lines = []
@@ -284,11 +393,15 @@ class Orchestrator:
     ):
         topics = await self._classify_topics(message, history, session_id)
 
-        phase = self._get_phase(exchange_number, max_exchanges) if exchange_number > 0 and max_exchanges > 0 else SessionPhase.WORK
+        phase = (
+            self._get_phase_adaptive(exchange_number, max_exchanges, history, message)
+            if exchange_number > 0 and max_exchanges > 0
+            else SessionPhase.WORK
+        )
         if phase == SessionPhase.INTAKE:
             selected = []
         else:
-            selected = self._select_agents(topics)
+            selected = self._select_agents(topics, history)
 
         perspectives: dict[str, str] = {}
         agent_names = [k for k, _ in selected]
@@ -377,7 +490,9 @@ class Orchestrator:
 Если перспективы экспертов противоречат друг другу — выбери более безопасную или объедини последовательно: сначала телесное заземление, потом когнитивная работа."""
 
         if exchange_number > 0 and max_exchanges > 0:
-            effective_phase = phase or self._get_phase(exchange_number, max_exchanges)
+            effective_phase = phase or self._get_phase_adaptive(
+                exchange_number, max_exchanges, history, message
+            )
             remaining = max_exchanges - exchange_number
             phase_instruction = PHASE_INSTRUCTIONS.get(effective_phase, "")
             user_content += f"""

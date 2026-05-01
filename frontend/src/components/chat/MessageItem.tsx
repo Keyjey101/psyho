@@ -2,7 +2,7 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import { motion } from "framer-motion";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, RefreshCw } from "lucide-react";
 import type { Message } from "@/types";
 import { getAgentInfo } from "@/types";
 import AgentBadge from "./AgentBadge";
@@ -10,9 +10,12 @@ import AgentBadge from "./AgentBadge";
 interface MessageItemProps {
   message: Message;
   isStreaming?: boolean;
+  /** Show a "Regenerate" button on this message (only meaningful for the
+   *  last assistant message; parent decides). */
+  onRegenerate?: () => void;
 }
 
-export default function MessageItem({ message, isStreaming }: MessageItemProps) {
+export default function MessageItem({ message, isStreaming, onRegenerate }: MessageItemProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
   const agents: string[] = message.agents_used
@@ -66,16 +69,30 @@ export default function MessageItem({ message, isStreaming }: MessageItemProps) 
       </div>
         <div className="max-w-[85%] min-w-0">
           <div className="group relative rounded-[18px] rounded-bl-[4px] border border-[#D8CDC0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] px-[18px] py-[14px] shadow-[0_1px_4px_rgba(90,80,72,0.06)]">
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(message.content);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
-            }}
-            className="absolute right-2 top-2 rounded-md p-1.5 text-[#B8A898] opacity-0 transition-opacity hover:bg-[#F5EDE4] dark:hover:bg-[#4A4038] hover:text-[#8A7A6A] group-hover:opacity-100"
-          >
-            {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-          </button>
+          <div className="absolute right-2 top-2 flex gap-0.5">
+            {onRegenerate && (
+              <button
+                onClick={onRegenerate}
+                title="Перегенерировать ответ"
+                aria-label="Перегенерировать ответ"
+                className="rounded-md p-1.5 text-[#B8A898] opacity-0 transition-opacity hover:bg-[#F5EDE4] dark:hover:bg-[#4A4038] hover:text-[#8A7A6A] group-hover:opacity-100"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(message.content);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              }}
+              title="Скопировать"
+              aria-label="Скопировать сообщение"
+              className="rounded-md p-1.5 text-[#B8A898] opacity-0 transition-opacity hover:bg-[#F5EDE4] dark:hover:bg-[#4A4038] hover:text-[#8A7A6A] group-hover:opacity-100"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+            </button>
+          </div>
           <div className="markdown-content text-[15px] leading-[1.6] text-[#5A5048] dark:text-[#F5EDE4]">
             <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{message.content}</ReactMarkdown>
           </div>

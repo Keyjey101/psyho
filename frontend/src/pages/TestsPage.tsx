@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronRight, Check, Lock, Sparkles } from "lucide-react";
-import { TESTS, TEST_CATEGORIES, type PsyTest } from "@/data/tests";
+import { TESTS, TEST_CATEGORIES, maxPossibleScore, type PsyTest } from "@/data/tests";
 import { getTestEligibility, type TestHistoryEntry } from "@/utils/testHistory";
+import { pluralizeRu, QUESTIONS_PLURAL } from "@/utils/pluralize";
+import Sparkline from "@/components/tests/Sparkline";
 import { useAuthStore } from "@/store/auth";
 import api from "@/api/client";
 
@@ -64,16 +66,28 @@ export default function TestsPage() {
     return TESTS.filter((t) => t.category === activeCategory);
   }, [activeCategory]);
 
-  const lastByTest = useMemo(() => {
-    const map = new Map<string, TestHistoryEntry>();
+  // All attempts grouped per test, oldest first. We use this both to render the
+  // per-card sparkline AND to find the latest attempt for the eligibility check.
+  const historyByTest = useMemo(() => {
+    const map = new Map<string, TestHistoryEntry[]>();
     for (const h of history) {
-      const cur = map.get(h.testId);
-      if (!cur || new Date(h.completedAt) > new Date(cur.completedAt)) {
-        map.set(h.testId, h);
-      }
+      const arr = map.get(h.testId) ?? [];
+      arr.push(h);
+      map.set(h.testId, arr);
+    }
+    for (const arr of map.values()) {
+      arr.sort((a, b) => new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime());
     }
     return map;
   }, [history]);
+
+  const lastByTest = useMemo(() => {
+    const map = new Map<string, TestHistoryEntry>();
+    for (const [testId, arr] of historyByTest.entries()) {
+      if (arr.length > 0) map.set(testId, arr[arr.length - 1]);
+    }
+    return map;
+  }, [historyByTest]);
 
   return (
     <div className="min-h-screen bg-[#FAF6F1] p-6 dark:bg-[#2A2420] lg:p-10">
@@ -131,6 +145,7 @@ export default function TestsPage() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           {visibleTests.map((test) => {
+            const attempts = historyByTest.get(test.id) ?? [];
             const last = lastByTest.get(test.id);
             const eligibility = getTestEligibility(last, completedSessions);
             return (
@@ -138,6 +153,7 @@ export default function TestsPage() {
                 key={test.id}
                 test={test}
                 last={last}
+                attempts={attempts}
                 eligible={eligibility.eligible}
                 reason={eligibility.reason}
                 onClick={() => navigate(`/tests/${test.id}`)}
@@ -174,12 +190,15 @@ function CategoryChip({
 interface TestCardProps {
   test: PsyTest;
   last?: TestHistoryEntry;
+  attempts: TestHistoryEntry[];
   eligible: boolean;
   reason: string | null;
   onClick: () => void;
 }
 
-function TestCard({ test, last, eligible, reason, onClick }: TestCardProps) {
+function TestCard({ test, last, attempts, eligible, reason, onClick }: TestCardProps) {
+  const sparkValues = attempts.slice(-6).map((a) => a.score);
+  const sparkMax = maxPossibleScore(test);
   return (
     <button
       onClick={onClick}
@@ -219,7 +238,7 @@ function TestCard({ test, last, eligible, reason, onClick }: TestCardProps) {
 
       <div className="mt-auto flex items-center justify-between">
         <span className="text-[11px] text-[#B8A898] dark:text-[#8A7A6A]">
-          {test.questions.length} вопросов
+          {test.questions.length} {pluralizeRu(test.questions.length, QUESTIONS_PLURAL)}
         </span>
         {eligible ? (
           <span className="flex items-center gap-1 text-[12px] font-medium text-[#B8785A] dark:text-[#C08B68]">
@@ -235,11 +254,20 @@ function TestCard({ test, last, eligible, reason, onClick }: TestCardProps) {
       </div>
 
       {last && (
-        <div className="mt-3 flex items-center justify-between rounded-xl bg-[#FAF6F1] px-3 py-2 text-[12px] dark:bg-[#2A2420]">
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-[#FAF6F1] px-3 py-2 text-[12px] dark:bg-[#2A2420]">
           <span className="text-[#8A7A6A] dark:text-[#B8A898]">Прошлый раз:</span>
-          <span className="font-semibold text-[#4A4038] dark:text-[#F5EDE4]">
-            {last.level}
-          </span>
+          <div className="flex items-center gap-2">
+            {sparkValues.length >= 2 && (
+              <Sparkline
+                values={sparkValues}
+                max={sparkMax}
+                lowerIsBetter={test.lowerIsBetter}
+              />
+            )}
+            <span className="font-semibold text-[#4A4038] dark:text-[#F5EDE4]">
+              {last.level}
+            </span>
+          </div>
         </div>
       )}
     </button>

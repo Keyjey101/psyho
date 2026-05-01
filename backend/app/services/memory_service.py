@@ -1,3 +1,4 @@
+import hashlib
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,6 +7,16 @@ from app.config import get_settings
 from app.models.models import UserProfile
 
 logger = structlog.get_logger()
+
+
+def _memory_fingerprint(text: str) -> str:
+    """Stable hash of memory content for skip-on-noop comparisons.
+
+    Lowercased + whitespace-collapsed so trivial reformatting doesn't trigger
+    a write.
+    """
+    normalized = " ".join(text.lower().split())
+    return hashlib.sha1(normalized.encode("utf-8")).hexdigest()
 
 MEMORY_EXTRACT_PROMPT = """Из этого диалога извлеки ключевую информацию о пользователе.
 Верни компактный текст (не более 200 слов) с фактами:
@@ -59,7 +70,12 @@ async def extract_and_update_memory(
         result = await db.execute(select(UserProfile).where(UserProfile.user_id == user_id))
         profile = result.scalar_one_or_none()
         if profile:
+            new_hash = _memory_fingerprint(new_memory)
+            if profile.memory_hash == new_hash:
+                logger.info("memory_unchanged", user_id=user_id, hash=new_hash[:8])
+                return new_memory
             profile.long_term_memory = new_memory
+            profile.memory_hash = new_hash
             await db.commit()
 
         return new_memory

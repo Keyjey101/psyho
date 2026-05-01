@@ -6,7 +6,7 @@ from collections import deque
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db, async_session
@@ -262,29 +262,77 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
     try:
         while True:
             data = await websocket.receive_json()
-            if data.get("type") != "message":
+            msg_type = data.get("type")
+            if msg_type not in ("message", "regenerate"):
                 continue
 
-            content = data.get("content", "").strip()
-            if not content:
-                continue
+            is_regenerate = msg_type == "regenerate"
 
             if not _check_ws_rate_limit(user_id):
                 await websocket.send_json({"type": "error", "message": "Слишком много сообщений. Подожди немного."})
                 continue
 
-            if len(content) > settings.MAX_MESSAGE_LENGTH:
-                await websocket.send_json({"type": "error", "message": "Сообщение слишком длинное (максимум 4000 символов)"})
-                continue
+            if is_regenerate:
+                # Drop the last assistant message and re-run synthesis using
+                # the same user message that came before it. Idempotent: if
+                # the last message in the session is *not* an assistant
+                # message, we simply ignore the request.
+                async with async_session() as db:
+                    last_msg_q = await db.execute(
+                        select(Message)
+                        .where(Message.session_id == session_id)
+                        .order_by(Message.created_at.desc())
+                        .limit(1)
+                    )
+                    last_msg = last_msg_q.scalar_one_or_none()
+                    if not last_msg or last_msg.role != "assistant":
+                        await websocket.send_json({
+                            "type": "error",
+                            "message": "Нечего перегенерировать.",
+                        })
+                        continue
+
+                    # Find the last user message to use as the seed for the
+                    # rerun.
+                    last_user_q = await db.execute(
+                        select(Message)
+                        .where(
+                            Message.session_id == session_id,
+                            Message.role == "user",
+                        )
+                        .order_by(Message.created_at.desc())
+                        .limit(1)
+                    )
+                    last_user = last_user_q.scalar_one_or_none()
+                    if not last_user:
+                        await websocket.send_json({
+                            "type": "error",
+                            "message": "Нет сообщения, к которому можно вернуться.",
+                        })
+                        continue
+
+                    content = last_user.content
+                    # Delete the last assistant message; we'll write a fresh
+                    # one below.
+                    await db.execute(delete(Message).where(Message.id == last_msg.id))
+                    await db.commit()
+            else:
+                content = data.get("content", "").strip()
+                if not content:
+                    continue
+                if len(content) > settings.MAX_MESSAGE_LENGTH:
+                    await websocket.send_json({"type": "error", "message": "Сообщение слишком длинное (максимум 4000 символов)"})
+                    continue
 
             async with async_session() as db:
-                user_msg = Message(
-                    session_id=session_id,
-                    role="user",
-                    content=content,
-                )
-                db.add(user_msg)
-                await db.commit()
+                if not is_regenerate:
+                    user_msg = Message(
+                        session_id=session_id,
+                        role="user",
+                        content=content,
+                    )
+                    db.add(user_msg)
+                    await db.commit()
 
                 count_result = await db.execute(
                     select(func.count()).where(
@@ -373,7 +421,10 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
 
             if profile and profile.memory_enabled and full_response:
                 _memory_counters[session_id] = _memory_counters.get(session_id, 0) + 1
-                if _memory_counters[session_id] % 3 == 0:
+                # Every 5 exchanges (was 3): cuts ~40% of glm-4-flash memory
+                # calls per session. The dedup hash in extract_and_update_memory
+                # additionally short-circuits no-op writes.
+                if _memory_counters[session_id] % 5 == 0:
                     memory_task_mem = profile.long_term_memory
                     memory_task_history = list(history_dicts)
                     asyncio.create_task(

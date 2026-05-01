@@ -5,6 +5,8 @@
 // `getTestEligibility` that returns whether the test is takeable right now and,
 // if not, a short user-facing reason.
 
+import { pluralizeRu, SESSIONS_ACC_PLURAL, DAYS_PLURAL } from "./pluralize";
+
 export interface TestHistoryEntry {
   testId: string;
   score: number;
@@ -50,18 +52,9 @@ export function getTestEligibility(
   const sessionsLeft = SESSIONS_THRESHOLD_FOR_RETAKE - completedSessions;
   const reason =
     sessionsLeft > 0
-      ? `через ${daysLeft} дн. или ${sessionsLeft} ${pluralizeSessions(sessionsLeft)}`
-      : `через ${daysLeft} дн.`;
+      ? `через ${daysLeft} ${pluralizeRu(daysLeft, DAYS_PLURAL)} или ${sessionsLeft} ${pluralizeRu(sessionsLeft, SESSIONS_ACC_PLURAL)}`
+      : `через ${daysLeft} ${pluralizeRu(daysLeft, DAYS_PLURAL)}`;
   return { eligible: false, reason, retakeAt };
-}
-
-function pluralizeSessions(n: number): string {
-  // 1 → сессию, 2-4 → сессии, 5+ → сессий
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return "сессию";
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "сессии";
-  return "сессий";
 }
 
 export function appendLocalHistory(entry: TestHistoryEntry): void {
