@@ -69,6 +69,7 @@ class UserProfile(Base):
     crisis_plan: Mapped[str | None] = mapped_column(Text)
     memory_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
     long_term_memory: Mapped[str | None] = mapped_column(Text)
+    memory_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     pop_score: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     address_form: Mapped[str] = mapped_column(String(10), default="ты", server_default="ты")
     gender: Mapped[str | None] = mapped_column(String(20), nullable=True)

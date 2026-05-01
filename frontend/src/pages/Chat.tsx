@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessions, useSession, useCreateSession, useDeleteSession, useContinueSession } from "@/hooks/useSessions";
 import { useChat } from "@/hooks/useChat";
@@ -26,6 +26,10 @@ interface PendingTask {
 export default function Chat() {
   const { sessionId } = useParams<{ sessionId?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const initialMessageFromState =
+    (location.state as { initialMessage?: string } | null)?.initialMessage ?? null;
+  const initialMessageRef = useRef<string | null>(initialMessageFromState);
   const { user, logout, refreshUser } = useAuth();
   const queryClient = useQueryClient();
   const { data: sessions } = useSessions();
@@ -97,11 +101,21 @@ export default function Chat() {
     setShowLimitModal(true);
   }, []);
 
-  const { streamingContent, agentsUsed, isStreaming, sendMessage, isConnected, exchangeCount, maxExchanges } = useChat({
+  const { streamingContent, agentsUsed, isStreaming, sendMessage, regenerate, isConnected, exchangeCount, maxExchanges } = useChat({
     sessionId: sessionId || "",
     onMessageComplete: handleMessageComplete,
     onSessionLimitReached: handleSessionLimitReached,
   });
+
+  const handleRegenerate = useCallback(() => {
+    if (!localMessages.length) return;
+    const last = localMessages[localMessages.length - 1];
+    if (last.role !== "assistant") return;
+    // Optimistically remove the last assistant message; the backend will
+    // delete its row before streaming the replacement.
+    setLocalMessages((prev) => prev.filter((m) => m.id !== last.id));
+    regenerate();
+  }, [localMessages, regenerate]);
 
   useEffect(() => {
     if (!sessionId) {
@@ -139,6 +153,35 @@ export default function Chat() {
     setLocalMessages((prev) => [...prev, optimisticMsg]);
     sendMessage(msg);
   }, [isConnected, pendingMessage, sessionId, sendMessage]);
+
+  // If we arrived from another page (e.g. Tests "Discuss with Nika") with a
+  // pre-filled first message, fire it once the WS is up. Wait until the
+  // session has 0 server-side messages so we don't double-post on a navigate
+  // back to an existing chat.
+  useEffect(() => {
+    if (!initialMessageRef.current) return;
+    if (!sessionId || !isConnected) return;
+    if (currentSession?.messages && currentSession.messages.length > 0) {
+      // Existing session with history — drop the initial-message intent.
+      initialMessageRef.current = null;
+      navigate(location.pathname, { replace: true, state: null });
+      return;
+    }
+    const msg = initialMessageRef.current;
+    initialMessageRef.current = null;
+    // Clear router state so refreshing doesn't resend.
+    navigate(location.pathname, { replace: true, state: null });
+    const optimisticMsg: Message = {
+      id: `temp-${Date.now()}`,
+      session_id: sessionId,
+      role: "user",
+      content: msg,
+      agents_used: null,
+      created_at: new Date().toISOString(),
+    };
+    setLocalMessages((prev) => [...prev, optimisticMsg]);
+    sendMessage(msg);
+  }, [isConnected, sessionId, currentSession, sendMessage, navigate, location.pathname]);
 
   const handleSend = async (content: string) => {
     if (!sessionId) {
@@ -377,6 +420,7 @@ export default function Chat() {
           previousSession={previousSession}
           onContinueSession={handleContinueSession}
           isContinuing={continueSession.isPending}
+          onRegenerate={isStreaming || awaitingGreeting ? undefined : handleRegenerate}
         />
 
         <ActionPanel

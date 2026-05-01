@@ -15,13 +15,34 @@ SUMMARY_MAX_CHARS = 3000
 
 
 async def maybe_compress_context(db: AsyncSession, session_id: str):
-    count_result = await db.execute(
-        select(func.count()).where(Message.session_id == session_id)
+    # Two triggers — whichever fires first wins:
+    #   1. message count >= CONTEXT_COMPRESSION_THRESHOLD (default 40)
+    #   2. total content length >= CONTEXT_COMPRESSION_CHARS (default 24000)
+    # The char-based trigger protects sessions full of long, verbose answers
+    # (philosophical mode) from blowing past the model context before the
+    # message-count threshold ever fires.
+    stats = await db.execute(
+        select(
+            func.count(Message.id),
+            func.coalesce(func.sum(func.length(Message.content)), 0),
+        ).where(Message.session_id == session_id)
     )
-    total = count_result.scalar() or 0
+    total, total_chars = stats.one()
+    total = int(total or 0)
+    total_chars = int(total_chars or 0)
 
-    if total < settings.CONTEXT_COMPRESSION_THRESHOLD:
+    by_count = total >= settings.CONTEXT_COMPRESSION_THRESHOLD
+    by_chars = total_chars >= settings.CONTEXT_COMPRESSION_CHARS
+    if not (by_count or by_chars):
         return
+    logger.info(
+        "context_compression_trigger",
+        session_id=session_id,
+        total=total,
+        total_chars=total_chars,
+        by_count=by_count,
+        by_chars=by_chars,
+    )
 
     msg_result = await db.execute(
         select(Message)

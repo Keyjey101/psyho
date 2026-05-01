@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     RATE_LIMIT_AUTH: str = "5/minute"
 
     CONTEXT_COMPRESSION_THRESHOLD: int = 40
+    # Trigger compression earlier on verbose sessions: when total content
+    # length across all messages exceeds this many characters (≈ 8k tokens
+    # for Russian text). Whichever threshold (count or chars) hits first wins.
+    CONTEXT_COMPRESSION_CHARS: int = 24000
     CONTEXT_KEEP_MESSAGES: int = 20
 
     AGENT_TIMEOUT_SECONDS: int = 15

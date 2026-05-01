@@ -186,10 +186,20 @@ export function useChat({ sessionId, onMessageComplete, onSessionLimitReached }:
     [],
   );
 
+  const regenerate = useCallback(() => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    streamingContentRef.current = "";
+    setStreamingContent("");
+    setAgentsUsed([]);
+    agentsUsedRef.current = [];
+    setIsStreaming(true);
+    wsRef.current.send(JSON.stringify({ type: "regenerate" }));
+  }, []);
+
   useEffect(() => {
     connect();
     return () => cleanup();
   }, [connect, cleanup]);
 
-  return { isConnected, streamingContent, agentsUsed, isStreaming, sendMessage, exchangeCount, maxExchanges };
+  return { isConnected, streamingContent, agentsUsed, isStreaming, sendMessage, regenerate, exchangeCount, maxExchanges };
 }

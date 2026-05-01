@@ -1,11 +1,16 @@
-import { useRef, useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { useRef, useEffect, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowRight, ArrowDown } from "lucide-react";
 import type { Message, Session } from "@/types";
 import MessageItem from "./MessageItem";
 import ThinkingIndicator from "./ThinkingIndicator";
 import PendingTaskCard from "./PendingTaskCard";
 import api from "@/api/client";
+
+// Vertical distance (px) within which we consider the user "at the bottom"
+// of the chat. Bigger than 0 because mobile keyboards and momentum scroll
+// rarely land us exactly on 0.
+const STICKY_BOTTOM_THRESHOLD = 80;
 
 interface MessageListProps {
   messages: Message[];
@@ -15,6 +20,9 @@ interface MessageListProps {
   previousSession?: Session | null;
   onContinueSession?: () => void;
   isContinuing?: boolean;
+  /** When defined and the last message is an assistant reply, that message
+   *  shows a "Regenerate" affordance. Disabled while streaming. */
+  onRegenerate?: () => void;
 }
 
 interface PendingTask {
@@ -45,9 +53,20 @@ export default function MessageList({
   previousSession,
   onContinueSession,
   isContinuing,
+  onRegenerate,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [pendingTasks, setPendingTasks] = useState<PendingTask[]>([]);
+  // True while the user's viewport is parked near the bottom — controls
+  // whether incoming tokens auto-scroll or surface a "jump to latest" pill.
+  const [atBottom, setAtBottom] = useState(true);
+  // Distinguish "new content arrived while scrolled up" so the pill can
+  // optionally show a different label / dot. We just use a counter.
+  const [unseenCount, setUnseenCount] = useState(0);
+  // Track the previous message count so we know when something is genuinely
+  // new vs. a re-render of the same list.
+  const prevMsgCountRef = useRef(0);
 
   useEffect(() => {
     if (messages.length === 0 && !isStreaming) {
@@ -55,13 +74,38 @@ export default function MessageList({
     }
   }, [messages.length, isStreaming]);
 
+  const checkAtBottom = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const isNearBottom = distance < STICKY_BOTTOM_THRESHOLD;
+    setAtBottom(isNearBottom);
+    if (isNearBottom) setUnseenCount(0);
+  }, []);
+
+  // When new content arrives, only auto-scroll if we were already at the
+  // bottom. Otherwise increment the unseen counter so the pill appears.
   useEffect(() => {
+    if (atBottom) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    } else if (messages.length !== prevMsgCountRef.current || streamingContent) {
+      setUnseenCount((n) => n + 1);
+    }
+    prevMsgCountRef.current = messages.length;
+  }, [messages, streamingContent, atBottom]);
+
+  const jumpToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamingContent]);
+    setUnseenCount(0);
+  }, []);
 
   if (messages.length === 0 && !isStreaming) {
     return (
-      <div className="flex-1 overflow-y-auto bg-[#FAF6F1] px-4 py-6 dark:bg-[#2A2420]">
+      <div
+        ref={scrollContainerRef}
+        onScroll={checkAtBottom}
+        className="flex-1 overflow-y-auto bg-[#FAF6F1] px-4 py-6 dark:bg-[#2A2420]"
+      >
         <div className="mx-auto max-w-3xl space-y-6">
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -121,11 +165,25 @@ export default function MessageList({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#FAF6F1] px-4 py-6 lg:px-6 dark:bg-[#2A2420]">
+    <div className="relative flex-1 overflow-hidden">
+      <div
+        ref={scrollContainerRef}
+        onScroll={checkAtBottom}
+        className="h-full overflow-y-auto bg-[#FAF6F1] px-4 py-6 lg:px-6 dark:bg-[#2A2420]"
+      >
       <div className="mx-auto max-w-3xl space-y-6">
-        {messages.map((msg) => (
-          <MessageItem key={msg.id} message={msg} />
-        ))}
+        {messages.map((msg, idx) => {
+          const isLast = idx === messages.length - 1;
+          const canRegenerate =
+            isLast && !isStreaming && msg.role === "assistant" && !!onRegenerate;
+          return (
+            <MessageItem
+              key={msg.id}
+              message={msg}
+              onRegenerate={canRegenerate ? onRegenerate : undefined}
+            />
+          );
+        })}
 
         {isStreaming && streamingContent && (
           <MessageItem
@@ -144,6 +202,25 @@ export default function MessageList({
         {isStreaming && !streamingContent && <ThinkingIndicator agents={agentsUsed} />}
         <div ref={bottomRef} />
       </div>
+      </div>
+
+      <AnimatePresence>
+        {!atBottom && (
+          <motion.button
+            key="jump-to-latest"
+            initial={{ opacity: 0, y: 8, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.92 }}
+            transition={{ duration: 0.18 }}
+            onClick={jumpToBottom}
+            aria-label="К новым сообщениям"
+            className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-pill border border-[#E8DDD0] bg-white px-3 py-1.5 text-[12px] font-medium text-[#5A5048] shadow-md hover:bg-[#FAF6F1] dark:border-[#4A4038] dark:bg-[#352E2A] dark:text-[#F5EDE4] dark:hover:bg-[#4A4038]"
+          >
+            <ArrowDown className="h-3.5 w-3.5" />
+            {unseenCount > 0 ? "Новые сообщения" : "К концу"}
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

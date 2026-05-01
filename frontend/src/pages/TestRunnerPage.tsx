@@ -1,13 +1,55 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, MessageSquare, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, MessageSquare } from "lucide-react";
 import { getTest, getInterpretation, maxPossibleScore, type PsyTest } from "@/data/tests";
-import { appendLocalHistory } from "@/utils/testHistory";
+import { appendLocalHistory, type TestHistoryEntry } from "@/utils/testHistory";
+import { pluralizeRu, QUESTIONS_PLURAL, POINTS_PLURAL } from "@/utils/pluralize";
 import { useAuthStore } from "@/store/auth";
+import { useCreateSession } from "@/hooks/useSessions";
 import api from "@/api/client";
 
 type Phase = "intro" | "questions" | "result";
+
+interface TestDraft {
+  answers: number[];
+  currentIdx: number;
+}
+
+const draftKey = (testId: string) => `psyho.testDraft.${testId}`;
+
+function loadDraft(testId: string): TestDraft | null {
+  try {
+    const raw = sessionStorage.getItem(draftKey(testId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed.answers)) return null;
+    if (parsed.answers.every((a: number) => a < 0)) return null; // empty draft
+    return { answers: parsed.answers, currentIdx: parsed.currentIdx ?? 0 };
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(testId: string, answers: number[], currentIdx: number) {
+  try {
+    if (answers.every((a) => a < 0)) {
+      sessionStorage.removeItem(draftKey(testId));
+      return;
+    }
+    sessionStorage.setItem(draftKey(testId), JSON.stringify({ answers, currentIdx }));
+  } catch {
+    /* quota or private mode */
+  }
+}
+
+function clearDraft(testId: string) {
+  try {
+    sessionStorage.removeItem(draftKey(testId));
+  } catch {
+    /* ignore */
+  }
+}
 
 export default function TestRunnerPage() {
   const { testId } = useParams<{ testId: string }>();
@@ -18,12 +60,56 @@ export default function TestRunnerPage() {
   const [answers, setAnswers] = useState<number[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [draft, setDraft] = useState<TestDraft | null>(() =>
+    testId ? loadDraft(testId) : null,
+  );
+  // Most recent prior attempt for this test (used for comparison in ResultView).
+  // Loaded once on mount; we don't refresh while the user takes the test.
+  const [previousAttempt, setPreviousAttempt] = useState<TestHistoryEntry | null>(null);
 
   useEffect(() => {
     if (testId && !test) {
       navigate("/tests", { replace: true });
     }
   }, [testId, test, navigate]);
+
+  useEffect(() => {
+    if (!testId) return;
+    let cancelled = false;
+    async function loadPrevious() {
+      let entries: TestHistoryEntry[] = [];
+      if (isAuthenticated) {
+        try {
+          const { data } = await api.get<{
+            test_id: string; score: number; level: string; completed_at: string;
+          }[]>("/tests/results", { params: { test_id: testId } });
+          entries = data.map((r) => ({
+            testId: r.test_id, score: r.score, level: r.level, completedAt: r.completed_at,
+          }));
+        } catch { /* fall through to localStorage */ }
+      }
+      if (entries.length === 0) {
+        try {
+          const raw = localStorage.getItem("psyho.testHistory");
+          if (raw) {
+            const all: TestHistoryEntry[] = JSON.parse(raw);
+            entries = all.filter((e) => e.testId === testId);
+          }
+        } catch { /* ignore */ }
+      }
+      if (cancelled) return;
+      entries.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+      setPreviousAttempt(entries[0] ?? null);
+    }
+    loadPrevious();
+    return () => { cancelled = true; };
+  }, [testId, isAuthenticated]);
+
+  // Persist draft on every change while we're in the question phase.
+  useEffect(() => {
+    if (!testId || phase !== "questions") return;
+    saveDraft(testId, answers, currentIdx);
+  }, [testId, phase, answers, currentIdx]);
 
   if (!test) {
     return (
@@ -36,6 +122,22 @@ export default function TestRunnerPage() {
   const startTest = () => {
     setAnswers(new Array(test.questions.length).fill(-1));
     setCurrentIdx(0);
+    setDraft(null);
+    if (testId) clearDraft(testId);
+    setPhase("questions");
+  };
+
+  const resumeFromDraft = () => {
+    if (!draft) return;
+    // Pad/truncate to current question count in case the catalogue changed.
+    const padded = new Array(test.questions.length).fill(-1);
+    for (let i = 0; i < Math.min(draft.answers.length, padded.length); i++) {
+      padded[i] = draft.answers[i];
+    }
+    setAnswers(padded);
+    // Jump to the first unanswered question, or the saved cursor.
+    const firstUnanswered = padded.findIndex((a) => a < 0);
+    setCurrentIdx(firstUnanswered >= 0 ? firstUnanswered : draft.currentIdx);
     setPhase("questions");
   };
 
@@ -72,6 +174,7 @@ export default function TestRunnerPage() {
 
     setPhase("result");
     setSubmitting(false);
+    if (testId) clearDraft(testId);
   };
 
   const handleAnswer = (questionIdx: number, optionIdx: number) => {
@@ -99,7 +202,14 @@ export default function TestRunnerPage() {
           {phase === "questions" ? "К описанию" : "Все тесты"}
         </button>
 
-        {phase === "intro" && <IntroView test={test} onStart={startTest} />}
+        {phase === "intro" && (
+          <IntroView
+            test={test}
+            onStart={startTest}
+            draft={draft}
+            onResume={resumeFromDraft}
+          />
+        )}
         {phase === "questions" && (
           <QuestionsView
             test={test}
@@ -116,11 +226,8 @@ export default function TestRunnerPage() {
           <ResultView
             test={test}
             score={totalScore}
+            previousAttempt={previousAttempt}
             isAuthenticated={isAuthenticated}
-            onRetake={() => {
-              setAnswers([]);
-              setPhase("intro");
-            }}
           />
         )}
       </div>
@@ -129,7 +236,20 @@ export default function TestRunnerPage() {
 }
 
 // ── Intro ────────────────────────────────────────────────────────────────────
-function IntroView({ test, onStart }: { test: PsyTest; onStart: () => void }) {
+function IntroView({
+  test, onStart, draft, onResume,
+}: {
+  test: PsyTest;
+  onStart: () => void;
+  draft: TestDraft | null;
+  onResume: () => void;
+}) {
+  const answeredCount = draft?.answers.filter((a) => a >= 0).length ?? 0;
+  const resumeQuestion = (() => {
+    if (!draft) return 0;
+    const firstUnanswered = draft.answers.findIndex((a) => a < 0);
+    return firstUnanswered >= 0 ? firstUnanswered : draft.currentIdx;
+  })();
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -156,8 +276,8 @@ function IntroView({ test, onStart }: { test: PsyTest; onStart: () => void }) {
       </p>
 
       <ul className="mb-6 space-y-1.5 text-[13px] text-[#8A7A6A] dark:text-[#B8A898]">
-        <li>· {test.questions.length} вопросов с выбором ответа</li>
-        <li>· Займёт ~{Math.max(1, Math.round(test.questions.length * 0.4))} минут{test.questions.length * 0.4 >= 5 ? "" : "ы"}</li>
+        <li>· {test.questions.length} {pluralizeRu(test.questions.length, QUESTIONS_PLURAL)} с выбором ответа</li>
+        <li>· Займёт ~{Math.max(1, Math.round(test.questions.length * 0.4))} {pluralizeRu(Math.max(1, Math.round(test.questions.length * 0.4)), ["минуту", "минуты", "минут"])}</li>
         <li>· Источник: {test.source}</li>
       </ul>
 
@@ -167,12 +287,32 @@ function IntroView({ test, onStart }: { test: PsyTest; onStart: () => void }) {
         </div>
       )}
 
-      <button
-        onClick={onStart}
-        className="w-full rounded-pill bg-[#B8785A] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#9E6349]"
-      >
-        Начать тест
-      </button>
+      {draft && answeredCount > 0 ? (
+        <div className="space-y-2">
+          <button
+            onClick={onResume}
+            className="w-full rounded-pill bg-[#B8785A] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#9E6349]"
+          >
+            Продолжить с вопроса {resumeQuestion + 1}
+          </button>
+          <button
+            onClick={onStart}
+            className="w-full rounded-pill border border-[#D8CDC0] px-6 py-3 text-sm font-medium text-[#8A7A6A] transition-colors hover:bg-[#F5EDE4] dark:border-[#4A4038] dark:text-[#B8A898] dark:hover:bg-[#4A4038]"
+          >
+            Начать заново
+          </button>
+          <p className="text-center text-[11.5px] text-[#B8A898] dark:text-[#8A7A6A]">
+            Сохранён черновик: {answeredCount} из {test.questions.length} {pluralizeRu(test.questions.length, QUESTIONS_PLURAL)}
+          </p>
+        </div>
+      ) : (
+        <button
+          onClick={onStart}
+          className="w-full rounded-pill bg-[#B8785A] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#9E6349]"
+        >
+          Начать тест
+        </button>
+      )}
     </motion.div>
   );
 }
@@ -284,16 +424,70 @@ function QuestionsView({
 
 // ── Result ───────────────────────────────────────────────────────────────────
 function ResultView({
-  test, score, isAuthenticated, onRetake,
+  test, score, previousAttempt, isAuthenticated,
 }: {
   test: PsyTest;
   score: number;
+  previousAttempt: TestHistoryEntry | null;
   isAuthenticated: boolean;
-  onRetake: () => void;
 }) {
   const interp = getInterpretation(test, score);
   const max = maxPossibleScore(test);
   const pct = Math.round((score / Math.max(max, 1)) * 100);
+  const navigate = useNavigate();
+  const createSession = useCreateSession();
+  const [creatingSession, setCreatingSession] = useState(false);
+
+  // Pre-filled message that gets sent on the user's behalf when they tap
+  // "Discuss with Nika" — we want Nika to start with full context, not an
+  // empty greeting.
+  const initialDiscussMessage = (() => {
+    const lines = [
+      `Я только что прошёл(прошла) тест «${test.title}» и хочу обсудить результаты.`,
+      `Мой результат: ${score} из ${max} — «${interp.level}».`,
+    ];
+    if (previousAttempt && previousAttempt.score !== score) {
+      const delta = score - previousAttempt.score;
+      const sign = delta > 0 ? "+" : "";
+      lines.push(
+        `В прошлый раз было ${previousAttempt.score} баллов («${previousAttempt.level}»), сейчас ${sign}${delta}.`,
+      );
+    }
+    lines.push("Помоги мне разобраться, что с этим делать дальше.");
+    return lines.join(" ");
+  })();
+
+  const handleDiscuss = async () => {
+    if (!isAuthenticated) {
+      navigate(`/auth?next=/tests/${test.id}`);
+      return;
+    }
+    if (creatingSession) return;
+    setCreatingSession(true);
+    try {
+      const newSession = await createSession.mutateAsync(undefined);
+      navigate(`/chat/${newSession.id}`, {
+        state: { initialMessage: initialDiscussMessage },
+      });
+    } catch {
+      navigate("/chat");
+    } finally {
+      setCreatingSession(false);
+    }
+  };
+
+  // Comparison block info: only meaningful if we have a previous attempt and
+  // it isn't literally identical to the just-finished one.
+  const showComparison = !!previousAttempt;
+  const delta = previousAttempt ? score - previousAttempt.score : 0;
+  const improvement = test.lowerIsBetter ? -delta : delta;
+  const compareTone = !previousAttempt
+    ? "neutral"
+    : Math.abs(delta) === 0
+      ? "neutral"
+      : improvement > 0
+        ? "good"
+        : "bad";
 
   return (
     <motion.div
@@ -308,7 +502,7 @@ function ResultView({
         {interp.level}
       </h2>
       <p className="mb-6 text-center text-[12px] uppercase tracking-wide text-[#B8A898] dark:text-[#8A7A6A]">
-        {test.shortTitle} · {score} баллов из {max}
+        {test.shortTitle} · {score} {pluralizeRu(score, POINTS_PLURAL)} из {max}
       </p>
 
       {/* Score bar */}
@@ -333,6 +527,50 @@ function ResultView({
         </p>
       </div>
 
+      {showComparison && previousAttempt && (
+        <div
+          className={`mb-5 rounded-2xl border p-4 text-[13px] leading-relaxed ${
+            compareTone === "good"
+              ? "border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/30"
+              : compareTone === "bad"
+                ? "border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30"
+                : "border-[#E8DDD0] bg-white dark:border-[#4A4038] dark:bg-[#352E2A]"
+          }`}
+        >
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#8A7A6A] dark:text-[#B8A898]">
+            В сравнении с прошлым разом
+          </p>
+          <p className="text-[#4A4038] dark:text-[#F5EDE4]">
+            Тогда: <span className="font-semibold">{previousAttempt.score}</span> {pluralizeRu(previousAttempt.score, POINTS_PLURAL)} (
+            «{previousAttempt.level}»). Сейчас:{" "}
+            <span className="font-semibold">{score}</span> {pluralizeRu(score, POINTS_PLURAL)}{" "}
+            (
+            <span
+              className={
+                compareTone === "good"
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : compareTone === "bad"
+                    ? "text-amber-700 dark:text-amber-400"
+                    : "text-[#8A7A6A] dark:text-[#B8A898]"
+              }
+            >
+              {delta === 0 ? "без изменений" : (delta > 0 ? `+${delta}` : `${delta}`)}
+            </span>
+            ).
+          </p>
+          {compareTone === "good" && (
+            <p className="mt-1 text-[12px] text-emerald-700 dark:text-emerald-400">
+              🌱 Похоже, движение в нужную сторону. Замечай, что в этом помогло.
+            </p>
+          )}
+          {compareTone === "bad" && (
+            <p className="mt-1 text-[12px] text-amber-700 dark:text-amber-400">
+              💛 Стало чуть тяжелее — это бывает. Обсуди с Никой, что изменилось.
+            </p>
+          )}
+        </div>
+      )}
+
       {test.disclaimer && (
         <div className="mb-5 rounded-xl border border-[#E8DDD0] bg-[#FDF5F3] p-3 text-[12px] leading-relaxed text-[#8A7A6A] dark:border-[#4A4038] dark:bg-[#3E2A2A] dark:text-[#B8A898]">
           ⚠️ {test.disclaimer}
@@ -345,13 +583,18 @@ function ResultView({
       </p>
 
       <div className="space-y-2">
-        <Link
-          to="/chat"
-          className="flex w-full items-center justify-center gap-2 rounded-pill bg-[#B8785A] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#9E6349]"
+        <button
+          onClick={handleDiscuss}
+          disabled={creatingSession}
+          className="flex w-full items-center justify-center gap-2 rounded-pill bg-[#B8785A] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#9E6349] disabled:opacity-50"
         >
           <MessageSquare className="h-4 w-4" />
-          {isAuthenticated ? "Обсудить с Никой" : "Поговорить с Никой бесплатно"}
-        </Link>
+          {creatingSession
+            ? "Открываю чат..."
+            : isAuthenticated
+              ? "Обсудить с Никой"
+              : "Войти и обсудить с Никой"}
+        </button>
         {!isAuthenticated && (
           <p className="text-center text-[11.5px] text-[#B8A898] dark:text-[#8A7A6A]">
             Без регистрации тоже можно — Ника отвечает всем.{" "}
@@ -360,13 +603,6 @@ function ResultView({
             </Link>
           </p>
         )}
-        <button
-          onClick={onRetake}
-          className="flex w-full items-center justify-center gap-2 rounded-pill border border-[#D8CDC0] px-6 py-3 text-sm font-medium text-[#8A7A6A] transition-colors hover:bg-[#F5EDE4] dark:border-[#4A4038] dark:text-[#B8A898] dark:hover:bg-[#4A4038]"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Пройти ещё раз
-        </button>
       </div>
     </motion.div>
   );
