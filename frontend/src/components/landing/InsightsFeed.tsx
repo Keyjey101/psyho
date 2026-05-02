@@ -51,7 +51,7 @@ export default function InsightsFeed() {
     if (!newInsight.trim() || newInsight.length > 500) return;
     setSubmitting(true);
     try {
-      await api.post("/insights", { text: newInsight.trim() });
+      await api.post("/insights", { content: newInsight.trim() });
       setNewInsight("");
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 3000);

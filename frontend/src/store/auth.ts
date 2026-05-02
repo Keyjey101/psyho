@@ -70,6 +70,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       first_name: firstName,
       username: username || null,
     });
+    localStorage.setItem(TG_TOKEN_KEY, data.access_token);
+    localStorage.setItem(TG_REFRESH_KEY, data.refresh_token);
     set({ isAuthenticated: true, isLoading: false });
     try {
       const { data: userData } = await api.get("/user/me");

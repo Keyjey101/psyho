@@ -265,7 +265,7 @@ function ExerciseView({ exercise, elapsed }: { exercise: Exercise; elapsed: numb
 
       {/* Phase label centered in SVG */}
       <div className="pointer-events-none absolute inset-0 flex max-w-[320px] flex-col items-center justify-center gap-1">
-        <span className="text-2xl font-semibold transition-colors duration-500" style={{ color: phase.color }}>
+        <span className="text-3xl font-semibold transition-colors duration-500" style={{ color: phase.color }}>
           {phase.label}
         </span>
         <span className="text-sm text-[#B8A898]">
@@ -434,8 +434,8 @@ export default function BreathingExercise() {
                 className="font-serif font-bold tabular-nums"
                 style={{
                   color: f.color,
-                  fontSize: `${48 + f.count * 6}px`,
-                  textShadow: "0 2px 14px rgba(0,0,0,0.10)",
+                  fontSize: `${96 + f.count * 12}px`,
+                  textShadow: "0 4px 24px rgba(0,0,0,0.18)",
                 }}
               >
                 {f.count}

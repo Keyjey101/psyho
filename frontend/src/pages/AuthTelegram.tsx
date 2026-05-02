@@ -7,7 +7,8 @@ import { isTMA, getInitData, getTelegramUser } from "@/utils/telegram";
 type Step = "tma_loading" | "input" | "code";
 
 export default function AuthTelegram() {
-  const [step, setStep] = useState<Step>(isTMA() ? "tma_loading" : "input");
+  // Всегда начинаем с загрузки: SDK async/defer, isTMA() ненадёжен до загрузки скрипта
+  const [step, setStep] = useState<Step>("tma_loading");
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -28,29 +29,54 @@ export default function AuthTelegram() {
   const [searchParams] = useSearchParams();
   const nextPath = searchParams.get("next") || null;
 
-  // В Telegram Mini App — авторизуемся автоматически, OTP не нужен
+  // В Telegram Mini App — авторизуемся автоматически, OTP не нужен.
+  // SDK грузится async/defer, поэтому window.Telegram может быть недоступен
+  // в момент монтирования — ждём до 1500ms, как App.tsx.
   useEffect(() => {
-    if (!isTMA()) return;
-    const initData = getInitData();
-    if (initData) {
-      telegramAuth(initData)
-        .then((data) => {
-          navigate(data.is_new_user ? "/onboarding" : (nextPath || "/chat"), { replace: true });
-        })
-        .catch(() => { setStep("input"); });
-      return;
+    let cancelled = false;
+
+    const tryTmaAuth = () => {
+      if (cancelled) return;
+
+      const initData = getInitData();
+      if (initData) {
+        telegramAuth(initData)
+          .then((data) => {
+            if (!cancelled) navigate(data.is_new_user ? "/onboarding" : (nextPath || "/chat"), { replace: true });
+          })
+          .catch(() => { if (!cancelled) setStep("input"); });
+        return;
+      }
+
+      // Fallback for Telegram Android where initData is empty but initDataUnsafe.user is available
+      const tgUser = getTelegramUser();
+      if (tgUser?.id) {
+        telegramMiniAppAuth(String(tgUser.id), tgUser.first_name, tgUser.username)
+          .then((data) => {
+            if (!cancelled) navigate(data.is_new_user ? "/onboarding" : (nextPath || "/chat"), { replace: true });
+          })
+          .catch(() => { if (!cancelled) setStep("input"); });
+        return;
+      }
+
+      setStep("input");
+    };
+
+    if (isTMA()) {
+      tryTmaAuth();
+    } else {
+      // SDK ещё не загрузился — даём 1500ms (async defer)
+      const timer = setTimeout(() => {
+        if (isTMA()) {
+          tryTmaAuth();
+        } else {
+          if (!cancelled) setStep("input");
+        }
+      }, 1500);
+      return () => { cancelled = true; clearTimeout(timer); };
     }
-    // Fallback for Telegram Android where initData is empty but initDataUnsafe.user is available
-    const tgUser = getTelegramUser();
-    if (tgUser?.id) {
-      telegramMiniAppAuth(String(tgUser.id), tgUser.first_name, tgUser.username)
-        .then((data) => {
-          navigate(data.is_new_user ? "/onboarding" : (nextPath || "/chat"), { replace: true });
-        })
-        .catch(() => { setStep("input"); });
-      return;
-    }
-    setStep("input");
+
+    return () => { cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stopPolling = useCallback(() => {

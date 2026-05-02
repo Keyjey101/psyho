@@ -40,9 +40,9 @@ export default function Achievements() {
   const locked = achievements.filter((a) => a.is_locked || !a.earned_at);
 
   return (
-    <div className="rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm">
-      <h2 className="mb-1 text-lg font-semibold text-[#5A5048]">Достижения</h2>
-      <p className="mb-4 text-sm text-[#8A7A6A]">
+    <div className="rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-sm dark:border-[#4A4038] dark:bg-[#352E2A]">
+      <h2 className="mb-1 text-lg font-semibold text-[#5A5048] dark:text-[#F5EDE4]">Достижения</h2>
+      <p className="mb-4 text-sm text-[#8A7A6A] dark:text-[#B8A898]">
         {loading ? "Загрузка..." : `${earned.length} из ${achievements.length} получено`}
       </p>
 
@@ -55,18 +55,18 @@ export default function Achievements() {
               title={isEarned ? `${a.title}: ${a.description}` : `???? — ${a.description}`}
               className={`flex flex-col items-center rounded-xl p-3 text-center transition-all ${
                 isEarned
-                  ? "bg-[#FAF0E8] border border-[#E8C5A0]"
-                  : "bg-[#F5F5F5] border border-[#EBEBEB] opacity-50"
+                  ? "bg-[#FAF0E8] border border-[#E8C5A0] dark:bg-[#3E342B] dark:border-[#6A5040]"
+                  : "bg-[#F5F5F5] border border-[#EBEBEB] opacity-50 dark:bg-[#2A2420] dark:border-[#3A3028]"
               }`}
             >
               <span className="mb-1 text-2xl">
                 {isEarned ? a.emoji : "🔒"}
               </span>
-              <p className={`text-[11px] font-medium leading-tight ${isEarned ? "text-[#5A5048]" : "text-[#B8A898]"}`}>
+              <p className={`text-[11px] font-medium leading-tight ${isEarned ? "text-[#5A5048] dark:text-[#F5EDE4]" : "text-[#B8A898] dark:text-[#6A5A4A]"}`}>
                 {isEarned ? a.title : "???"}
               </p>
               {isEarned && a.earned_at && (
-                <p className="mt-0.5 text-[9px] text-[#B8A898]">
+                <p className="mt-0.5 text-[9px] text-[#B8A898] dark:text-[#6A5A4A]">
                   {new Date(a.earned_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
                 </p>
               )}

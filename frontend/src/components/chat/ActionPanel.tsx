@@ -30,7 +30,6 @@ export default function ActionPanel({ sessionId, disabled, isOpen, onMoodRequest
 
   const closeBreatheOverlay = () => {
     setActiveMode(null);
-    onMoodRequest?.();
   };
 
   const handleAction = async (id: ActiveMode) => {

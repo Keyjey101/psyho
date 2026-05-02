@@ -1,4 +1,5 @@
 import axios from "axios";
+import { TG_TOKEN_KEY, TG_REFRESH_KEY } from "@/utils/telegram";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "/api",
@@ -12,7 +13,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const tgToken = localStorage.getItem("tg_access_token");
+  const tgToken = localStorage.getItem(TG_TOKEN_KEY);
   if (tgToken) {
     config.headers.Authorization = `Bearer ${tgToken}`;
   }
@@ -51,6 +52,8 @@ api.interceptors.response.use(
       if (isRefreshing) {
         return new Promise((resolve) => {
           subscribeTokenRefresh((token: string) => {
+            // Mark as retried so a failed retry doesn't re-trigger another refresh
+            error.config._retry = true;
             if (token) {
               error.config.headers.Authorization = `Bearer ${token}`;
             }
@@ -62,22 +65,28 @@ api.interceptors.response.use(
       error.config._retry = true;
       isRefreshing = true;
 
-      try {
-        await api.post("/auth/refresh", {});
-        onTokenRefreshed("");
+      const applyTokens = (accessToken: string, refreshToken?: string) => {
+        if (accessToken) {
+          localStorage.setItem(TG_TOKEN_KEY, accessToken);
+          if (refreshToken) localStorage.setItem(TG_REFRESH_KEY, refreshToken);
+          error.config.headers.Authorization = `Bearer ${accessToken}`;
+        }
+        onTokenRefreshed(accessToken);
         isRefreshing = false;
+      };
+
+      try {
+        // Cookie-based refresh: backend returns new tokens in the response body too.
+        // We must save them to localStorage so the Bearer header on retries is fresh.
+        const { data } = await api.post("/auth/refresh", {});
+        applyTokens(data?.access_token || "", data?.refresh_token);
         return api(error.config);
       } catch {
-        const tgRefresh = localStorage.getItem("tg_refresh_token");
+        const tgRefresh = localStorage.getItem(TG_REFRESH_KEY);
         if (tgRefresh) {
           try {
             const { data } = await api.post("/auth/refresh", { refresh_token: tgRefresh });
-            const newToken = data.access_token || "";
-            localStorage.setItem("tg_access_token", newToken);
-            if (data.refresh_token) localStorage.setItem("tg_refresh_token", data.refresh_token);
-            error.config.headers.Authorization = `Bearer ${newToken}`;
-            onTokenRefreshed(newToken);
-            isRefreshing = false;
+            applyTokens(data?.access_token || "", data?.refresh_token);
             return api(error.config);
           } catch {
             // fall through
