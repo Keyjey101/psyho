@@ -58,7 +58,7 @@ class _TTLCache:
 # small model — even if a few new messages arrived. After this many seconds
 # OR _MSG_DRIFT messages, we re-classify.
 _TOPIC_CACHE_TIME_WINDOW_S = 300       # 5 minutes
-_TOPIC_CACHE_MSG_DRIFT = 6
+_TOPIC_CACHE_MSG_DRIFT = 4
 
 
 class SessionPhase(Enum):
@@ -79,8 +79,8 @@ PHASE_INSTRUCTIONS = {
     SessionPhase.FOCUS: "Фокусируйся на одной теме. Углубись, уточни.",
     SessionPhase.WORK: "Работай конкретно. Давай практические инструменты.",
     SessionPhase.INTEGRATION: (
-        "ЗАДАЧА INTEGRATION: Начинай закреплять. Предложи 1 конкретное упражнение "
-        "(если соматика — укажи технику из 4-7-8 или 5-4-3-2-1)."
+        "ЗАДАЧА INTEGRATION: Начинай закреплять. Предложи 1 конкретную практику, "
+        "которая подходит под то, что возникло в этой сессии — без навязывания конкретных техник."
     ),
     SessionPhase.CLOSE: (
         "ЗАДАЧА CLOSE: Мы подходим к завершению сессии, но НЕ прощайся и не заканчивай разговор — "
@@ -125,7 +125,7 @@ _INJECTION_PATTERNS = re.compile(
     r"|always\s+respond|always\s+reply|\[system\]|new\s+instruction)",
     re.IGNORECASE | re.UNICODE,
 )
-_MAX_MEMORY_LENGTH = 500
+_MAX_MEMORY_LENGTH = 1500
 
 # Drops codepoints we never want in user-facing answers — most often this is
 # Chinese / Japanese / Korean characters that the model occasionally hallucinates
@@ -393,11 +393,14 @@ class Orchestrator:
     ):
         topics = await self._classify_topics(message, history, session_id)
 
-        phase = (
-            self._get_phase_adaptive(exchange_number, max_exchanges, history, message)
-            if exchange_number > 0 and max_exchanges > 0
-            else SessionPhase.WORK
-        )
+        if exchange_number <= 1:
+            phase = SessionPhase.INTAKE
+        elif max_exchanges > 0:
+            phase = self._get_phase_adaptive(
+                exchange_number, max_exchanges, history, message
+            )
+        else:
+            phase = SessionPhase.WORK
         if phase == SessionPhase.INTAKE:
             selected = []
         else:
@@ -406,10 +409,21 @@ class Orchestrator:
         perspectives: dict[str, str] = {}
         agent_names = [k for k, _ in selected]
 
+        memory_brief = ""
+        if long_term_memory:
+            sanitized = _sanitize_memory(long_term_memory)
+            if sanitized:
+                words = sanitized.split()
+                memory_brief = " ".join(words[:80])
+
         if selected:
             async def _run_agent(key: str, agent: BaseAgent):
                 return key, await asyncio.wait_for(
-                    agent.analyze(message, history),
+                    agent.analyze(
+                        message, history,
+                        phase=phase.value,
+                        memory_summary=memory_brief,
+                    ),
                     timeout=settings.AGENT_TIMEOUT_SECONDS,
                 )
 
@@ -473,21 +487,8 @@ class Orchestrator:
         if session_summary:
             summary_section = f"\n\nРезюме предыдущей беседы:\n{session_summary}"
 
-        user_content = f"""История разговора:
-{history_text}
-{summary_section}
-
-Текущее сообщение пользователя: {message}
+        user_content = f"""Текущее сообщение пользователя: {message}
 """
-
-        if perspectives_text:
-            user_content += f"""
-Мнения экспертов:
-{perspectives_text}
-
-Синтезируй единый тёплый, профессиональный и эмпатичный ответ, органично интегрируя наиболее полезные инсайты от экспертов. Ответ должен звучать естественно, как от одного заботливого терапевта.
-
-Если перспективы экспертов противоречат друг другу — выбери более безопасную или объедини последовательно: сначала телесное заземление, потом когнитивная работа."""
 
         if exchange_number > 0 and max_exchanges > 0:
             effective_phase = phase or self._get_phase_adaptive(
@@ -496,7 +497,6 @@ class Orchestrator:
             remaining = max_exchanges - exchange_number
             phase_instruction = PHASE_INSTRUCTIONS.get(effective_phase, "")
             user_content += f"""
-
 [ПРОГРЕСС СЕССИИ: обмен {exchange_number} из {max_exchanges}. Фаза: {effective_phase.value}. Осталось ~{remaining} обменов]
 {phase_instruction}"""
 
@@ -521,16 +521,33 @@ class Orchestrator:
             ),
             "balanced": (
                 "\n\n## Стиль общения — СБАЛАНСИРОВАННЫЙ\n"
-                "Сочетай эмпатию с конкретикой. Минимизируй банальные утешительные фразы-заглушки "
-                "(«Я здесь», «Я слышу тебя», «Я рядом», «Спасибо, что делишься») — они раздражают и ощущаются искусственно. "
-                "Предпочитай содержательные формулировки: наблюдение, вопрос, предложение."
+                "Сочетай эмпатию с конкретикой.\n\n"
+                "СТРОГО ЗАПРЕЩЕНЫ шаблонные фразы-заглушки — они ощущаются искусственно и разрушают контакт. Не используй:\n"
+                "«Я здесь», «Я слышу тебя», «Я с тобой», «Я рядом», «Я заметила, что ты...» (как зачин), "
+                "«Я тебя слышу», «Спасибо, что делишься», «Это важно» и любые похожие клише.\n"
+                "Вместо этого — сразу содержательно: наблюдение, уточняющий вопрос, отражение смысла.\n"
+                "Не начинай несколько ответов подряд с одного и того же слова."
             ),
             "gentle": (
-                "\n\n## Стиль общения\nПользователь предпочитает мягкий, поддерживающий стиль. Будь особенно тёплой и эмпатичной, избегай директивности."
+                "\n\n## Стиль общения — МЯГКИЙ\n"
+                "Пользователь предпочитает мягкий, поддерживающий стиль. Будь тёплой и эмпатичной, избегай директивности.\n\n"
+                "При этом ЗАПРЕЩЕНЫ заезженные клише — они обесценивают тепло:\n"
+                "«Понимаю» / «Поняла» в качестве самодостаточного зачина, «Мне интересно...» как шаблонный вопрос, "
+                "«Я здесь», «Я слышу тебя», «Я рядом» — эти фразы звучат заученно.\n"
+                "Тепло передаётся через конкретное внимание к словам человека, а не через дежурные формулы. "
+                "Не начинай несколько ответов подряд с одного и того же слова или конструкции."
             ),
         }
         if preferred_style in style_instructions:
             messages[0]["content"] += style_instructions[preferred_style]
+
+        if len(history) >= 4:
+            messages[0]["content"] += (
+                "\n\n## Непрерывность разговора\n"
+                "Разговор уже идёт, и пользователь поделился важной информацией. "
+                "Не переспрашивай о том, что уже обсуждалось — опирайся на историю. "
+                "Продолжай с того места, где остановились, независимо от текущего стиля."
+            )
 
         if address_form == "вы":
             messages[0]["content"] += (
@@ -555,6 +572,17 @@ class Orchestrator:
 
         if history:
             messages.extend(history[-10:])
+
+        if perspectives_text:
+            messages.append({
+                "role": "user",
+                "content": f"История разговора:\n{history_text}\n{summary_section}\n\nМнения экспертов:\n{perspectives_text}\n\nСинтезируй единый тёплый, профессиональный и эмпатичный ответ, органично интегрируя наиболее полезные инсайты от экспертов. Ответ должен звучать естественно, как от одного заботливого терапевта.\n\nЕсли перспективы экспертов противоречат друг другу — выбери более безопасную или объедини последовательно: сначала телесное заземление, потом когнитивная работа.",
+            })
+            messages.append({
+                "role": "assistant",
+                "content": "Поняла, учту все перспективы экспертов при формулировании ответа.",
+            })
+
         messages.append({"role": "user", "content": user_content})
 
         stream = await client.chat.completions.create(

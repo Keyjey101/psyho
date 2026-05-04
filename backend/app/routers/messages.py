@@ -421,10 +421,10 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
 
             if profile and profile.memory_enabled and full_response:
                 _memory_counters[session_id] = _memory_counters.get(session_id, 0) + 1
-                # Every 5 exchanges (was 3): cuts ~40% of glm-4-flash memory
-                # calls per session. The dedup hash in extract_and_update_memory
+                # Every 3 exchanges: balance between freshness and API cost.
+                # The dedup hash in extract_and_update_memory
                 # additionally short-circuits no-op writes.
-                if _memory_counters[session_id] % 5 == 0:
+                if _memory_counters[session_id] % 3 == 0:
                     memory_task_mem = profile.long_term_memory
                     memory_task_history = list(history_dicts)
                     asyncio.create_task(
