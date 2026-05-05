@@ -262,7 +262,7 @@ class Orchestrator:
 
         return nominal
 
-    async def _classify_topics(self, message: str, history: list[dict], session_id: str = "") -> list[str]:
+    async def _classify_topics(self, message: str, history: list[dict], session_id: str = "") -> tuple[list[str], dict | None]:
         msg_count = len(history)
         if session_id:
             cached = self._session_topic_cache.get(session_id)
@@ -270,10 +270,8 @@ class Orchestrator:
                 cached_topics, cached_msg_count, set_at = cached
                 age = _time.monotonic() - set_at
                 msg_drift = msg_count - cached_msg_count
-                # Trust the cached classification while EITHER the time window
-                # is still open OR very few messages have come in since.
                 if age < _TOPIC_CACHE_TIME_WINDOW_S and msg_drift < _TOPIC_CACHE_MSG_DRIFT:
-                    return cached_topics
+                    return cached_topics, None
 
         topics_list = ", ".join(TOPIC_AGENT_MAP.keys())
         classify_prompt = f"""Ты — классификатор тем для психологического чат-бота. Определи, какие психологические темы затрагивает сообщение пользователя.
@@ -294,7 +292,13 @@ class Orchestrator:
             temperature=0.1,
             messages=[{"role": "user", "content": classify_prompt}],
         )
+        classify_usage = None
         if hasattr(response, "usage") and response.usage:
+            classify_usage = {
+                "prompt_tokens": response.usage.prompt_tokens or 0,
+                "completion_tokens": response.usage.completion_tokens or 0,
+                "total_tokens": response.usage.total_tokens or 0,
+            }
             logger.info(
                 "classify_tokens",
                 prompt_tokens=response.usage.prompt_tokens,
@@ -315,7 +319,7 @@ class Orchestrator:
             pass
         if session_id and topics:
             self._session_topic_cache.set(session_id, topics, msg_count)
-        return topics
+        return topics, classify_usage
 
     def _select_agents(
         self,
@@ -391,7 +395,13 @@ class Orchestrator:
         max_exchanges: int = 20,
         session_id: str = "",
     ):
-        topics = await self._classify_topics(message, history, session_id)
+        token_accumulator = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+        topics, classify_usage = await self._classify_topics(message, history, session_id)
+        if classify_usage:
+            token_accumulator["prompt_tokens"] += classify_usage["prompt_tokens"]
+            token_accumulator["completion_tokens"] += classify_usage["completion_tokens"]
+            token_accumulator["total_tokens"] += classify_usage["total_tokens"]
 
         if exchange_number <= 1:
             phase = SessionPhase.INTAKE
@@ -436,17 +446,43 @@ class Orchestrator:
                         error=type(result).__name__ + (f": {result}" if str(result) else ""),
                     )
                     continue
-                key, analysis = result
+                key, (analysis, agent_usage) = result
                 perspectives[key] = analysis
+                if agent_usage:
+                    token_accumulator["prompt_tokens"] += agent_usage["prompt_tokens"]
+                    token_accumulator["completion_tokens"] += agent_usage["completion_tokens"]
+                    token_accumulator["total_tokens"] += agent_usage["total_tokens"]
 
         yield {"type": "agents_used", "agents": agent_names if agent_names else ["orchestrator"]}
 
+        full_response_chars = 0
         async for token in self._synthesize(
             message, history, perspectives, session_summary,
             preferred_style, long_term_memory, therapy_goals, address_form, gender,
             exchange_number, max_exchanges, phase,
         ):
+            if token.get("type") == "synthesis_usage":
+                token_accumulator["prompt_tokens"] += token.get("prompt_tokens", 0)
+                token_accumulator["completion_tokens"] += token.get("completion_tokens", 0)
+                token_accumulator["total_tokens"] += token.get("total_tokens", 0)
+                continue
+            if token.get("type") == "token":
+                full_response_chars += len(token.get("content", ""))
             yield token
+
+        if token_accumulator["total_tokens"] == 0 and full_response_chars > 0:
+            estimated_prompt = sum(len(m.get("content", "")) for m in history[-10:]) // 2 + len(message) // 2
+            estimated_completion = full_response_chars // 2
+            token_accumulator["prompt_tokens"] = estimated_prompt
+            token_accumulator["completion_tokens"] = estimated_completion
+            token_accumulator["total_tokens"] = estimated_prompt + estimated_completion
+
+        yield {
+            "type": "token_usage",
+            "prompt_tokens": token_accumulator["prompt_tokens"],
+            "completion_tokens": token_accumulator["completion_tokens"],
+            "total_tokens": token_accumulator["total_tokens"],
+        }
 
     async def _synthesize(
         self,
@@ -591,9 +627,17 @@ class Orchestrator:
             temperature=0.7,
             messages=messages,
             stream=True,
+            stream_options={"include_usage": True},
         )
 
         async for chunk in stream:
+            if hasattr(chunk, "usage") and chunk.usage and chunk.usage.total_tokens:
+                yield {
+                    "type": "synthesis_usage",
+                    "prompt_tokens": chunk.usage.prompt_tokens or 0,
+                    "completion_tokens": chunk.usage.completion_tokens or 0,
+                    "total_tokens": chunk.usage.total_tokens or 0,
+                }
             if chunk.choices and chunk.choices[0].delta.content:
                 content = _filter_foreign_chars(chunk.choices[0].delta.content)
                 if content:

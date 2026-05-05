@@ -29,3 +29,21 @@ async def init_db():
             ))
         except Exception:
             pass
+        try:
+            await conn.execute(sqlalchemy.text(
+                "ALTER TABLE messages ADD COLUMN prompt_tokens INTEGER"
+            ))
+        except Exception:
+            pass
+        try:
+            await conn.execute(sqlalchemy.text(
+                "ALTER TABLE messages ADD COLUMN completion_tokens INTEGER"
+            ))
+        except Exception:
+            pass
+        try:
+            await conn.execute(sqlalchemy.text(
+                "ALTER TABLE messages ADD COLUMN total_tokens INTEGER"
+            ))
+        except Exception:
+            pass

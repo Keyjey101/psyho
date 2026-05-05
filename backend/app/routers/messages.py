@@ -364,6 +364,7 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
 
             agents_used_list = []
             full_response = ""
+            token_usage_data = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
             try:
                 async for event in orchestrator.process(
@@ -379,6 +380,12 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                     elif event["type"] == "agents_used":
                         agents_used_list = event["agents"]
                         await websocket.send_json({"type": "agents_used", "agents": agents_used_list})
+                    elif event["type"] == "token_usage":
+                        token_usage_data = {
+                            "prompt_tokens": event.get("prompt_tokens", 0),
+                            "completion_tokens": event.get("completion_tokens", 0),
+                            "total_tokens": event.get("total_tokens", 0),
+                        }
                     elif event["type"] == "error":
                         await websocket.send_json({"type": "error", "message": event["message"]})
             except Exception as e:
@@ -392,6 +399,9 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                     role="assistant",
                     content=full_response,
                     agents_used=json.dumps(agents_used_list) if agents_used_list else None,
+                    prompt_tokens=token_usage_data.get("prompt_tokens"),
+                    completion_tokens=token_usage_data.get("completion_tokens"),
+                    total_tokens=token_usage_data.get("total_tokens"),
                 )
                 db.add(assistant_msg)
 

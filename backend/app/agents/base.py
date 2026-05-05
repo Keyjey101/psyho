@@ -44,7 +44,7 @@ class BaseAgent(ABC):
         focus: str = "",
         phase: str = "",
         memory_summary: str = "",
-    ) -> str:
+    ) -> tuple[str, dict | None]:
         messages = [{"role": "system", "content": AGENT_PREAMBLE + "\n\n" + self.system_prompt}]
         messages.extend(history[-16:])
         user_content = user_message
@@ -63,7 +63,13 @@ class BaseAgent(ABC):
             temperature=0.7,
             messages=messages,
         )
+        usage = None
         if hasattr(response, "usage") and response.usage:
+            usage = {
+                "prompt_tokens": response.usage.prompt_tokens or 0,
+                "completion_tokens": response.usage.completion_tokens or 0,
+                "total_tokens": response.usage.total_tokens or 0,
+            }
             logger.info(
                 "agent_tokens",
                 agent=self.__class__.__name__,
@@ -72,4 +78,4 @@ class BaseAgent(ABC):
                 total_tokens=response.usage.total_tokens,
             )
         content = response.choices[0].message.content
-        return content if content else ""
+        return (content if content else ""), usage
