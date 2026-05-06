@@ -16,6 +16,12 @@ import DiaryPage from "@/pages/DiaryPage";
 import TimeCapsulePage from "@/pages/TimeCapsulePage";
 import TestsPage from "@/pages/TestsPage";
 import TestRunnerPage from "@/pages/TestRunnerPage";
+import Pricing from "@/pages/Pricing";
+import Subscription from "@/pages/Subscription";
+import Offer from "@/pages/legal/Offer";
+import Refund from "@/pages/legal/Refund";
+import Privacy from "@/pages/legal/Privacy";
+import Consent from "@/pages/legal/Consent";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -143,6 +149,24 @@ export default function App() {
           (results are kept in localStorage) and are nudged to sign in afterwards. */}
       <Route path="/tests" element={<TestsPage />} />
       <Route path="/tests/:testId" element={<TestRunnerPage />} />
+
+      {/* Billing */}
+      <Route path="/pricing" element={<Pricing />} />
+      <Route
+        path="/profile/subscription"
+        element={
+          <ProtectedRoute>
+            <Subscription />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Legal — public, must be reachable without auth */}
+      <Route path="/legal/offer" element={<Offer />} />
+      <Route path="/legal/refund" element={<Refund />} />
+      <Route path="/legal/privacy" element={<Privacy />} />
+      <Route path="/legal/consent" element={<Consent />} />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

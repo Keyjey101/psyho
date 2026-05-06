@@ -11,9 +11,11 @@ from app.config import get_settings
 from app.database import init_db, async_session
 from app.routers import auth, sessions, messages, users, mood, actions, personality, tasks
 from app.routers import admin as admin_router
+from app.routers import billing as billing_router
 from app.routers import diary, capsules, achievements, insights, export as export_router
 from app.routers import tests as tests_router
 from app.services.telegram_bot import start_bot, stop_bot
+from app.services.subscription_renewal import start_scheduler, stop_scheduler
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -26,10 +28,19 @@ async def lifespan(app: FastAPI):
     await init_db()
     if settings.TELEGRAM_BOT_TOKEN:
         await start_bot()
+    if settings.MONETIZATION_ENABLED:
+        try:
+            start_scheduler()
+        except Exception as e:
+            logger.error("scheduler_start_failed", error=str(e))
     logger.info("PsyHo backend started", environment=settings.ENVIRONMENT)
     yield
     if settings.TELEGRAM_BOT_TOKEN:
         await stop_bot()
+    try:
+        stop_scheduler()
+    except Exception:
+        pass
     logger.info("PsyHo backend shutting down")
 
 
@@ -65,6 +76,7 @@ app.include_router(achievements.router, prefix="/api/achievements", tags=["Achie
 app.include_router(insights.router, prefix="/api/insights", tags=["Insights"])
 app.include_router(export_router.router, prefix="/api/export", tags=["Export"])
 app.include_router(tests_router.router, prefix="/api/tests", tags=["Tests"])
+app.include_router(billing_router.router)
 
 
 @app.get("/health")

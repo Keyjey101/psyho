@@ -11,6 +11,8 @@ import ActionPanel from "@/components/chat/ActionPanel";
 import SessionProgress from "@/components/chat/SessionProgress";
 import SessionEndCard from "@/components/chat/SessionEndCard";
 import MoodTracker from "@/components/chat/MoodTracker";
+import SoftPaywallModal from "@/components/billing/SoftPaywallModal";
+import type { PaywallDetail } from "@/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Message } from "@/types";
 import { Menu, Brain, X, Download } from "lucide-react";
@@ -47,6 +49,7 @@ export default function Chat() {
   const [initialExchangeCount, setInitialExchangeCount] = useState(0);
   const [pendingTask, setPendingTask] = useState<PendingTask | null>(null);
   const [taskDismissed, setTaskDismissed] = useState(false);
+  const [paywall, setPaywall] = useState<PaywallDetail | null>(null);
 
   useEffect(() => {
     if (user && user.name === "") {
@@ -186,8 +189,15 @@ export default function Chat() {
   const handleSend = async (content: string) => {
     if (!sessionId) {
       setPendingMessage(content);
-      const newSession = await createSession.mutateAsync(undefined);
-      navigate(`/chat/${newSession.id}`);
+      try {
+        const newSession = await createSession.mutateAsync(undefined);
+        navigate(`/chat/${newSession.id}`);
+      } catch (err: any) {
+        setPendingMessage(null);
+        if (err?.response?.status === 402) {
+          setPaywall(err.response.data?.detail ?? { reason: "session_quota_exhausted" });
+        }
+      }
       return;
     }
 
@@ -224,17 +234,29 @@ export default function Chat() {
 
   const handleContinueSession = async () => {
     if (!previousSession) return;
-    const result = await continueSession.mutateAsync(previousSession.id);
-    setAwaitingGreeting(true);
-    navigate(`/chat/${result.new_session_id}`);
+    try {
+      const result = await continueSession.mutateAsync(previousSession.id);
+      setAwaitingGreeting(true);
+      navigate(`/chat/${result.new_session_id}`);
+    } catch (err: any) {
+      if (err?.response?.status === 402) {
+        setPaywall(err.response.data?.detail ?? { reason: "session_quota_exhausted" });
+      }
+    }
   };
 
   const handleContinueFromLimit = async () => {
     if (!sessionId) return;
     setShowLimitModal(false);
-    const result = await continueSession.mutateAsync(sessionId);
-    setAwaitingGreeting(true);
-    navigate(`/chat/${result.new_session_id}`);
+    try {
+      const result = await continueSession.mutateAsync(sessionId);
+      setAwaitingGreeting(true);
+      navigate(`/chat/${result.new_session_id}`);
+    } catch (err: any) {
+      if (err?.response?.status === 402) {
+        setPaywall(err.response.data?.detail ?? { reason: "session_quota_exhausted" });
+      }
+    }
   };
 
   const handleFinishFromLimit = (moodValue: number | null, exerciseCompleted?: boolean | null) => {
@@ -462,6 +484,14 @@ export default function Chat() {
           />
         </div>
       )}
+
+      <SoftPaywallModal
+        open={!!paywall}
+        onClose={() => setPaywall(null)}
+        reason={paywall?.reason}
+        freeSessionsLeft={paywall?.free_sessions_left}
+        paidSessionsLeft={paywall?.paid_sessions_left}
+      />
     </div>
   );
 }

@@ -76,7 +76,31 @@ async def _handle_message(update: Update, _context):
             )
 
 
-async def _handle_start(update: Update, _context):
+async def _handle_start(update: Update, context):
+    args = getattr(context, "args", None) or []
+    deep_link = args[0] if args else ""
+
+    if deep_link.startswith("link_"):
+        token = deep_link[len("link_"):]
+        chat_id = str(update.effective_user.id)
+        async with async_session() as db:
+            result = await db.execute(select(User).where(User.notify_link_token == token))
+            user = result.scalar_one_or_none()
+            if user is None:
+                await update.message.reply_text(
+                    "❌ Эта ссылка устарела. Открой раздел «Подписка» на сайте и попробуй ещё раз."
+                )
+                return
+            user.notify_telegram_id = chat_id
+            user.notify_link_token = None
+            if not user.telegram_username and update.effective_user.username:
+                user.telegram_username = update.effective_user.username.lower()
+            await db.commit()
+        await update.message.reply_text(
+            "✅ Готово — теперь буду писать сюда о статусе подписки."
+        )
+        return
+
     await update.message.reply_text(
         "Привет! Я бот для входа в Нику 🐻\n\n"
         "На сайте тебе покажут 6-значный код — просто отправь его мне сюда, "

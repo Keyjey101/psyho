@@ -27,6 +27,7 @@ from app.schemas.auth import (
     TgRequestCodeResponse,
     TgCheckResponse,
     TgMiniAppRequest,
+    UtmInfo,
 )
 from app.services.auth import (
     create_access_token,
@@ -81,6 +82,17 @@ def _sha256_hex(value: str) -> str:
 
 def _verify_code(plain: str, hashed: str) -> bool:
     return _pwd_context.verify(plain, hashed)
+
+
+def _apply_utm(user: User, utm: UtmInfo | None) -> None:
+    if not utm or user.utm_source or user.utm_campaign:
+        return
+    user.utm_source = utm.utm_source
+    user.utm_medium = utm.utm_medium
+    user.utm_campaign = utm.utm_campaign
+    user.utm_content = utm.utm_content
+    user.utm_term = utm.utm_term
+    user.referrer_host = utm.referrer_host
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -160,7 +172,17 @@ async def tg_request_code(body: TgRequestCodeRequest, request: Request, db: Asyn
 
 
 @router.get("/tg/check/{request_id}", response_model=TgCheckResponse)
-async def tg_check(request_id: str, response: Response, db: AsyncSession = Depends(get_db)):
+async def tg_check(
+    request_id: str,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    utm_source: str | None = None,
+    utm_medium: str | None = None,
+    utm_campaign: str | None = None,
+    utm_content: str | None = None,
+    utm_term: str | None = None,
+    referrer_host: str | None = None,
+):
     result = await db.execute(
         select(TelegramVerificationCode).where(TelegramVerificationCode.id == request_id)
     )
@@ -192,11 +214,18 @@ async def tg_check(request_id: str, response: Response, db: AsyncSession = Depen
             password=_hash_code(secrets.token_hex(32)),
             telegram_id=record.telegram_id,
             telegram_username=record.telegram_username,
+            notify_telegram_id=record.telegram_id,
         )
+        _apply_utm(user, UtmInfo(
+            utm_source=utm_source, utm_medium=utm_medium, utm_campaign=utm_campaign,
+            utm_content=utm_content, utm_term=utm_term, referrer_host=referrer_host,
+        ))
         db.add(user)
         await db.flush()
         profile = UserProfile(user_id=user.id)
         db.add(profile)
+    elif not user.notify_telegram_id:
+        user.notify_telegram_id = record.telegram_id
 
     await db.commit()
 
@@ -233,7 +262,9 @@ async def tg_mini_app_auth(body: TgMiniAppRequest, response: Response, db: Async
             password=_hash_code(secrets.token_hex(32)),
             telegram_id=body.telegram_id,
             telegram_username=body.username,
+            notify_telegram_id=body.telegram_id,
         )
+        _apply_utm(user, body.utm)
         db.add(user)
         await db.flush()
         profile = UserProfile(user_id=user.id)
@@ -245,6 +276,9 @@ async def tg_mini_app_auth(body: TgMiniAppRequest, response: Response, db: Async
             user.name = body.first_name
         if body.username and not user.telegram_username:
             user.telegram_username = body.username
+        if not user.notify_telegram_id:
+            user.notify_telegram_id = body.telegram_id
+        _apply_utm(user, body.utm)
         await db.commit()
 
     access = create_access_token({"sub": user.id})
@@ -317,7 +351,9 @@ async def telegram_auth(body: TelegramAuthRequest, response: Response, db: Async
             password=_hash_code(secrets.token_hex(32)),
             telegram_id=telegram_id,
             telegram_username=tg_username,
+            notify_telegram_id=telegram_id,
         )
+        _apply_utm(user, body.utm)
         db.add(user)
         await db.flush()
         profile = UserProfile(user_id=user.id)
@@ -329,6 +365,9 @@ async def telegram_auth(body: TelegramAuthRequest, response: Response, db: Async
             user.name = first_name
         if tg_username and not user.telegram_username:
             user.telegram_username = tg_username
+        if not user.notify_telegram_id:
+            user.notify_telegram_id = telegram_id
+        _apply_utm(user, body.utm)
         await db.commit()
 
     access = create_access_token({"sub": user.id})

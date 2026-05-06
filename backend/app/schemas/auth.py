@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from datetime import datetime
 
 
@@ -22,8 +22,18 @@ class UserResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class UtmInfo(BaseModel):
+    utm_source: str | None = None
+    utm_medium: str | None = None
+    utm_campaign: str | None = None
+    utm_content: str | None = None
+    utm_term: str | None = None
+    referrer_host: str | None = None
+
+
 class TelegramAuthRequest(BaseModel):
     init_data: str
+    utm: UtmInfo | None = None
 
 
 class TelegramAuthResponse(BaseModel):
@@ -60,3 +70,4 @@ class TgMiniAppRequest(BaseModel):
     telegram_id: str
     first_name: str = ""
     username: str | None = None
+    utm: UtmInfo | None = None

@@ -14,6 +14,14 @@ export default function Footer() {
             </span>
           </Link>
 
+          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-surface-500">
+            <Link to="/pricing" className="hover:text-primary-600">Цены</Link>
+            <Link to="/legal/offer" className="hover:text-primary-600">Оферта</Link>
+            <Link to="/legal/refund" className="hover:text-primary-600">Возврат</Link>
+            <Link to="/legal/privacy" className="hover:text-primary-600">Конфиденциальность</Link>
+            <Link to="/legal/consent" className="hover:text-primary-600">Регулярные платежи</Link>
+          </nav>
+
           <p className="text-sm text-surface-400">
             &copy; {new Date().getFullYear()} PsyHo. Не заменяет профессиональную помощь.
           </p>

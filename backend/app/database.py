@@ -47,3 +47,25 @@ async def init_db():
             ))
         except Exception:
             pass
+        # Monetization columns — additive, idempotent
+        for ddl in (
+            "ALTER TABLE users ADD COLUMN subscription_tier VARCHAR(20) DEFAULT 'free'",
+            "ALTER TABLE users ADD COLUMN subscription_expires_at DATETIME",
+            "ALTER TABLE users ADD COLUMN subscription_started_at DATETIME",
+            "ALTER TABLE users ADD COLUMN autorenew_enabled BOOLEAN DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN sessions_quota_balance INTEGER DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN lifetime_free_sessions_used INTEGER DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN saved_payment_method_id VARCHAR(64)",
+            "ALTER TABLE users ADD COLUMN utm_source VARCHAR(64)",
+            "ALTER TABLE users ADD COLUMN utm_medium VARCHAR(64)",
+            "ALTER TABLE users ADD COLUMN utm_campaign VARCHAR(128)",
+            "ALTER TABLE users ADD COLUMN utm_content VARCHAR(128)",
+            "ALTER TABLE users ADD COLUMN utm_term VARCHAR(128)",
+            "ALTER TABLE users ADD COLUMN referrer_host VARCHAR(128)",
+            "ALTER TABLE users ADD COLUMN notify_telegram_id VARCHAR(20)",
+            "ALTER TABLE users ADD COLUMN notify_link_token VARCHAR(64)",
+        ):
+            try:
+                await conn.execute(sqlalchemy.text(ddl))
+            except Exception:
+                pass

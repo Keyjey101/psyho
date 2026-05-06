@@ -15,7 +15,9 @@ from app.database import get_db
 from app.models.models import (
     User, ChatSession, Message, MoodEntry, AnonymousInsight,
     AppSetting, Achievement, DiaryEntry, SessionTask,
+    Payment, PromoCode, PromoRedemption, SubscriptionEvent,
 )
+from app.schemas.billing import PromoCreateRequest, PromoUpdateRequest
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -608,3 +610,161 @@ async def export_users_csv(
             "Content-Disposition": f"attachment; filename=users_export_{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"
         },
     )
+
+
+# ── Monetization admin: UTM, promo codes, payments ─────────────────────────
+
+
+@router.get("/utm")
+async def utm_breakdown(
+    admin=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+    days: int = Query(30, ge=1, le=365),
+):
+    """Aggregates by ``utm_source × utm_campaign``.
+
+    - ``users``: registered (lifetime, filtered by ``created_at`` window if provided)
+    - ``paid_users``: distinct users with at least one ``succeeded`` payment
+    - ``revenue_kopecks``: sum of succeeded payment amounts (less promo discount)
+    - ``conversion_pct``: ``paid_users / users * 100``
+    """
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+
+    users_q = await db.execute(
+        select(
+            func.coalesce(User.utm_source, "(none)").label("source"),
+            func.coalesce(User.utm_campaign, "(none)").label("campaign"),
+            func.count(User.id).label("users"),
+        )
+        .where(User.created_at >= since)
+        .group_by("source", "campaign")
+    )
+    users_map: dict[tuple[str, str], int] = {(r.source, r.campaign): r.users for r in users_q}
+
+    payments_q = await db.execute(
+        select(
+            func.coalesce(Payment.utm_source, "(none)").label("source"),
+            func.coalesce(Payment.utm_campaign, "(none)").label("campaign"),
+            func.count(func.distinct(Payment.user_id)).label("paid_users"),
+            func.sum(Payment.amount_kopecks).label("revenue"),
+        )
+        .where(Payment.status == "succeeded", Payment.created_at >= since)
+        .group_by("source", "campaign")
+    )
+    pay_map: dict[tuple[str, str], dict] = {
+        (r.source, r.campaign): {"paid_users": r.paid_users, "revenue": int(r.revenue or 0)}
+        for r in payments_q
+    }
+
+    keys = set(users_map.keys()) | set(pay_map.keys())
+    rows = []
+    for key in sorted(keys, key=lambda k: -(pay_map.get(k, {}).get("revenue", 0))):
+        users = users_map.get(key, 0)
+        pay = pay_map.get(key, {})
+        paid = pay.get("paid_users", 0)
+        revenue = pay.get("revenue", 0)
+        rows.append({
+            "utm_source": key[0],
+            "utm_campaign": key[1],
+            "users": users,
+            "paid_users": paid,
+            "revenue_kopecks": revenue,
+            "conversion_pct": round(100 * paid / users, 1) if users else 0.0,
+        })
+    return {"days": days, "rows": rows}
+
+
+@router.get("/promos")
+async def list_promos(admin=Depends(get_admin_user), db: AsyncSession = Depends(get_db)):
+    rows = (await db.execute(select(PromoCode).order_by(PromoCode.created_at.desc()))).scalars().all()
+    return [
+        {
+            "id": r.id,
+            "code": r.code,
+            "discount_percent": r.discount_percent,
+            "max_uses": r.max_uses,
+            "used_count": r.used_count,
+            "valid_until": r.valid_until.isoformat() if r.valid_until else None,
+            "applies_to": r.applies_to,
+            "active": r.active,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "created_by_admin_email": r.created_by_admin_email,
+        }
+        for r in rows
+    ]
+
+
+@router.post("/promos")
+async def create_promo(
+    body: PromoCreateRequest,
+    admin=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    code = body.code.strip().upper()
+    existing = (await db.execute(select(PromoCode).where(PromoCode.code == code))).scalar_one_or_none()
+    if existing:
+        raise HTTPException(status_code=409, detail="Промокод уже существует")
+    promo = PromoCode(
+        code=code,
+        discount_percent=body.discount_percent,
+        max_uses=body.max_uses,
+        valid_until=body.valid_until,
+        applies_to=body.applies_to,
+        active=True,
+        created_by_admin_email=getattr(admin, "email", None),
+    )
+    db.add(promo)
+    await db.commit()
+    await db.refresh(promo)
+    return {"id": promo.id, "code": promo.code}
+
+
+@router.patch("/promos/{promo_id}")
+async def update_promo(
+    promo_id: str,
+    body: PromoUpdateRequest,
+    admin=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    promo = (await db.execute(select(PromoCode).where(PromoCode.id == promo_id))).scalar_one_or_none()
+    if not promo:
+        raise HTTPException(status_code=404, detail="Промокод не найден")
+    if body.active is not None:
+        promo.active = body.active
+    if body.valid_until is not None:
+        promo.valid_until = body.valid_until
+    if body.max_uses is not None:
+        promo.max_uses = body.max_uses
+    await db.commit()
+    return {"ok": True}
+
+
+@router.get("/payments")
+async def list_payments(
+    admin=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+    status_filter: Optional[str] = Query(None, alias="status"),
+    days: int = Query(30, ge=1, le=365),
+    limit: int = Query(100, ge=1, le=500),
+):
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    q = select(Payment).where(Payment.created_at >= since).order_by(Payment.created_at.desc()).limit(limit)
+    if status_filter:
+        q = q.where(Payment.status == status_filter)
+    rows = (await db.execute(q)).scalars().all()
+    return [
+        {
+            "id": p.id,
+            "user_id": p.user_id,
+            "amount_kopecks": p.amount_kopecks,
+            "discount_kopecks": p.discount_kopecks,
+            "status": p.status,
+            "purpose": p.purpose,
+            "is_recurring": p.is_recurring,
+            "utm_source": p.utm_source,
+            "utm_campaign": p.utm_campaign,
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+            "completed_at": p.completed_at.isoformat() if p.completed_at else None,
+        }
+        for p in rows
+    ]

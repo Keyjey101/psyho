@@ -3,14 +3,17 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/auth";
 import { getInitData, getTelegramUser } from "@/utils/telegram";
+import { useUtm } from "@/hooks/useUtm";
 import Hero from "@/components/landing/Hero";
 import Techniques from "@/components/landing/Techniques";
 import UserGuide from "@/components/landing/UserGuide";
 import AgentSystem from "@/components/landing/AgentSystem";
 import InsightsFeed from "@/components/landing/InsightsFeed";
 import TestsCTA from "@/components/landing/TestsCTA";
+import Footer from "@/components/landing/Footer";
 
 export default function Landing() {
+  useUtm();
   const { isAuthenticated, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
@@ -146,6 +149,7 @@ export default function Landing() {
         <AgentSystem />
         <InsightsFeed />
       </main>
+      <Footer />
     </div>
   );
 }
