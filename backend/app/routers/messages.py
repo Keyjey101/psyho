@@ -19,6 +19,7 @@ from app.agents.base import client as ai_client
 from app.services.context import maybe_compress_context, generate_session_title
 from app.services.memory_service import extract_and_update_memory
 from app.services.personality_service import compute_personality_snapshot, should_compute_snapshot
+from app.services import billing
 
 from app.config import get_settings
 
@@ -28,10 +29,9 @@ orchestrator = Orchestrator()
 settings = get_settings()
 
 _ws_rate_limits: dict[str, deque] = {}
-WS_RATE_LIMIT = 30  # per minute
 
 
-def _check_ws_rate_limit(user_id: str) -> bool:
+def _check_ws_rate_limit(user_id: str, limit: int) -> bool:
     now = time.monotonic()
     window = 60.0
     if user_id not in _ws_rate_limits:
@@ -39,7 +39,7 @@ def _check_ws_rate_limit(user_id: str) -> bool:
     dq = _ws_rate_limits[user_id]
     while dq and dq[0] < now - window:
         dq.popleft()
-    if len(dq) >= WS_RATE_LIMIT:
+    if len(dq) >= limit:
         return False
     dq.append(now)
     return True
@@ -174,12 +174,24 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
             await websocket.close(code=4004, reason="Session not found")
             return
 
+        user_q = await db.execute(select(User).where(User.id == user_id))
+        user_obj = user_q.scalar_one_or_none()
+        if not user_obj:
+            await websocket.close(code=4001, reason="User not found")
+            return
+        ws_limit = billing.ws_rate_limit_per_minute(user_obj)
+        memory_allowed = billing.memory_enabled_for(user_obj)
+
         profile_result = await db.execute(
             select(UserProfile).where(UserProfile.user_id == user_id)
         )
         profile = profile_result.scalar_one_or_none()
         preferred_style = profile.preferred_style if profile else "balanced"
-        long_term_memory = profile.long_term_memory if (profile and profile.memory_enabled) else ""
+        long_term_memory = (
+            profile.long_term_memory
+            if (profile and profile.memory_enabled and memory_allowed)
+            else ""
+        )
         therapy_goals = profile.therapy_goals or "" if profile else ""
         address_form = getattr(profile, "address_form", "ты") if profile else "ты"
         gender = getattr(profile, "gender", "") if profile else ""
@@ -268,7 +280,7 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
 
             is_regenerate = msg_type == "regenerate"
 
-            if not _check_ws_rate_limit(user_id):
+            if not _check_ws_rate_limit(user_id, ws_limit):
                 await websocket.send_json({"type": "error", "message": "Слишком много сообщений. Подожди немного."})
                 continue
 
@@ -429,7 +441,7 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                     "max_exchanges": max_exchanges,
                 })
 
-            if profile and profile.memory_enabled and full_response:
+            if profile and profile.memory_enabled and memory_allowed and full_response:
                 _memory_counters[session_id] = _memory_counters.get(session_id, 0) + 1
                 # Every 3 exchanges: balance between freshness and API cost.
                 # The dedup hash in extract_and_update_memory

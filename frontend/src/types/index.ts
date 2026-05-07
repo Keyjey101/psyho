@@ -10,6 +10,66 @@ export interface User {
   is_admin?: boolean;
 }
 
+export type BillingTier = "free" | "pro";
+
+export interface SubscriptionMe {
+  tier: BillingTier;
+  expires_at: string | null;
+  autorenew: boolean;
+  free_sessions_left: number;
+  paid_sessions_left: number;
+  notify_telegram_linked: boolean;
+}
+
+export type PlanCode = "pro_month" | "pro_3m" | "pro_year";
+export type PackCode = "pack_5" | "pack_15";
+export type PurposeCode = PlanCode | PackCode;
+
+export interface PricingPlan {
+  amount_kopecks: number;
+  label: string;
+  size?: number;
+}
+
+export interface PricingResponse {
+  monetization_enabled: boolean;
+  free_lifetime_sessions: number;
+  plans: Record<PlanCode, PricingPlan>;
+  packs: Record<PackCode, PricingPlan>;
+}
+
+export interface PromoCheckResponse {
+  valid: boolean;
+  discount_percent: number;
+  final_amount_kopecks: number;
+  error?: string | null;
+}
+
+export interface CheckoutResponse {
+  confirmation_url: string;
+  payment_id: string;
+  amount_kopecks: number;
+  discount_kopecks: number;
+}
+
+export interface PaymentItem {
+  id: string;
+  purpose: string;
+  amount_kopecks: number;
+  discount_kopecks: number;
+  status: string;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface PaywallDetail {
+  reason: string;
+  tier?: BillingTier;
+  free_sessions_left?: number;
+  paid_sessions_left?: number;
+  limit?: number;
+}
+
 export interface UserProfile {
   user_id: string;
   therapy_goals: string | null;

@@ -49,6 +49,33 @@ class Settings(BaseSettings):
 
     OTP_EXPIRE_MINUTES: int = 10
 
+    # ── Monetization ──────────────────────────────────────────────────────
+    MONETIZATION_ENABLED: bool = False
+
+    # Prices in kopecks (RUB * 100). Floats banned to avoid rounding pain.
+    PRICING_PRO_MONTH_KOPECKS: int = 39000
+    PRICING_PRO_3M_KOPECKS: int = 99000
+    PRICING_PRO_YEAR_KOPECKS: int = 299000
+    PRICING_PACK_5_KOPECKS: int = 29000
+    PRICING_PACK_15_KOPECKS: int = 69000
+
+    FREE_LIFETIME_SESSIONS: int = 2
+    FREE_DAILY_ACTIONS: int = 1
+
+    PACK_5_SIZE: int = 5
+    PACK_15_SIZE: int = 15
+
+    WS_RATE_LIMIT_FREE: int = 20
+    WS_RATE_LIMIT_PRO: int = 60
+    WS_RATE_LIMIT_PACKAGE: int = 30
+
+    YOOKASSA_SHOP_ID: str = ""
+    YOOKASSA_SECRET_KEY: str = ""
+    YOOKASSA_RETURN_URL: str = "https://psyho.app/profile/subscription?from=yookassa"
+
+    SUBSCRIPTION_GRACE_DAYS: int = 3
+    SUBSCRIPTION_RENEW_LOOKAHEAD_HOURS: int = 24
+
     model_config = {"env_file": (".env", "../.env"), "env_file_encoding": "utf-8", "extra": "ignore"}
 
     @field_validator("TELEGRAM_BOT_USERNAME")

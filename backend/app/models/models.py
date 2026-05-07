@@ -27,6 +27,27 @@ class User(Base):
     telegram_id: Mapped[str | None] = mapped_column(String(20), nullable=True, unique=True, index=True)
     telegram_username: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
+    # ── Monetization ──────────────────────────────────────────────────────
+    subscription_tier: Mapped[str] = mapped_column(String(20), default="free", server_default="free")
+    subscription_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    subscription_started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    autorenew_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    sessions_quota_balance: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    lifetime_free_sessions_used: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    saved_payment_method_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    # UTM attribution (immutable once set at registration)
+    utm_source: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    utm_medium: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    utm_campaign: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    utm_content: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    utm_term: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    referrer_host: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    # Telegram-bot delivery channel for billing notifications
+    notify_telegram_id: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)
+    notify_link_token: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
+
     sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
     profile = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
@@ -197,6 +218,66 @@ class AppSetting(Base):
     key: Mapped[str] = mapped_column(String(100), primary_key=True)
     value: Mapped[str] = mapped_column(Text, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    provider: Mapped[str] = mapped_column(String(20), default="yookassa", server_default="yookassa")
+    provider_payment_id: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
+    provider_idempotence_key: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    amount_kopecks: Mapped[int] = mapped_column(Integer, nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), default="RUB", server_default="RUB")
+    status: Mapped[str] = mapped_column(String(20), default="pending", server_default="pending", index=True)
+    purpose: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    promo_code_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("promo_codes.id", ondelete="SET NULL"), nullable=True)
+    discount_kopecks: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    utm_source: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    utm_campaign: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    is_recurring: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class SubscriptionEvent(Base):
+    __tablename__ = "subscription_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    event_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    from_tier: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    to_tier: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    payment_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("payments.id", ondelete="SET NULL"), nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+
+
+class PromoCode(Base):
+    __tablename__ = "promo_codes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    code: Mapped[str] = mapped_column(String(40), unique=True, nullable=False, index=True)
+    discount_percent: Mapped[int] = mapped_column(Integer, nullable=False)
+    max_uses: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    used_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    valid_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    applies_to: Mapped[str] = mapped_column(String(20), default="all", server_default="all")
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    created_by_admin_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+
+class PromoRedemption(Base):
+    __tablename__ = "promo_redemptions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    promo_code_id: Mapped[str] = mapped_column(String(36), ForeignKey("promo_codes.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    payment_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("payments.id", ondelete="SET NULL"), nullable=True)
+    redeemed_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
 class AnonymousInsight(Base):

@@ -10,10 +10,21 @@ from app.database import get_db
 from app.models.models import ChatSession, Message, User
 from app.schemas.session import SessionCreate, SessionUpdate, SessionResponse, SessionListResponse, SessionDetailResponse
 from app.middleware.auth import get_current_user
+from app.services import billing
 
 settings = get_settings()
 
 router = APIRouter()
+
+
+def _paywall_payload(user: User) -> dict:
+    quota = billing.get_user_quota(user)
+    return {
+        "reason": "session_quota_exhausted",
+        "tier": quota["tier"],
+        "free_sessions_left": quota["free_sessions_left"],
+        "paid_sessions_left": quota["paid_sessions_left"],
+    }
 
 
 @router.get("")
@@ -49,6 +60,9 @@ async def list_sessions(
 
 @router.post("", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)
 async def create_session(body: SessionCreate, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    quota_source = billing.consume_session_quota(user)
+    if quota_source is None:
+        raise HTTPException(status_code=402, detail=_paywall_payload(user))
     session = ChatSession(user_id=user.id, title=body.title, max_exchanges=settings.SESSION_MAX_EXCHANGES)
     db.add(session)
     await db.commit()
@@ -144,6 +158,12 @@ async def continue_session(
     if not prev_session:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    quota_source = billing.consume_session_quota(user)
+    if quota_source is None:
+        raise HTTPException(status_code=402, detail=_paywall_payload(user))
+
+    use_continuation = billing.continuation_enabled_for(user)
+
     msg_result = await db.execute(
         select(Message)
         .where(Message.session_id == session_id)
@@ -199,7 +219,7 @@ async def continue_session(
         "previous_title": prev_session.title or "Без названия",
         "insights": insights,
         "previous_id": session_id,
-    }, ensure_ascii=False)
+    }, ensure_ascii=False) if use_continuation else None
 
     new_session = ChatSession(
         user_id=user.id,

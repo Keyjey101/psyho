@@ -4,7 +4,9 @@ import { ChevronDown } from "lucide-react";
 import BreathingExercise from "./BreathingExercise";
 import PopItGame from "./PopItGame";
 import ActionResultOverlay from "./ActionResultOverlay";
+import SoftPaywallModal from "@/components/billing/SoftPaywallModal";
 import api from "@/api/client";
+import type { PaywallDetail } from "@/types";
 
 interface ActionPanelProps {
   sessionId: string | undefined;
@@ -27,6 +29,7 @@ export default function ActionPanel({ sessionId, disabled, isOpen, onMoodRequest
   const [overlayTitle, setOverlayTitle] = useState("");
   const [overlayContent, setOverlayContent] = useState<string | null>(null);
   const [overlayLoading, setOverlayLoading] = useState(false);
+  const [paywall, setPaywall] = useState<PaywallDetail | null>(null);
 
   const closeBreatheOverlay = () => {
     setActiveMode(null);
@@ -50,8 +53,13 @@ export default function ActionPanel({ sessionId, disabled, isOpen, onMoodRequest
           { action_type: id }
         );
         setOverlayContent(res.data.content);
-      } catch {
-        setOverlayContent("Произошла ошибка. Попробуй ещё раз.");
+      } catch (err: any) {
+        if (err?.response?.status === 402) {
+          setActiveMode(null);
+          setPaywall(err.response.data?.detail ?? { reason: "daily_action_limit" });
+        } else {
+          setOverlayContent("Произошла ошибка. Попробуй ещё раз.");
+        }
       } finally {
         setOverlayLoading(false);
       }
@@ -149,6 +157,14 @@ export default function ActionPanel({ sessionId, disabled, isOpen, onMoodRequest
           onClose={closeOverlay}
         />
       )}
+
+      <SoftPaywallModal
+        open={!!paywall}
+        onClose={() => setPaywall(null)}
+        reason={paywall?.reason}
+        freeSessionsLeft={paywall?.free_sessions_left}
+        paidSessionsLeft={paywall?.paid_sessions_left}
+      />
     </>
   );
 }

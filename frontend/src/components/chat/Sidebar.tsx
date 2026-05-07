@@ -1,10 +1,12 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, X, LogOut, MessageSquare, Settings, Download, Smile, BarChart2, Moon, Sun, Shield, Lightbulb, Home, ClipboardList } from "lucide-react";
+import { Plus, Trash2, X, LogOut, MessageSquare, Settings, Download, Smile, BarChart2, Moon, Sun, Shield, Lightbulb, Home, ClipboardList, Sparkles } from "lucide-react";
 import type { Session } from "@/types";
 import { useNavigate } from "react-router-dom";
 import { useThemeStore } from "@/store/theme";
 import { useRenameSession } from "@/hooks/useSessions";
+import { useSubscriptionMe } from "@/hooks/useSubscription";
+import ProBadge from "@/components/billing/ProBadge";
 
 const PAGE_SIZE = 20;
 
@@ -63,6 +65,8 @@ export default function Sidebar({
   const editInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const renameSession = useRenameSession();
+  const { data: sub } = useSubscriptionMe();
+  const isPro = sub?.tier === "pro";
 
   const visibleSessions = sessions.slice(0, visibleCount);
   const hasMore = visibleCount < sessions.length;
@@ -75,6 +79,7 @@ export default function Sidebar({
             <img src="/illustrations/opt/ai_avatar.webp" alt="Ника" className="h-full w-full object-cover" />
           </div>
           <span className="font-serif text-xl font-bold text-[#5A5048] dark:text-[#F5EDE4]">Ника</span>
+          {isPro && <ProBadge compact />}
         </div>
         <button onClick={onClose} className="rounded-lg p-1.5 text-[#8A7A6A] hover:bg-[#FAF6F1] dark:text-[#B8A898] dark:hover:bg-[#2A2420] lg:hidden">
           <X className="h-5 w-5" />
@@ -248,6 +253,13 @@ export default function Sidebar({
               Админ
             </button>
           )}
+          <button
+            onClick={() => navigate(isPro ? "/profile/subscription" : "/pricing")}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A]"
+          >
+            <Sparkles className="h-4 w-4" />
+            {isPro ? "Подписка" : "Pro · 390 ₽"}
+          </button>
           <ThemeToggle />
           <button
             onClick={onLogout}

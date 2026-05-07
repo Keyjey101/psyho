@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { User } from "@/types";
 import api from "@/api/client";
 import { TG_TOKEN_KEY, TG_REFRESH_KEY } from "@/utils/telegram";
+import { getStoredUtm } from "@/hooks/useUtm";
 
 interface AuthState {
   user: User | null;
@@ -53,7 +54,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   telegramAuth: async (initData: string) => {
-    const { data } = await api.post("/auth/telegram", { init_data: initData });
+    const utm = getStoredUtm();
+    const { data } = await api.post("/auth/telegram", { init_data: initData, utm });
     localStorage.setItem(TG_TOKEN_KEY, data.access_token);
     localStorage.setItem(TG_REFRESH_KEY, data.refresh_token);
     set({ isAuthenticated: true, isLoading: false });
@@ -65,10 +67,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   telegramMiniAppAuth: async (telegramId: string, firstName: string, username?: string) => {
+    const utm = getStoredUtm();
     const { data } = await api.post("/auth/tg/mini-app", {
       telegram_id: telegramId,
       first_name: firstName,
       username: username || null,
+      utm,
     });
     localStorage.setItem(TG_TOKEN_KEY, data.access_token);
     localStorage.setItem(TG_REFRESH_KEY, data.refresh_token);
@@ -86,7 +90,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   checkTgCode: async (requestId: string) => {
-    const { data } = await api.get(`/auth/tg/check/${requestId}`);
+    const utm = getStoredUtm();
+    const params: Record<string, string> = {};
+    if (utm) {
+      for (const [k, v] of Object.entries(utm)) {
+        if (v) params[k] = String(v);
+      }
+    }
+    const { data } = await api.get(`/auth/tg/check/${requestId}`, { params });
     if (data.status === "verified") {
       set({ isAuthenticated: true, isLoading: false });
       try {
