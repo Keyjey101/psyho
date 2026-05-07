@@ -28,6 +28,8 @@ import {
   Clock,
   Target,
   Heart,
+  Gift,
+  Sparkles,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { AGENTS } from "@/types";
@@ -87,6 +89,11 @@ interface AdminUser {
   cost_total: number;
   last_active_at: string | null;
   avg_mood: number | null;
+  subscription_tier: "free" | "pro";
+  subscription_expires_at: string | null;
+  free_sessions_left: number;
+  paid_sessions_left: number;
+  autorenew: boolean;
 }
 
 interface UserDetail {
@@ -104,6 +111,13 @@ interface UserDetail {
   tasks_count: number;
   tasks_completed: number;
   achievements: { achievement_type: string; earned_at: string }[];
+  subscription_tier: "free" | "pro";
+  subscription_expires_at: string | null;
+  free_sessions_left: number;
+  paid_sessions_left: number;
+  autorenew: boolean;
+  notify_telegram_linked: boolean;
+  admin_grants: { event_type: string; note: string | null; created_at: string | null }[];
   sessions: {
     id: string;
     title: string | null;
@@ -174,6 +188,12 @@ export default function Admin() {
   const [showUserModal, setShowUserModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [tokenPrice, setTokenPrice] = useState("0");
+  const [grantTarget, setGrantTarget] = useState<{ id: string; name: string; email: string } | null>(null);
+  const [grantKind, setGrantKind] = useState<"pro_days" | "sessions">("pro_days");
+  const [grantAmount, setGrantAmount] = useState<string>("30");
+  const [grantNote, setGrantNote] = useState("");
+  const [granting, setGranting] = useState(false);
+  const [grantSuccess, setGrantSuccess] = useState("");
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -265,6 +285,52 @@ export default function Admin() {
       loadData();
     } catch {
       setError("Ошибка сохранения настроек");
+    }
+  };
+
+  const openGrantModal = (u: { id: string; name: string; email: string }) => {
+    setGrantTarget({ id: u.id, name: u.name, email: u.email });
+    setGrantKind("pro_days");
+    setGrantAmount("30");
+    setGrantNote("");
+    setGrantSuccess("");
+    setError("");
+  };
+
+  const closeGrantModal = () => {
+    setGrantTarget(null);
+    setGrantSuccess("");
+  };
+
+  const handleGrant = async () => {
+    if (!grantTarget) return;
+    const amount = parseInt(grantAmount, 10);
+    if (!Number.isFinite(amount) || amount < 1) {
+      setError("Введите положительное число");
+      return;
+    }
+    setGranting(true);
+    setError("");
+    try {
+      await api.post(`/admin/users/${grantTarget.id}/grant`, {
+        kind: grantKind,
+        amount,
+        note: grantNote.trim() || undefined,
+      });
+      setGrantSuccess(
+        grantKind === "pro_days"
+          ? `Начислено ${amount} дн. Pro`
+          : `Начислено ${amount} сессий`,
+      );
+      await loadData();
+      if (selectedUser?.id === grantTarget.id) {
+        const { data } = await api.get(`/admin/users/${grantTarget.id}`);
+        setSelectedUser(data);
+      }
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || "Не удалось начислить");
+    } finally {
+      setGranting(false);
     }
   };
 
@@ -595,6 +661,7 @@ export default function Admin() {
                       <th className="cursor-pointer px-4 py-3" onClick={() => handleSort("created_at")}>
                         <span className="inline-flex items-center gap-1">Регистрация <SortIcon field="created_at" /></span>
                       </th>
+                      <th className="px-4 py-3">Подписка</th>
                       <th className="px-4 py-3">Статус</th>
                       <th className="px-4 py-3">Действия</th>
                     </tr>
@@ -609,6 +676,34 @@ export default function Admin() {
                         <td className="px-4 py-3 text-surface-600">{formatTokens(u.tokens_total)}</td>
                         <td className="px-4 py-3 text-surface-600">{formatCost(u.cost_total)}</td>
                         <td className="px-4 py-3 text-surface-500">{new Date(u.created_at).toLocaleDateString("ru-RU")}</td>
+                        <td className="px-4 py-3">
+                          {u.subscription_tier === "pro" ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="inline-flex w-fit items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                                <Sparkles className="h-3 w-3" />
+                                Pro
+                              </span>
+                              {u.subscription_expires_at && (
+                                <span className="text-[11px] text-surface-400">
+                                  до {new Date(u.subscription_expires_at).toLocaleDateString("ru-RU")}
+                                </span>
+                              )}
+                              {u.paid_sessions_left > 0 && (
+                                <span className="text-[11px] text-surface-400">+{u.paid_sessions_left} пак.</span>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="inline-flex w-fit rounded-full bg-surface-100 px-2 py-0.5 text-xs font-medium text-surface-500">
+                                Free
+                              </span>
+                              <span className="text-[11px] text-surface-400">
+                                своб. {u.free_sessions_left}
+                                {u.paid_sessions_left > 0 ? ` · пак. ${u.paid_sessions_left}` : ""}
+                              </span>
+                            </div>
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <span
                             className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -626,6 +721,13 @@ export default function Admin() {
                               title="Подробнее"
                             >
                               <Eye className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => openGrantModal(u)}
+                              className="rounded-lg p-1.5 text-amber-600 transition-colors hover:bg-amber-50"
+                              title="Начислить"
+                            >
+                              <Gift className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => handleToggleStatus(u.id)}
@@ -802,6 +904,71 @@ export default function Admin() {
                 </div>
               </div>
 
+              <div className="mb-6 rounded-xl border border-surface-100 bg-surface-50 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-surface-900">Подписка</h3>
+                  <button
+                    onClick={() => openGrantModal({ id: selectedUser.id, name: selectedUser.name, email: selectedUser.email })}
+                    className="inline-flex items-center gap-1 rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-200"
+                  >
+                    <Gift className="h-3.5 w-3.5" />
+                    Начислить
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div>
+                    <p className="text-xs text-surface-500">Тариф</p>
+                    <p className="text-sm font-semibold text-surface-900">
+                      {selectedUser.subscription_tier === "pro" ? (
+                        <span className="inline-flex items-center gap-1 text-amber-700">
+                          <Sparkles className="h-3.5 w-3.5" /> Pro
+                        </span>
+                      ) : (
+                        "Free"
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-surface-500">Доступ до</p>
+                    <p className="text-sm font-semibold text-surface-900">
+                      {selectedUser.subscription_expires_at
+                        ? new Date(selectedUser.subscription_expires_at).toLocaleDateString("ru-RU")
+                        : "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-surface-500">Бесплатные</p>
+                    <p className="text-sm font-semibold text-surface-900">{selectedUser.free_sessions_left}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-surface-500">Из пакета</p>
+                    <p className="text-sm font-semibold text-surface-900">{selectedUser.paid_sessions_left}</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-surface-500">
+                  <span>Автопродление: {selectedUser.autorenew ? "вкл" : "выкл"}</span>
+                  <span>·</span>
+                  <span>Telegram: {selectedUser.notify_telegram_linked ? "связан" : "не связан"}</span>
+                </div>
+                {selectedUser.admin_grants.length > 0 && (
+                  <div className="mt-3 border-t border-surface-200 pt-2">
+                    <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-surface-500">
+                      История начислений
+                    </p>
+                    <ul className="space-y-1 text-[12px] text-surface-600">
+                      {selectedUser.admin_grants.slice(0, 5).map((g, i) => (
+                        <li key={i} className="flex justify-between gap-2">
+                          <span>{g.note || g.event_type}</span>
+                          <span className="shrink-0 text-surface-400">
+                            {g.created_at ? new Date(g.created_at).toLocaleDateString("ru-RU") : ""}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
               {selectedUser.achievements.length > 0 && (
                 <div className="mb-6">
                   <h3 className="mb-2 text-sm font-semibold text-surface-900">Достижения</h3>
@@ -831,6 +998,130 @@ export default function Admin() {
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {grantTarget && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+            onClick={closeGrantModal}
+          >
+            <div
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 flex items-start justify-between">
+                <div>
+                  <h2 className="flex items-center gap-2 text-lg font-bold text-surface-900">
+                    <Gift className="h-5 w-5 text-amber-600" />
+                    Начислить пользователю
+                  </h2>
+                  <p className="mt-1 text-sm text-surface-500">
+                    {grantTarget.name || grantTarget.email}
+                  </p>
+                </div>
+                <button
+                  onClick={closeGrantModal}
+                  className="rounded-lg p-2 text-surface-400 hover:bg-surface-100"
+                >
+                  <AlertCircle className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="mb-4 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    setGrantKind("pro_days");
+                    setGrantAmount("30");
+                  }}
+                  className={`rounded-xl border px-3 py-3 text-left transition-colors ${
+                    grantKind === "pro_days"
+                      ? "border-amber-400 bg-amber-50"
+                      : "border-surface-200 hover:bg-surface-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 text-sm font-semibold text-surface-900">
+                    <Sparkles className="h-3.5 w-3.5 text-amber-600" />
+                    Pro (дни)
+                  </div>
+                  <p className="mt-0.5 text-xs text-surface-500">
+                    Продлить подписку на N дней
+                  </p>
+                </button>
+                <button
+                  onClick={() => {
+                    setGrantKind("sessions");
+                    setGrantAmount("5");
+                  }}
+                  className={`rounded-xl border px-3 py-3 text-left transition-colors ${
+                    grantKind === "sessions"
+                      ? "border-amber-400 bg-amber-50"
+                      : "border-surface-200 hover:bg-surface-50"
+                  }`}
+                >
+                  <div className="text-sm font-semibold text-surface-900">Сессии</div>
+                  <p className="mt-0.5 text-xs text-surface-500">
+                    Добавить N сессий в баланс
+                  </p>
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <label className="mb-1.5 block text-sm font-medium text-surface-700">
+                  Сколько начислить
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max={grantKind === "pro_days" ? 365 : 1000}
+                  value={grantAmount}
+                  onChange={(e) => setGrantAmount(e.target.value)}
+                  className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                />
+                <p className="mt-1 text-xs text-surface-400">
+                  {grantKind === "pro_days"
+                    ? "До 365 дней за раз. Если у пользователя уже есть Pro — продлим от текущего срока."
+                    : "До 1000 сессий за раз. Платный баланс — расходуется до бесплатных лимитов."}
+                </p>
+              </div>
+
+              <div className="mb-5">
+                <label className="mb-1.5 block text-sm font-medium text-surface-700">
+                  Комментарий (необязательно)
+                </label>
+                <input
+                  type="text"
+                  value={grantNote}
+                  onChange={(e) => setGrantNote(e.target.value)}
+                  maxLength={500}
+                  placeholder="Например: компенсация бага, ранний бета-тестер"
+                  className="w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                />
+              </div>
+
+              {grantSuccess && (
+                <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                  {grantSuccess}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={closeGrantModal}
+                  className="rounded-lg border border-surface-200 px-4 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50"
+                >
+                  Закрыть
+                </button>
+                <button
+                  onClick={handleGrant}
+                  disabled={granting}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:opacity-50"
+                >
+                  <Gift className="h-4 w-4" />
+                  {granting ? "Начисляем..." : "Начислить"}
+                </button>
               </div>
             </div>
           </div>

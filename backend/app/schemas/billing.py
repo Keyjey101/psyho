@@ -81,3 +81,9 @@ class PromoUpdateRequest(BaseModel):
     active: Optional[bool] = None
     valid_until: Optional[datetime] = None
     max_uses: Optional[int] = Field(default=None, ge=1)
+
+
+class AdminGrantRequest(BaseModel):
+    kind: Literal["pro_days", "sessions"]
+    amount: int = Field(ge=1, le=3650)
+    note: Optional[str] = Field(default=None, max_length=500)

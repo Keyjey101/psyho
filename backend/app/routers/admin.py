@@ -17,7 +17,8 @@ from app.models.models import (
     AppSetting, Achievement, DiaryEntry, SessionTask,
     Payment, PromoCode, PromoRedemption, SubscriptionEvent,
 )
-from app.schemas.billing import PromoCreateRequest, PromoUpdateRequest
+from app.schemas.billing import AdminGrantRequest, PromoCreateRequest, PromoUpdateRequest
+from app.services import billing, notify
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -324,6 +325,7 @@ async def list_users(
         )
         token_price = float(await _get_setting(db, "token_price", "0.0"))
 
+        quota = billing.get_user_quota(u)
         user_data.append({
             "id": u.id,
             "email": u.email,
@@ -336,6 +338,11 @@ async def list_users(
             "cost_total": round(tokens * token_price, 4),
             "last_active_at": last_session,
             "avg_mood": round(avg_mood, 1) if avg_mood else None,
+            "subscription_tier": quota["tier"],
+            "subscription_expires_at": quota["expires_at"],
+            "free_sessions_left": quota["free_sessions_left"],
+            "paid_sessions_left": quota["paid_sessions_left"],
+            "autorenew": quota["autorenew"],
         })
 
     return user_data
@@ -418,6 +425,26 @@ async def get_user_detail(
         .where(SessionTask.user_id == user_id, SessionTask.completed == True)  # noqa: E712
     )
 
+    quota = billing.get_user_quota(user)
+
+    grant_events_q = await db.execute(
+        select(SubscriptionEvent)
+        .where(
+            SubscriptionEvent.user_id == user_id,
+            SubscriptionEvent.event_type.in_(["admin_grant_pro", "admin_grant_sessions"]),
+        )
+        .order_by(SubscriptionEvent.created_at.desc())
+        .limit(20)
+    )
+    grants = [
+        {
+            "event_type": e.event_type,
+            "note": e.note,
+            "created_at": e.created_at.isoformat() if e.created_at else None,
+        }
+        for e in grant_events_q.scalars().all()
+    ]
+
     return {
         "id": user.id,
         "email": user.email,
@@ -437,6 +464,13 @@ async def get_user_detail(
             for a in achievements
         ],
         "sessions": session_data,
+        "subscription_tier": quota["tier"],
+        "subscription_expires_at": quota["expires_at"],
+        "free_sessions_left": quota["free_sessions_left"],
+        "paid_sessions_left": quota["paid_sessions_left"],
+        "autorenew": quota["autorenew"],
+        "notify_telegram_linked": quota["notify_telegram_linked"],
+        "admin_grants": grants,
     }
 
 
@@ -737,6 +771,79 @@ async def update_promo(
         promo.max_uses = body.max_uses
     await db.commit()
     return {"ok": True}
+
+
+@router.post("/users/{user_id}/grant")
+async def grant_to_user(
+    user_id: str,
+    body: AdminGrantRequest,
+    admin=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Manually credit a user. Additive only — kind="pro_days" extends Pro
+    access by N days, kind="sessions" tops up the paid-session balance."""
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    now = datetime.now(timezone.utc)
+    admin_email = getattr(admin, "email", None) or "admin"
+    note_prefix = f"by {admin_email}"
+    user_note = (body.note or "").strip()
+    full_note = f"{note_prefix}: {user_note}" if user_note else note_prefix
+
+    if body.kind == "pro_days":
+        if body.amount > 365:
+            raise HTTPException(status_code=400, detail="Не более 365 дней за раз")
+        previous_tier = user.subscription_tier
+        cur = user.subscription_expires_at
+        if cur is not None and cur.tzinfo is None:
+            cur = cur.replace(tzinfo=timezone.utc)
+        base = cur if (cur and cur > now) else now
+        user.subscription_expires_at = base + timedelta(days=body.amount)
+        user.subscription_tier = "pro"
+        if not user.subscription_started_at:
+            user.subscription_started_at = now
+        db.add(SubscriptionEvent(
+            user_id=user.id,
+            event_type="admin_grant_pro",
+            from_tier=previous_tier,
+            to_tier="pro",
+            note=f"+{body.amount}d {full_note}",
+        ))
+        msg = (
+            f"🎁 Тебе начислено {body.amount} дн. PsyHo Pro. "
+            f"Доступ до {user.subscription_expires_at:%d.%m.%Y}."
+        )
+    else:  # sessions
+        if body.amount > 1000:
+            raise HTTPException(status_code=400, detail="Не более 1000 сессий за раз")
+        user.sessions_quota_balance = (user.sessions_quota_balance or 0) + body.amount
+        db.add(SubscriptionEvent(
+            user_id=user.id,
+            event_type="admin_grant_sessions",
+            from_tier=user.subscription_tier,
+            to_tier=user.subscription_tier,
+            note=f"+{body.amount} sessions {full_note}",
+        ))
+        msg = f"🎁 Начислено {body.amount} сессий. Всего доступно: {user.sessions_quota_balance}."
+
+    await db.commit()
+
+    try:
+        await notify.notify_user(user, msg)
+    except Exception as e:
+        logger.warning("admin_grant_notify_failed", error=str(e), user_id=user.id)
+
+    quota = billing.get_user_quota(user)
+    return {
+        "ok": True,
+        "subscription_tier": quota["tier"],
+        "subscription_expires_at": quota["expires_at"].isoformat() if quota["expires_at"] else None,
+        "paid_sessions_left": quota["paid_sessions_left"],
+        "free_sessions_left": quota["free_sessions_left"],
+    }
 
 
 @router.get("/payments")
