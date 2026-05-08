@@ -258,7 +258,14 @@ export default function Sidebar({
             className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A]"
           >
             <Sparkles className="h-4 w-4" />
-            {isPro ? "Подписка" : "Pro · 390 ₽"}
+            <span className="flex flex-1 items-center justify-between gap-2">
+              <span>Подписка</span>
+              {!isPro && sub && (
+                <span className="text-[11px] text-[#B8A898]">
+                  {sub.free_sessions_left + sub.paid_sessions_left} сес.
+                </span>
+              )}
+            </span>
           </button>
           <ThemeToggle />
           <button

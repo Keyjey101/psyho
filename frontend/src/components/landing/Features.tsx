@@ -39,7 +39,7 @@ export default function Features() {
           className="mb-16 text-center"
         >
           <h2 className="mb-4 text-3xl font-bold text-surface-900 sm:text-4xl">
-            Почему PsyHo?
+            Почему Ника?
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-surface-500">
             Технологии, которые делают терапию доступнее, бережнее и умнее

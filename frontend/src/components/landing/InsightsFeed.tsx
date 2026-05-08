@@ -6,17 +6,20 @@ import { useAuth } from "@/hooks/useAuth";
 
 interface Insight {
   id: string;
-  text: string;
+  content: string;
   reactions: number;
   created_at: string;
 }
 
 const FALLBACK_INSIGHTS: Insight[] = [
-  { id: "1", text: "Тревога часто прячется за прокрастинацией. Я начал замечать этот паттерн у себя.", reactions: 47, created_at: new Date().toISOString() },
-  { id: "2", text: "После трёх сессий с Никой я наконец смог сформулировать, что именно меня беспокоит.", reactions: 38, created_at: new Date().toISOString() },
-  { id: "3", text: "Дыхательное упражнение 4-7-8 помогло мне не сорваться в конфликте с близкими.", reactions: 62, created_at: new Date().toISOString() },
-  { id: "4", text: "Оказывается, моя самокритика защищает меня от разочарований — это было открытием.", reactions: 55, created_at: new Date().toISOString() },
+  { id: "1", content: "Тревога часто прячется за прокрастинацией. Я начал замечать этот паттерн у себя.", reactions: 47, created_at: new Date().toISOString() },
+  { id: "2", content: "После трёх сессий с Никой я наконец смог сформулировать, что именно меня беспокоит.", reactions: 38, created_at: new Date().toISOString() },
+  { id: "3", content: "Дыхательное упражнение 4-7-8 помогло мне не сорваться в конфликте с близкими.", reactions: 62, created_at: new Date().toISOString() },
+  { id: "4", content: "Оказывается, моя самокритика защищает меня от разочарований — это было открытием.", reactions: 55, created_at: new Date().toISOString() },
 ];
+
+const MIN_INSIGHT_LENGTH = 10;
+const MAX_INSIGHT_LENGTH = 500;
 
 export default function InsightsFeed() {
   const { isAuthenticated } = useAuth();
@@ -24,6 +27,7 @@ export default function InsightsFeed() {
   const [newInsight, setNewInsight] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [reactedIds, setReactedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -47,16 +51,33 @@ export default function InsightsFeed() {
     }
   };
 
+  const trimmedLength = newInsight.trim().length;
+  const tooShort = trimmedLength > 0 && trimmedLength < MIN_INSIGHT_LENGTH;
+
   const handleSubmit = async () => {
-    if (!newInsight.trim() || newInsight.length > 500) return;
+    setSubmitError("");
+    const trimmed = newInsight.trim();
+    if (trimmed.length < MIN_INSIGHT_LENGTH) {
+      setSubmitError(`Слишком коротко — нужно хотя бы ${MIN_INSIGHT_LENGTH} символов.`);
+      return;
+    }
+    if (trimmed.length > MAX_INSIGHT_LENGTH) {
+      setSubmitError(`Длина мысли не должна превышать ${MAX_INSIGHT_LENGTH} символов.`);
+      return;
+    }
     setSubmitting(true);
     try {
-      await api.post("/insights", { content: newInsight.trim() });
+      await api.post("/insights", { content: trimmed });
       setNewInsight("");
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 3000);
-    } catch {
-      // ignore
+    } catch (e: any) {
+      const detail = e?.response?.data?.detail;
+      if (e?.response?.status === 429) {
+        setSubmitError(typeof detail === "string" ? detail : "Слишком много публикаций. Попробуй позже.");
+      } else {
+        setSubmitError("Не получилось отправить. Попробуй ещё раз.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -83,7 +104,7 @@ export default function InsightsFeed() {
               className="rounded-2xl border border-[#E8DDD0] bg-[#FAF6F1] p-5"
             >
               <p className="text-[14px] leading-relaxed text-[#5A5048] mb-4">
-                «{insight.text}»
+                «{insight.content}»
               </p>
               <div className="flex items-center justify-between">
                 <button
@@ -124,17 +145,29 @@ export default function InsightsFeed() {
             <>
               <textarea
                 value={newInsight}
-                onChange={(e) => setNewInsight(e.target.value)}
+                onChange={(e) => {
+                  setNewInsight(e.target.value);
+                  if (submitError) setSubmitError("");
+                }}
                 placeholder="Поделись открытием, мыслью или тем, что помогло тебе..."
-                className="w-full rounded-[14px] border border-[#E8DDD0] bg-white px-4 py-3 text-sm text-[#5A5048] placeholder:text-[#B8A898] focus:border-[#B8785A] focus:outline-none mb-3 resize-none"
+                className="w-full rounded-[14px] border border-[#E8DDD0] bg-white px-4 py-3 text-sm text-[#5A5048] placeholder:text-[#B8A898] focus:border-[#B8785A] focus:outline-none mb-2 resize-none"
                 rows={3}
-                maxLength={500}
+                maxLength={MAX_INSIGHT_LENGTH}
               />
+              {submitError && (
+                <p className="mb-2 rounded-lg bg-rose-50 px-3 py-2 text-[12px] text-rose-700">
+                  {submitError}
+                </p>
+              )}
               <div className="flex items-center justify-between">
-                <span className="text-[11px] text-[#B8A898]">{newInsight.length}/500</span>
+                <span className={`text-[11px] ${tooShort ? "text-rose-500" : "text-[#B8A898]"}`}>
+                  {tooShort
+                    ? `Ещё ${MIN_INSIGHT_LENGTH - trimmedLength} символов до отправки`
+                    : `${newInsight.length}/${MAX_INSIGHT_LENGTH}`}
+                </span>
                 <button
                   onClick={handleSubmit}
-                  disabled={!newInsight.trim() || submitting}
+                  disabled={trimmedLength < MIN_INSIGHT_LENGTH || submitting}
                   className="btn-primary text-sm"
                 >
                   {submitting ? (

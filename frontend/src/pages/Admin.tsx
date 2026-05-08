@@ -30,6 +30,7 @@ import {
   Heart,
   Gift,
   Sparkles,
+  Home,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { AGENTS } from "@/types";
@@ -391,21 +392,32 @@ export default function Admin() {
   ];
 
   return (
-    <div className="min-h-screen bg-surface-50 p-4 lg:p-8">
+    <div className="min-h-screen overflow-x-hidden bg-surface-50 p-4 lg:p-8">
       <Helmet>
         <title>Админ-панель — Ника</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-surface-900">Админ-панель</h1>
-          <div className="flex gap-2">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/")}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 px-2.5 py-1.5 text-xs font-medium text-surface-600 transition-colors hover:bg-surface-100"
+              title="На главную"
+            >
+              <Home className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">На главную</span>
+            </button>
+            <h1 className="text-2xl font-bold text-surface-900">Админ-панель</h1>
+          </div>
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={handleExport}
               className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-1.5 text-xs font-medium text-surface-600 transition-colors hover:bg-surface-100"
             >
               <Download className="h-3.5 w-3.5" />
-              Экспорт CSV
+              <span className="hidden sm:inline">Экспорт CSV</span>
+              <span className="sm:hidden">CSV</span>
             </button>
             <button
               onClick={loadData}
@@ -413,23 +425,23 @@ export default function Admin() {
               className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-1.5 text-xs font-medium text-surface-600 transition-colors hover:bg-surface-100 disabled:opacity-50"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
-              Обновить
+              <span className="hidden sm:inline">Обновить</span>
             </button>
           </div>
         </div>
 
-        <div className="mb-6 flex gap-1 rounded-xl bg-white p-1 shadow-sm">
+        <div className="mb-6 flex gap-1 overflow-x-auto rounded-xl bg-white p-1 shadow-sm">
           {tabs.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+              className={`flex flex-1 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors sm:px-4 ${
                 tab === t.id
                   ? "bg-primary-600 text-white"
                   : "text-surface-500 hover:bg-surface-50"
               }`}
             >
-              <t.icon className="h-4 w-4" />
+              <t.icon className="h-4 w-4 shrink-0" />
               {t.label}
             </button>
           ))}
@@ -613,7 +625,7 @@ export default function Admin() {
         {tab === "users" && (
           <div className="space-y-4">
             <div className="flex flex-wrap gap-3">
-              <div className="relative flex-1 min-w-[200px]">
+              <div className="relative w-full min-w-0 flex-1 sm:w-auto sm:min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
                 <input
                   type="text"

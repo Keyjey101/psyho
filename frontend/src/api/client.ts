@@ -44,7 +44,7 @@ api.interceptors.response.use(
     const path = window.location.pathname;
     const onAuthPage = path.startsWith("/auth") || path === "/login" || path === "/register";
 
-    const publicPrefixes = ["/auth", "/login", "/register"];
+    const publicPrefixes = ["/auth", "/login", "/register", "/legal", "/pricing", "/tests"];
     const publicExact = ["/"];
     const onPublicPage = publicExact.includes(path) || publicPrefixes.some((p) => path.startsWith(p));
 

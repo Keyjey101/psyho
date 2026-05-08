@@ -12,7 +12,7 @@ export default function ProBadge({ className = "", compact = false }: Props) {
       title="Pro-подписка активна"
     >
       <Sparkles className="h-3 w-3" />
-      {compact ? "Pro" : "PsyHo Pro"}
+      {compact ? "Pro" : "Ника Pro"}
     </span>
   );
 }
