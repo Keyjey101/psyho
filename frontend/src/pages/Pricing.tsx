@@ -155,7 +155,8 @@ export default function Pricing() {
 
         {data && !data.monetization_enabled && (
           <div className="mb-6 rounded-[16px] border border-amber-300 bg-amber-50 p-4 text-[13px] text-amber-800">
-            Платежи временно отключены. Вернёмся скоро.
+            Платежи временно отключены. По вопросам добавления сессий пишите в Telegram:{" "}
+            <a href="https://t.me/keyjey101" target="_blank" rel="noopener noreferrer" className="underline font-medium">@keyjey101</a>
           </div>
         )}
 

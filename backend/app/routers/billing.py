@@ -117,7 +117,7 @@ async def _create_payment_for(
     if not s.MONETIZATION_ENABLED:
         raise HTTPException(status_code=503, detail="Платежи временно отключены")
     if not yookassa_client.is_configured():
-        raise HTTPException(status_code=503, detail="Платёжный провайдер не настроен")
+        raise HTTPException(status_code=503, detail="Платёжный провайдер не настроен. По вопросам добавления сессий пишите в Telegram: @keyjey101")
 
     final, promo, err = await billing.apply_promo_code(db, promo_code, purpose, user)
     if err:
