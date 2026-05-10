@@ -33,7 +33,7 @@ export default function Footer() {
           </p>
 
           <div className="flex flex-col items-center gap-1 text-[12px] text-surface-400">
-            <p>Самозанятый Гмыря Евгений Александрович · ИНН 665912762585</p>
+            <p>nika-talk.online/</p>
             <p>
               <a href="mailto:keyjey.danilov@gmail.com" className="hover:text-primary-600">keyjey.danilov@gmail.com</a>
               {" · "}
