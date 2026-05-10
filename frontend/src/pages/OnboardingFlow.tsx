@@ -152,7 +152,7 @@ export default function OnboardingFlow() {
     setSaving(true);
     try {
       await api.patch("/user/me", {
-        name: name.trim() || undefined,
+        name: name.trim() || "друг",
       });
       clearDraft();
       await refreshUser();
