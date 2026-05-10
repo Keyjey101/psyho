@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscriptionMe } from "@/hooks/useSubscription";
 import { useSessions, useSession, useCreateSession, useDeleteSession, useContinueSession } from "@/hooks/useSessions";
 import { useChat } from "@/hooks/useChat";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -33,6 +34,8 @@ export default function Chat() {
     (location.state as { initialMessage?: string } | null)?.initialMessage ?? null;
   const initialMessageRef = useRef<string | null>(initialMessageFromState);
   const { user, logout, refreshUser } = useAuth();
+  const { data: sub } = useSubscriptionMe(!!user);
+  const isPro = sub?.tier === "pro";
   const queryClient = useQueryClient();
   const { data: sessions } = useSessions();
   const { data: currentSession, isError } = useSession(sessionId);
@@ -229,7 +232,7 @@ export default function Chat() {
     navigate("/");
   };
 
-  const isPro = user?.subscription_tier === "pro";
+  const isPro = sub?.tier === "pro";
 
   const previousSession =
     !sessionId && sessions && sessions.length > 0 ? sessions[0] : null;
@@ -237,7 +240,7 @@ export default function Chat() {
   const handleContinueSession = async () => {
     if (!previousSession) return;
     if (!isPro) {
-      setPaywall({ reason: "pro_feature", message: "Продолжение сессии доступно с подпиской Pro" });
+      setPaywall({ reason: "pro_feature" });
       return;
     }
     try {
