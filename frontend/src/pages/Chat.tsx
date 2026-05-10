@@ -229,11 +229,17 @@ export default function Chat() {
     navigate("/");
   };
 
+  const isPro = user?.subscription_tier === "pro";
+
   const previousSession =
     !sessionId && sessions && sessions.length > 0 ? sessions[0] : null;
 
   const handleContinueSession = async () => {
     if (!previousSession) return;
+    if (!isPro) {
+      setPaywall({ reason: "pro_feature", message: "Продолжение сессии доступно с подпиской Pro" });
+      return;
+    }
     try {
       const result = await continueSession.mutateAsync(previousSession.id);
       setAwaitingGreeting(true);
@@ -440,7 +446,7 @@ export default function Chat() {
           agentsUsed={agentsUsed}
           isStreaming={isStreaming || awaitingGreeting}
           previousSession={previousSession}
-          onContinueSession={handleContinueSession}
+          onContinueSession={previousSession ? handleContinueSession : undefined}
           isContinuing={continueSession.isPending}
           onRegenerate={isStreaming || awaitingGreeting ? undefined : handleRegenerate}
         />
