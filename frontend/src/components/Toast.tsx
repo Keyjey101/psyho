@@ -43,6 +43,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           {toasts.map((toast) => (
             <motion.div
               key={toast.id}
+              role={toast.type === "error" ? "alert" : "status"}
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -55,6 +56,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <span className="flex-1">{toast.message}</span>
               <button
                 onClick={() => dismiss(toast.id)}
+                aria-label="Закрыть уведомление"
                 className="shrink-0 rounded-full p-0.5 opacity-60 hover:opacity-100"
               >
                 <X className="h-3.5 w-3.5" />

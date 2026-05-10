@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "@/api/client";
 import { ArrowLeft } from "lucide-react";
+import { pluralizeRu } from "@/utils/pluralize";
 
 function SkeletonBlock({ h = "h-4", w = "w-full", className = "" }: { h?: string; w?: string; className?: string }) {
   return <div className={`animate-pulse rounded-lg bg-[#E8DDD0] ${h} ${w} ${className}`} />;
@@ -158,7 +159,7 @@ export default function MoodPage() {
             <div className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-5 shadow-sm">
               <p className="text-[12px] text-[#8A7A6A] dark:text-[#B8A898]">Среднее</p>
               <div className="mt-1.5 flex items-center gap-2">
-                <span className="text-3xl">{MOOD_EMOJIS[Math.round(Number(avg))]}</span>
+                <span className="text-3xl">{MOOD_EMOJIS[Math.min(5, Math.max(1, Math.round(Number(avg))))]}</span>
                 <span className="text-2xl font-bold text-[#5A5048] dark:text-[#F5EDE4]">{avg}</span>
               </div>
             </div>
@@ -188,11 +189,11 @@ export default function MoodPage() {
             <div className="flex gap-6 text-[13px]">
               <div>
                 <span className="text-emerald-700 font-medium">После выполненных упражнений:</span>
-                <span className="ml-1 font-bold text-emerald-800">{avgWithExercise.toFixed(1)} {MOOD_EMOJIS[Math.round(avgWithExercise)]}</span>
+                <span className="ml-1 font-bold text-emerald-800">{avgWithExercise.toFixed(1)} {MOOD_EMOJIS[Math.min(5, Math.max(1, Math.round(avgWithExercise)))]}</span>
               </div>
               <div>
                 <span className="text-gray-600">Без выполнения:</span>
-                <span className="ml-1 font-bold text-gray-700">{avgWithoutExercise.toFixed(1)} {MOOD_EMOJIS[Math.round(avgWithoutExercise)]}</span>
+                <span className="ml-1 font-bold text-gray-700">{avgWithoutExercise.toFixed(1)} {MOOD_EMOJIS[Math.min(5, Math.max(1, Math.round(avgWithoutExercise)))]}</span>
               </div>
             </div>
             {avgWithExercise > avgWithoutExercise + 0.3 && (
@@ -289,7 +290,7 @@ export default function MoodPage() {
 
         {!loading && entries.length > 1 && (
           <p className="mb-6 text-center text-[13px] text-[#B8A898] dark:text-[#8A7A6A]">
-            Ты уже {entries.length} раз{entries.length === 1 ? "" : "а"} отмечал(а) настроение — продолжай! 🌱
+            Ты уже {entries.length} {pluralizeRu(entries.length, ["раз", "раза", "раз"])} отмечал(а) настроение — продолжай! 🌱
           </p>
         )}
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/api/client";
 import { ArrowLeft, Lock, Unlock, Plus } from "lucide-react";
+import { pluralizeRu } from "@/utils/pluralize";
 
 interface TimeCapsule {
   id: string;
@@ -117,7 +118,7 @@ export default function TimeCapsulePage() {
                         : "bg-[#F5EDE4] dark:bg-[#4A4038] text-[#5A5048] dark:text-[#F5EDE4] hover:bg-[#EBD9C8]"
                     }`}
                   >
-                    {d === 1 ? "1 день" : d === 30 ? "1 месяц" : `${d} дней`}
+                    {d === 1 ? "1 день" : d === 30 ? "1 месяц" : `${d} ${pluralizeRu(d, ["день", "дня", "дней"])}`}
                   </button>
                 ))}
               </div>

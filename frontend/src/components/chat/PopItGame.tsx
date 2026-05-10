@@ -160,7 +160,11 @@ export default function PopItGame() {
   }, []);
 
   useEffect(() => {
+    // Flush pending score on page close/refresh so points aren't lost
+    const handleBeforeUnload = () => { flushScore(); };
+    window.addEventListener("beforeunload", handleBeforeUnload);
     return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
       if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
       if (refillTimerRef.current) clearTimeout(refillTimerRef.current);
       if (comboTimerRef.current) clearTimeout(comboTimerRef.current);

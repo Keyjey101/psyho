@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, MessageSquare } from "lucide-react";
@@ -177,6 +177,8 @@ export default function TestRunnerPage() {
     if (testId) clearDraft(testId);
   };
 
+  const autoAdvanceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleAnswer = (questionIdx: number, optionIdx: number) => {
     setAnswers((prev) => {
       const next = [...prev];
@@ -184,12 +186,18 @@ export default function TestRunnerPage() {
       return next;
     });
     // Auto-advance to next unanswered question after a short delay
-    setTimeout(() => {
+    if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+    autoAdvanceRef.current = setTimeout(() => {
       if (questionIdx < test.questions.length - 1) {
         setCurrentIdx(questionIdx + 1);
       }
     }, 220);
   };
+
+  // Cleanup auto-advance timeout on unmount
+  useEffect(() => {
+    return () => { if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current); };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#FAF6F1] dark:bg-[#2A2420]">

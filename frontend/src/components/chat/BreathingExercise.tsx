@@ -292,11 +292,17 @@ export default function BreathingExercise() {
   const dragOpacity = useTransform(dragX, [-80, 0, 80], [0.6, 1, 0.6]);
 
   // Auto-start animation loop
+  // Use a previous-timestamp approach so that when the browser tab was inactive
+  // and the user returns, we don't get a huge elapsed-jump that piles up cycles.
   useEffect(() => {
     startedAtRef.current = performance.now();
     lastCycleRef.current = 0;
+    let prevTs = performance.now();
     const tick = (now: number) => {
-      setElapsed((now - startedAtRef.current) / 1000);
+      // Clamp delta to at most 2 seconds to prevent cycle pile-up after tab inactivity
+      const delta = Math.min((now - prevTs) / 1000, 2);
+      prevTs = now;
+      setElapsed((prev) => prev + delta);
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);

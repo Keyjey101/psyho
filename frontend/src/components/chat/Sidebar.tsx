@@ -81,7 +81,7 @@ export default function Sidebar({
           <span className="font-serif text-xl font-bold text-[#5A5048] dark:text-[#F5EDE4]">Ника</span>
           {isPro && <ProBadge compact />}
         </div>
-        <button onClick={onClose} className="rounded-lg p-1.5 text-[#8A7A6A] hover:bg-[#FAF6F1] dark:text-[#B8A898] dark:hover:bg-[#2A2420] lg:hidden">
+        <button onClick={onClose} aria-label="Закрыть меню" className="rounded-lg p-1.5 text-[#8A7A6A] hover:bg-[#FAF6F1] dark:text-[#B8A898] dark:hover:bg-[#2A2420] lg:hidden">
           <X className="h-5 w-5" />
         </button>
       </div>
@@ -197,7 +197,7 @@ export default function Sidebar({
       <div className="border-t border-[#E8DDD0] p-4 dark:border-[#4A4038]">
         <div className="mb-3 flex items-center gap-3 px-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#B8785A] text-xs font-bold text-white">
-            {(userName || "U")[0].toUpperCase()}
+            {(userName?.trim() || "U")[0].toUpperCase()}
           </div>
           <span className="truncate text-sm font-medium text-[#5A5048] dark:text-[#F5EDE4]">{userName}</span>
         </div>
@@ -238,7 +238,7 @@ export default function Sidebar({
             Психопортрет
           </button>
           <button
-            onClick={() => { window.location.href = "/#insights"; }}
+            onClick={() => navigate("/#insights")}
             className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A]"
           >
             <Lightbulb className="h-4 w-4" />

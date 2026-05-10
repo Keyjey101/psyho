@@ -22,7 +22,7 @@ const GOALS = [
 
 function ProgressBar({ step }: { step: number }) {
   return (
-    <div className="mb-8 flex gap-1.5">
+    <div className="mb-8 flex gap-1.5" role="progressbar" aria-valuenow={step} aria-valuemin={0} aria-valuemax={TOTAL_STEPS} aria-label="Прогресс настройки">
       {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
         <div
           key={i}

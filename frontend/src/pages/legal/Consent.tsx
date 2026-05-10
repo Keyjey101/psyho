@@ -2,7 +2,7 @@ import LegalLayout, { H2, Placeholder } from "./LegalLayout";
 
 const PH = {
   tg: "@keyjey101",
-  domain: "nika-talk.ru",
+  domain: "nika-talk.online",
   date: "10.05.2026",
 };
 
