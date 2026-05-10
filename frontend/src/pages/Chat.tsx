@@ -35,7 +35,6 @@ export default function Chat() {
   const initialMessageRef = useRef<string | null>(initialMessageFromState);
   const { user, logout, refreshUser } = useAuth();
   const { data: sub } = useSubscriptionMe(!!user);
-  const isPro = sub?.tier === "pro";
   const queryClient = useQueryClient();
   const { data: sessions } = useSessions();
   const { data: currentSession, isError } = useSession(sessionId);
