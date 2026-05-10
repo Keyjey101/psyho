@@ -1,11 +1,11 @@
 import LegalLayout, { H2, Placeholder } from "./LegalLayout";
 
 const PH = {
-  ispolnitel: "{ИСПОЛНИТЕЛЬ_ФИО}",
-  inn: "{ИНН_СЗ}",
-  email: "{EMAIL_СВЯЗИ}",
-  domain: "{ДОМЕН}",
-  date: "{ДАТА_РЕДАКЦИИ}",
+  ispolnitel: "Гмыря Евгений Александрович",
+  inn: "665912762585",
+  email: "keyjey.danilov@gmail.com",
+  domain: "nika-talk.ru",
+  date: "10.05.2026",
 };
 
 export default function Privacy() {

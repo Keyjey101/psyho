@@ -1,8 +1,8 @@
 import LegalLayout, { H2, Placeholder } from "./LegalLayout";
 
 const PH = {
-  email: "{EMAIL_СВЯЗИ}",
-  date: "{ДАТА_РЕДАКЦИИ}",
+  email: "keyjey.danilov@gmail.com",
+  date: "10.05.2026",
 };
 
 export default function Refund() {

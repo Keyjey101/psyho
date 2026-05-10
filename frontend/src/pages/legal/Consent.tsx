@@ -1,9 +1,9 @@
 import LegalLayout, { H2, Placeholder } from "./LegalLayout";
 
 const PH = {
-  tg: "{TELEGRAM_СВЯЗИ}",
-  domain: "{ДОМЕН}",
-  date: "{ДАТА_РЕДАКЦИИ}",
+  tg: "@keyjey101",
+  domain: "nika-talk.ru",
+  date: "10.05.2026",
 };
 
 export default function Consent() {

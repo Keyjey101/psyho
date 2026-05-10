@@ -31,6 +31,15 @@ export default function Footer() {
             кризисе — пожалуйста, обратись к специалисту или на телефон доверия. А в остальное время — я рядом и
             помогу, насколько хватит сил, в любой час, без осуждения.
           </p>
+
+          <div className="flex flex-col items-center gap-1 text-[12px] text-surface-400">
+            <p>Самозанятый Гмыря Евгений Александрович · ИНН 665912762585</p>
+            <p>
+              <a href="mailto:keyjey.danilov@gmail.com" className="hover:text-primary-600">keyjey.danilov@gmail.com</a>
+              {" · "}
+              <a href="https://t.me/keyjey101" target="_blank" rel="noopener noreferrer" className="hover:text-primary-600">Telegram</a>
+            </p>
+          </div>
         </div>
       </div>
     </footer>
