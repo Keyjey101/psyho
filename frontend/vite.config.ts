@@ -27,8 +27,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,svg,woff2}"],
-        globIgnores: ["illustrations/**", "icons/*.png"],
+        globIgnores: ["illustrations/**", "icons/*.png", "sw-push.js"],
         navigateFallback: null,
+        importScripts: ["/sw-push.js"],
         runtimeCaching: [
           {
             urlPattern: /^\/api\//,
