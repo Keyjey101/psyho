@@ -16,7 +16,14 @@ export default function SessionProgress({ current, max, isSessionCompleted }: Se
   }
 
   if (current <= 0) {
-    return <div data-tour="session-progress" className="h-0 overflow-hidden" />;
+    return (
+      <div data-tour="session-progress" className="flex items-center gap-2 px-4 py-1.5 bg-[#FAF6F1] dark:bg-[#2A2420] border-b border-[#E8DDD0] dark:bg-[#4A4038] border-b-[#E8DDD0]">
+        <div className="flex-1 h-[5px] rounded-full bg-[#E8DDD0] dark:bg-[#4A4038] overflow-hidden" />
+        <span className="text-[11px] tabular-nums whitespace-nowrap font-medium text-[#B8A898] dark:text-[#8A7A6A]">
+          0 / {max}
+        </span>
+      </div>
+    );
   }
 
   const pct = Math.min(current / max, 1);
