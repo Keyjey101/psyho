@@ -165,7 +165,7 @@ export default function OnboardingFlow() {
   };
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-[#FAF6F1] px-6 py-12">
+    <div className="flex min-h-dvh flex-col items-center justify-center overflow-x-hidden bg-[#FAF6F1] px-6 py-12">
       <div className="w-full max-w-sm">
         {step > 0 && <ProgressBar step={step} />}
 
