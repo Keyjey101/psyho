@@ -80,7 +80,9 @@ interface ChatTourProps {
   onRequestSidebarClose: () => void;
 }
 
-function MockSidebar() {
+const HL = "rounded-xl bg-[#FAF0E8] border border-[#B8785A] text-[#B8785A] font-medium dark:bg-[#3E342B] dark:border-[#C08B68] dark:text-[#C08B68]";
+
+function MockSidebar({ highlight }: { highlight?: string }) {
   return (
     <div className="flex h-full flex-col bg-white dark:bg-[#352E2A]">
       <div className="flex items-center gap-2 border-b border-[#E8DDD0] bg-[#FAF6F1] px-4 py-4 dark:border-[#4A4038] dark:bg-[#2A2420]">
@@ -99,7 +101,11 @@ function MockSidebar() {
       <div className="p-3">
         <button
           data-tour="new-chat"
-          className="flex w-full items-center gap-2 rounded-[24px] border border-dashed border-[#D8CDC0] px-4 py-3 text-sm font-medium text-[#8A7A6A] dark:border-[#4A4038] dark:text-[#B8A898]"
+          className={`flex w-full items-center gap-2 rounded-[24px] border px-4 py-3 text-sm font-medium ${
+            highlight === "new-chat"
+              ? "border-[#B8785A] bg-[#FAF0E8] text-[#B8785A] dark:border-[#C08B68] dark:bg-[#3E342B] dark:text-[#C08B68]"
+              : "border-dashed border-[#D8CDC0] text-[#8A7A6A] dark:border-[#4A4038] dark:text-[#B8A898]"
+          }`}
         >
           <Plus className="h-4 w-4" />
           Новый разговор
@@ -140,14 +146,18 @@ function MockSidebar() {
           </div>
           <button
             data-tour="profile-btn"
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A]"
+            className={`flex w-full items-center gap-2 px-3 py-2 text-sm ${
+              highlight === "profile-btn" ? HL : "text-[#8A7A6A]"
+            }`}
           >
             <Settings className="h-4 w-4" />
             Профиль
           </button>
           <button
             data-tour="personality-btn"
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A]"
+            className={`flex w-full items-center gap-2 px-3 py-2 text-sm ${
+              highlight === "personality-btn" ? HL : "text-[#8A7A6A]"
+            }`}
           >
             <BarChart2 className="h-4 w-4" />
             Психопортрет
@@ -295,7 +305,7 @@ export default function ChatTour({
               className="fixed inset-y-0 left-0 w-72"
               style={{ zIndex: 206 }}
             >
-              <MockSidebar />
+              <MockSidebar highlight={current.target} />
             </motion.div>
             {hasRect && (
               <motion.div
@@ -393,7 +403,7 @@ export default function ChatTour({
         )}
 
         <div
-          className="fixed inset-0 flex items-start justify-center p-4"
+          className="fixed inset-0 flex items-center justify-center p-4"
           style={{ zIndex: 210, pointerEvents: "none" }}
         >
           <motion.div
