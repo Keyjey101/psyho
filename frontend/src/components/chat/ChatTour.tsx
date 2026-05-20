@@ -393,7 +393,7 @@ export default function ChatTour({
         )}
 
         <div
-          className="fixed inset-0 flex items-center justify-center p-4"
+          className="fixed inset-0 flex items-start justify-center p-4"
           style={{ zIndex: 210, pointerEvents: "none" }}
         >
           <motion.div
@@ -403,13 +403,7 @@ export default function ChatTour({
             exit={{ opacity: 0, scale: 0.93 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
             className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl dark:bg-[#352E2A]"
-            style={{
-              pointerEvents: "all",
-              marginLeft: showMockSidebar ? 288 : 0,
-              maxWidth: showMockSidebar
-                ? "calc(100vw - 288px - 2rem)"
-                : undefined,
-            }}
+            style={{ pointerEvents: "all" }}
           >
             <button
               onClick={complete}
