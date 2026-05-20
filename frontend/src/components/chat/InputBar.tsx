@@ -78,6 +78,7 @@ export default function InputBar({ onSend, disabled, isActionsOpen, onToggleActi
       <div className="mx-auto max-w-3xl">
         <div className="flex items-end gap-2">
           <button
+            data-tour="actions-toggle"
             disabled={disabled}
             onClick={onToggleActions}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#D8CDC0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] text-[#8A7A6A] dark:text-[#B8A898] transition-all hover:bg-[#F5EDE4] dark:hover:bg-[#4A4038] disabled:opacity-40 disabled:pointer-events-none"

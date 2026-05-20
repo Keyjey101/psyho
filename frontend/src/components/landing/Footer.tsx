@@ -21,24 +21,14 @@ export default function Footer() {
               <Link to="/legal/consent" className="hover:text-primary-600">Регулярные платежи</Link>
             </nav>
 
-            <p className="text-sm text-surface-400">
+            <a
+              href="https://t.me/keyjey101"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-surface-400 transition-colors hover:text-primary-600"
+            >
               &copy; {new Date().getFullYear()} Ника
-            </p>
-          </div>
-
-          <p className="max-w-2xl text-center text-[13px] leading-relaxed text-surface-500">
-            Ника — заботливый собеседник, а не врач. В острых состояниях, при мыслях о самоповреждении или
-            кризисе — пожалуйста, обратись к специалисту или на телефон доверия. А в остальное время — я рядом и
-            помогу, насколько хватит сил, в любой час, без осуждения.
-          </p>
-
-          <div className="flex flex-col items-center gap-1 text-[12px] text-surface-400">
-            <p>nika-talk.online</p>
-            <p>
-              <a href="mailto:keyjey.danilov@gmail.com" className="hover:text-primary-600">keyjey.danilov@gmail.com</a>
-              {" · "}
-              <a href="https://t.me/keyjey101" target="_blank" rel="noopener noreferrer" className="hover:text-primary-600">Telegram</a>
-            </p>
+            </a>
           </div>
         </div>
       </div>

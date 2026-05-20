@@ -88,6 +88,7 @@ export default function Sidebar({
 
       <div className="p-3">
         <button
+          data-tour="new-chat"
           onClick={onNewChat}
           className="flex w-full items-center gap-2 rounded-pill border border-dashed border-[#D8CDC0] px-4 py-3 text-sm font-medium text-[#8A7A6A] transition-colors hover:border-[#B8785A] hover:bg-[#FAF6F1] hover:text-[#B8785A] dark:border-[#4A4038] dark:text-[#B8A898] dark:hover:border-[#C08B68] dark:hover:bg-[#2A2420] dark:hover:text-[#C08B68]"
         >
@@ -217,6 +218,7 @@ export default function Sidebar({
             Тесты
           </button>
           <button
+            data-tour="profile-btn"
             onClick={() => navigate("/profile")}
             className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A]"
           >
@@ -231,6 +233,7 @@ export default function Sidebar({
             Настроение
           </button>
           <button
+            data-tour="personality-btn"
             onClick={() => navigate("/personality")}
             className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] hover:text-[#B8785A]"
           >
