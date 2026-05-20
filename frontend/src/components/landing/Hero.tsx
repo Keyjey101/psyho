@@ -43,7 +43,7 @@ export default function Hero() {
   };
 
   return (
-    <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 pt-20">
+    <section className="relative flex min-h-[90vh] items-center justify-center overflow-hidden px-6 pt-20 sm:min-h-screen">
       <div
         className="absolute inset-0"
         style={{ background: "linear-gradient(to bottom, #FAF6F1, #F3EBE3)" }}

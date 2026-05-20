@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
 const techniques = [
@@ -52,8 +53,55 @@ const techniques = [
 ];
 
 export default function Techniques() {
+  const [hintVisible, setHintVisible] = useState(true);
+
+  useEffect(() => {
+    const onScroll = () => {
+      if (window.scrollY > 4) setHintVisible(false);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <section className="bg-white px-6 py-16">
+    <section className="relative bg-white px-6 py-16">
+      {hintVisible && (
+        <>
+          <motion.div
+            className="absolute left-0 right-0 top-0 h-4 bg-white sm:hidden"
+            animate={{ y: [0, -12, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            aria-hidden="true"
+          />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.2, duration: 0.6 }}
+            className="absolute left-1/2 top-3 z-10 flex -translate-x-1/2 flex-col items-center gap-[5px] sm:hidden"
+            aria-hidden="true"
+          >
+            {[0, 1, 2].map((i) => (
+              <motion.span
+                key={i}
+                className="block bg-[#C4B5A4]"
+                style={{
+                  width: 22,
+                  height: 9,
+                  borderRadius: "0 0 100% 100% / 0 0 100% 100%",
+                }}
+                animate={{ opacity: [0, 1, 0], y: [4, -4] }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  delay: (2 - i) * 0.4,
+                  ease: "easeInOut",
+                }}
+              />
+            ))}
+          </motion.div>
+        </>
+      )}
+
       <div className="mx-auto max-w-4xl">
         <h2 className="font-serif text-[22px] font-bold text-[#4A4038] text-center">
           Какими подходами я владею
