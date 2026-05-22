@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, MessageSquare } from "lucide-react";
+import { ArrowLeft, ArrowRight, Home, MessageSquare } from "lucide-react";
 import { getTest, getInterpretation, maxPossibleScore, type PsyTest } from "@/data/tests";
 import { appendLocalHistory, type TestHistoryEntry } from "@/utils/testHistory";
 import { pluralizeRu, QUESTIONS_PLURAL, POINTS_PLURAL } from "@/utils/pluralize";
@@ -177,6 +177,8 @@ export default function TestRunnerPage() {
     if (testId) clearDraft(testId);
   };
 
+  const autoAdvanceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleAnswer = (questionIdx: number, optionIdx: number) => {
     setAnswers((prev) => {
       const next = [...prev];
@@ -184,23 +186,38 @@ export default function TestRunnerPage() {
       return next;
     });
     // Auto-advance to next unanswered question after a short delay
-    setTimeout(() => {
+    if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+    autoAdvanceRef.current = setTimeout(() => {
       if (questionIdx < test.questions.length - 1) {
         setCurrentIdx(questionIdx + 1);
       }
     }, 220);
   };
 
+  // Cleanup auto-advance timeout on unmount
+  useEffect(() => {
+    return () => { if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current); };
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#FAF6F1] dark:bg-[#2A2420]">
       <div className="mx-auto flex min-h-screen max-w-2xl flex-col px-5 pb-10 pt-6 lg:px-8">
-        <button
-          onClick={() => (phase === "questions" ? setPhase("intro") : navigate("/tests"))}
-          className="mb-4 inline-flex items-center gap-1.5 self-start text-sm text-[#8A7A6A] hover:text-[#5A5048] dark:text-[#B8A898] dark:hover:text-[#F5EDE4]"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {phase === "questions" ? "К описанию" : "Все тесты"}
-        </button>
+        <div className="mb-4 flex items-center gap-4">
+          <button
+            onClick={() => (phase === "questions" ? setPhase("intro") : navigate("/tests"))}
+            className="inline-flex items-center gap-1.5 text-sm text-[#8A7A6A] hover:text-[#5A5048] dark:text-[#B8A898] dark:hover:text-[#F5EDE4]"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {phase === "questions" ? "К описанию" : "Все тесты"}
+          </button>
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-sm text-[#8A7A6A] hover:text-[#5A5048] dark:text-[#B8A898] dark:hover:text-[#F5EDE4]"
+          >
+            <Home className="h-4 w-4" />
+            На главную
+          </Link>
+        </div>
 
         {phase === "intro" && (
           <IntroView

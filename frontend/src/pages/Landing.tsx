@@ -5,6 +5,7 @@ import { useAuthStore } from "@/store/auth";
 import { getInitData, getTelegramUser } from "@/utils/telegram";
 import { useUtm } from "@/hooks/useUtm";
 import Hero from "@/components/landing/Hero";
+import StatsTicker from "@/components/landing/StatsTicker";
 import Techniques from "@/components/landing/Techniques";
 import UserGuide from "@/components/landing/UserGuide";
 import AgentSystem from "@/components/landing/AgentSystem";
@@ -143,6 +144,7 @@ export default function Landing() {
 
       <main>
         <Hero />
+        <StatsTicker />
         <Techniques />
         <UserGuide />
         <TestsCTA />

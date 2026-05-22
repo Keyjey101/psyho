@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscriptionMe } from "@/hooks/useSubscription";
 import { useSessions, useSession, useCreateSession, useDeleteSession, useContinueSession } from "@/hooks/useSessions";
 import { useChat } from "@/hooks/useChat";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -17,6 +18,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Message } from "@/types";
 import { Menu, Brain, X, Download } from "lucide-react";
 import api from "@/api/client";
+import ChatTour from "@/components/chat/ChatTour";
 
 interface PendingTask {
   id: string;
@@ -33,6 +35,7 @@ export default function Chat() {
     (location.state as { initialMessage?: string } | null)?.initialMessage ?? null;
   const initialMessageRef = useRef<string | null>(initialMessageFromState);
   const { user, logout, refreshUser } = useAuth();
+  const { data: sub } = useSubscriptionMe(!!user);
   const queryClient = useQueryClient();
   const { data: sessions } = useSessions();
   const { data: currentSession, isError } = useSession(sessionId);
@@ -50,6 +53,7 @@ export default function Chat() {
   const [pendingTask, setPendingTask] = useState<PendingTask | null>(null);
   const [taskDismissed, setTaskDismissed] = useState(false);
   const [paywall, setPaywall] = useState<PaywallDetail | null>(null);
+  const [showTour, setShowTour] = useState(() => !localStorage.getItem("nika_tour_done"));
 
   useEffect(() => {
     if (user && user.name === "") {
@@ -229,11 +233,17 @@ export default function Chat() {
     navigate("/");
   };
 
+  const isPro = sub?.tier === "pro";
+
   const previousSession =
     !sessionId && sessions && sessions.length > 0 ? sessions[0] : null;
 
   const handleContinueSession = async () => {
     if (!previousSession) return;
+    if (!isPro) {
+      setPaywall({ reason: "pro_feature" });
+      return;
+    }
     try {
       const result = await continueSession.mutateAsync(previousSession.id);
       setAwaitingGreeting(true);
@@ -333,6 +343,7 @@ export default function Chat() {
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <header className="flex items-center gap-3 bg-[#FAF6F1]/90 px-4 py-3 backdrop-blur-sm border-b border-[#E8DDD0] dark:bg-[#2A2420]/90 dark:border-[#4A4038]">
           <button
+            data-tour="burger-menu"
             onClick={() => setSidebarOpen(true)}
             className="rounded-lg p-2 text-[#8A7A6A] hover:bg-[#F5EDE4] dark:text-[#B8A898] dark:hover:bg-[#352E2A] lg:hidden"
           >
@@ -440,7 +451,7 @@ export default function Chat() {
           agentsUsed={agentsUsed}
           isStreaming={isStreaming || awaitingGreeting}
           previousSession={previousSession}
-          onContinueSession={handleContinueSession}
+          onContinueSession={previousSession ? handleContinueSession : undefined}
           isContinuing={continueSession.isPending}
           onRegenerate={isStreaming || awaitingGreeting ? undefined : handleRegenerate}
         />
@@ -492,6 +503,14 @@ export default function Chat() {
         freeSessionsLeft={paywall?.free_sessions_left}
         paidSessionsLeft={paywall?.paid_sessions_left}
       />
+
+      {showTour && (
+        <ChatTour
+          onComplete={() => setShowTour(false)}
+          onRequestSidebarOpen={() => setSidebarOpen(true)}
+          onRequestSidebarClose={() => setSidebarOpen(false)}
+        />
+      )}
     </div>
   );
 }

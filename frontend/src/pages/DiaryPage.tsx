@@ -21,6 +21,7 @@ export default function DiaryPage() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [editError, setEditError] = useState("");
   const [editingNote, setEditingNote] = useState<{ id: string; text: string } | null>(null);
   const navigate = useNavigate();
 
@@ -49,11 +50,12 @@ export default function DiaryPage() {
 
   const handleSaveNote = async (id: string, note: string) => {
     try {
+      setEditError("");
       await api.patch(`/diary/${id}`, { note });
       setEntries((prev) => prev.map((e) => e.id === id ? { ...e, note } : e));
       setEditingNote(null);
     } catch {
-      // ignore
+      setEditError("Не удалось сохранить заметку");
     }
   };
 

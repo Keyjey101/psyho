@@ -5,7 +5,7 @@ const PH = {
   inn: "665912762585",
   email: "keyjey.danilov@gmail.com",
   tg: "@keyjey101",
-  domain: "nika-talk.ru",
+  domain: "nika-talk.online",
   date: "10.05.2026",
 };
 

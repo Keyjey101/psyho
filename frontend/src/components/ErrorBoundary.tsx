@@ -29,7 +29,7 @@ export class ErrorBoundary extends Component<Props, State> {
             alt=""
             className="h-40 w-40 object-contain opacity-80"
           />
-          <p className="text-lg text-[#5C4B3A]">Что-то пошло не так.</p>
+          <p className="text-lg text-[#5C4B3A]">Что-то пошло не так. Это не ваша вина — давайте попробуем ещё раз.</p>
           <button
             onClick={() => window.location.reload()}
             className="rounded-full bg-[#B8785A] px-6 py-2 text-sm font-medium text-white hover:bg-[#A06748]"

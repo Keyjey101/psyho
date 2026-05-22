@@ -9,7 +9,7 @@ interface Props {
 
 export default function LegalLayout({ title, children, effectiveDate }: Props) {
   return (
-    <div className="min-h-dvh bg-[#FAF6F1] py-10 px-4 dark:bg-[#2A2420]">
+    <div className="min-h-dvh bg-[#FAF6F1] py-8 px-4 sm:py-10 sm:px-6 dark:bg-[#2A2420]">
       <div className="mx-auto max-w-3xl">
         <Link
           to="/"
@@ -29,12 +29,11 @@ export default function LegalLayout({ title, children, effectiveDate }: Props) {
         <div className="space-y-4 text-[14px] leading-relaxed text-[#5A5048] dark:text-[#C8B8A8]">
           {children}
         </div>
-        <div className="mt-12 border-t border-[#E8DDD0] pt-6 text-center text-[12px] text-[#8A7A6A] dark:border-[#3A302A] dark:text-[#B8A898]">
-          <Link to="/legal/offer" className="mx-2 hover:underline">Оферта</Link>·
+        <nav className="mt-12 border-t border-[#E8DDD0] pt-6 text-center text-[12px] text-[#8A7A6A] dark:border-[#3A302A] dark:text-[#B8A898]" aria-label="Юридические документы">          <Link to="/legal/offer" className="mx-2 hover:underline">Оферта</Link>·
           <Link to="/legal/refund" className="mx-2 hover:underline">Возврат</Link>·
           <Link to="/legal/privacy" className="mx-2 hover:underline">Конфиденциальность</Link>·
           <Link to="/legal/consent" className="mx-2 hover:underline">Регулярные платежи</Link>
-        </div>
+        </nav>
       </div>
     </div>
   );

@@ -22,7 +22,7 @@ const GOALS = [
 
 function ProgressBar({ step }: { step: number }) {
   return (
-    <div className="mb-8 flex gap-1.5">
+    <div className="mb-8 flex gap-1.5" role="progressbar" aria-valuenow={step} aria-valuemin={0} aria-valuemax={TOTAL_STEPS} aria-label="Прогресс настройки">
       {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
         <div
           key={i}
@@ -165,7 +165,7 @@ export default function OnboardingFlow() {
   };
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-[#FAF6F1] px-6 py-12">
+    <div className="flex min-h-dvh flex-col items-center justify-center overflow-x-hidden bg-[#FAF6F1] px-6 py-12">
       <div className="w-full max-w-sm">
         {step > 0 && <ProgressBar step={step} />}
 

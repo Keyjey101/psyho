@@ -20,9 +20,12 @@ export default function SoftPaywallModal({
   if (!open) return null;
 
   const isAction = reason === "daily_action_limit";
-  const title = isAction ? "Сегодня достаточно" : "Время продолжить";
+  const isProFeature = reason === "pro_feature";
+  const title = isAction ? "Сегодня достаточно" : isProFeature ? "Функция Pro" : "Время продолжить";
   const subtitle = isAction
     ? "Бесплатно — одно действие в день. Открой Pro, чтобы пользоваться без лимитов, или возвращайся завтра."
+    : isProFeature
+    ? "Продолжение сессии доступно с подпиской Pro. Выбери удобный вариант ниже."
     : "Ты прошёл бесплатные сессии. Чтобы продолжить — выбери удобный вариант ниже.";
 
   return (

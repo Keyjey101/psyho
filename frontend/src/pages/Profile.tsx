@@ -41,6 +41,7 @@ export default function Profile() {
     pop_score: 0,
   });
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const navigate = useNavigate();
 
   const [tgLinkLoading, setTgLinkLoading] = useState(false);
@@ -68,6 +69,7 @@ export default function Profile() {
 
   const handleSave = async () => {
     try {
+      setSaveError("");
       await api.patch("/user/me", {
         preferred_style: profile.preferred_style,
         therapy_goals: profile.therapy_goals,
@@ -76,7 +78,9 @@ export default function Profile() {
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-    } catch {}
+    } catch {
+      setSaveError("Не удалось сохранить. Попробуйте ещё раз.");
+    }
   };
 
   const handleLinkTelegram = async () => {
@@ -300,6 +304,9 @@ export default function Profile() {
             <Save className="h-4 w-4" />
             {saved ? "Сохранено!" : "Сохранить"}
           </button>
+          {saveError && (
+            <p className="mt-2 text-center text-sm text-[#C4786A]">{saveError}</p>
+          )}
         </div>
       </div>
     </div>

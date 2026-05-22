@@ -23,10 +23,19 @@ RUN echo 'server { \
     location / { \
         try_files $uri $uri/ /index.html; \
     } \
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|webp)$ { \
+    location ~* ^/assets/.*\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|webp)$ { \
         expires 1y; \
         add_header Cache-Control "public, immutable"; \
         max_ranges 0; \
+    } \
+    location = /sw.js { \
+        add_header Cache-Control "no-cache, no-store, must-revalidate"; \
+        add_header Pragma "no-cache"; \
+        expires 0; \
+    } \
+    location = /sw-push.js { \
+        add_header Cache-Control "no-cache"; \
+        expires 0; \
     } \
     location ~* ^/api/sessions/[^/]+/chat$ { \
         proxy_pass http://backend:8000; \

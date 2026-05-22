@@ -31,6 +31,16 @@
     @apply border-surface-200;
   }
 
+  /* Global keyboard focus ring for all interactive elements */
+  :focus-visible {
+    outline: 2px solid #B8785A;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  .dark :focus-visible {
+    outline-color: #C08B68;
+  }
+
   body {
     background: #faf6f1;
     color: #5a5048;
@@ -118,6 +128,11 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
 }
 
 @keyframes dotPulse {

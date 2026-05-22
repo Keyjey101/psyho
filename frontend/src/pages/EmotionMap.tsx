@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/api/client";
 import { ArrowLeft } from "lucide-react";
+import { pluralizeRu } from "@/utils/pluralize";
 
 interface MoodEntry {
   id: string;
@@ -280,7 +281,7 @@ export default function EmotionMap() {
           <p className="text-[#8A7A6A] dark:text-[#B8A898]">
             Среднее: <span className="font-medium">{tooltip.day.avg.toFixed(1)}</span> — {getMoodLabel(tooltip.day.avg)}
           </p>
-          <p className="text-[#B8A898] dark:text-[#8A7A6A]">{tooltip.day.entries.length} запис{tooltip.day.entries.length === 1 ? "ь" : "и"}</p>
+          <p className="text-[#B8A898] dark:text-[#8A7A6A]">{tooltip.day.entries.length} {pluralizeRu(tooltip.day.entries.length, ["запись", "записи", "записей"])}</p>
         </div>
       )}
     </div>

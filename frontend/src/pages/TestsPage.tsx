@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, ChevronRight, Check, Lock, Sparkles } from "lucide-react";
+import { ArrowLeft, ChevronRight, Check, Home, Lock, Sparkles } from "lucide-react";
 import { TESTS, TEST_CATEGORIES, maxPossibleScore, type PsyTest } from "@/data/tests";
 import { getTestEligibility, type TestHistoryEntry } from "@/utils/testHistory";
 import { pluralizeRu, QUESTIONS_PLURAL } from "@/utils/pluralize";
@@ -92,13 +92,23 @@ export default function TestsPage() {
   return (
     <div className="min-h-screen bg-[#FAF6F1] p-6 dark:bg-[#2A2420] lg:p-10">
       <div className="mx-auto max-w-4xl">
-        <button
-          onClick={() => navigate(-1)}
-          className="mb-6 flex items-center gap-2 text-sm text-[#8A7A6A] hover:text-[#5A5048] dark:text-[#B8A898] dark:hover:text-[#F5EDE4]"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Назад
-        </button>
+        <div className="mb-6 flex items-center gap-4">
+          <button
+            onClick={() => navigate(-1)}
+            aria-label="Назад"
+            className="flex items-center gap-2 text-sm text-[#8A7A6A] hover:text-[#5A5048] dark:text-[#B8A898] dark:hover:text-[#F5EDE4]"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Назад
+          </button>
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-sm text-[#8A7A6A] hover:text-[#5A5048] dark:text-[#B8A898] dark:hover:text-[#F5EDE4]"
+          >
+            <Home className="h-4 w-4" />
+            На главную
+          </Link>
+        </div>
 
         <header className="mb-6">
           <h1 className="font-serif text-3xl font-bold text-[#4A4038] dark:text-[#F5EDE4]">

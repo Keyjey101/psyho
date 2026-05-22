@@ -4,10 +4,15 @@ import { ArrowLeft, Send, RefreshCw, Copy, Check } from "lucide-react";
 import { useAuthStore } from "@/store/auth";
 import { isTMA, getInitData, getTelegramUser } from "@/utils/telegram";
 
-type Step = "tma_loading" | "input" | "code";
+type Step = "tma_loading" | "input" | "code" | "tg_open_bot";
+
+const BOT_USERNAME = (import.meta.env.VITE_TG_BOT_USERNAME || "").replace(/^@/, "");
+
+function isInTelegramBrowser(): boolean {
+  return /Telegram/i.test(navigator.userAgent);
+}
 
 export default function AuthTelegram() {
-  // Всегда начинаем с загрузки: SDK async/defer, isTMA() ненадёжен до загрузки скрипта
   const [step, setStep] = useState<Step>("tma_loading");
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
@@ -65,14 +70,16 @@ export default function AuthTelegram() {
     if (isTMA()) {
       tryTmaAuth();
     } else {
-      // SDK ещё не загрузился — даём 1500ms (async defer)
       const timer = setTimeout(() => {
+        if (cancelled) return;
         if (isTMA()) {
           tryTmaAuth();
+        } else if (isInTelegramBrowser()) {
+          setStep("tg_open_bot");
         } else {
-          if (!cancelled) setStep("input");
+          setStep("input");
         }
-      }, 1500);
+      }, 2000);
       return () => { cancelled = true; clearTimeout(timer); };
     }
 
@@ -217,6 +224,36 @@ export default function AuthTelegram() {
           <div className="flex flex-col items-center gap-4 py-4">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#E8DDD0] border-t-[#B8785A]" />
             <p className="text-[13px] text-[#8A7A6A]">Входим через Telegram...</p>
+          </div>
+        )}
+
+        {step === "tg_open_bot" && (
+          <div className="flex flex-col items-center gap-4 py-4">
+            <h1 className="text-center font-serif text-[22px] font-bold text-[#4A4038]">
+              Открой через бота
+            </h1>
+            <p className="text-center text-[13px] leading-[1.6] text-[#8A7A6A]">
+              Ты открыл ссылку в браузере Telegram — для мгновенного входа открой
+              приложение через бота. Нажми кнопку ниже:
+            </p>
+            {BOT_USERNAME ? (
+              <a
+                href={`https://t.me/${BOT_USERNAME}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary w-full no-underline"
+              >
+                Открыть @{BOT_USERNAME}
+              </a>
+            ) : (
+              <p className="text-[12px] text-[#C4786A]">Бот не настроен. Обратитесь к администратору.</p>
+            )}
+            <button
+              onClick={() => setStep("input")}
+              className="text-[13px] text-[#B8A898] hover:text-[#8A7A6A]"
+            >
+              Или войти через код
+            </button>
           </div>
         )}
 
