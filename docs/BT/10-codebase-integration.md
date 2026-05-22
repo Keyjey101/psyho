@@ -83,6 +83,31 @@ from app.agents.orchestrator import _check_crisis
 ```
 Вызывать до передачи ответа в АА.
 
+### `agents/base.py` — изменения
+
+Добавить `_call()` и рефакторинг `analyze()` (см. [02-agents.md → раздел 2.1](./02-agents.md)).
+Публичный контракт `analyze()` не меняется — Orchestrator и все вызывающие стороны
+не требуют правок.
+
+### `agents/registry.py` — новый файл
+
+Создать `AgentFactory` с декоратором `@AgentFactory.register`.
+Добавить декоратор к каждому из 6 терапевтических агентов (одна строка на файл).
+Заменить `Orchestrator.__init__()` (6 строк) на `AgentFactory.therapy_agents()`.
+Подробнее — [02-agents.md → раздел 2.1](./02-agents.md).
+
+### Импорт игровых агентов
+
+Игровые агенты регистрируются в той же фабрике. Для гарантии регистрации до использования —
+импортировать модули игровых агентов в `game.py` (роутер):
+```python
+# game.py — в самом начале, чтобы декораторы @AgentFactory.register сработали:
+import app.agents.game_analyzer   # noqa: F401
+import app.agents.game_designer   # noqa: F401
+import app.agents.game_host       # noqa: F401
+from app.agents.registry import AgentFactory
+```
+
 ---
 
 ## 10.2 Frontend: точки подключения

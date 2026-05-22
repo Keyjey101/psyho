@@ -1,22 +1,170 @@
 # 02. Агентная Система
 
-## 2.1 Архитектурный паттерн игровых агентов
+## 2.1 Архитектурный паттерн: расширение BaseAgent + фабрика
 
-Игровые агенты **не наследуют** `BaseAgent` из `agents/base.py`. Причины:
-- `BaseAgent.analyze()` заточен под терапевтический поток: принимает `user_message + history`,
-  возвращает `(str, usage_dict)`. Игровые агенты работают со структурированными
-  JSON-данными (массив ответов, вектор вероятностей).
-- `AGENT_PREAMBLE` в `base.py` формирует роль «ты — аналитик для Ники-терапевта». Это не
-  подходит для игрового контекста.
+### Изменение BaseAgent (минимальное, два шага)
 
-Игровые агенты — **отдельные модули** с собственными async-функциями. Все используют
-module-level `client` из `agents/base.py`:
+**Шаг 1.** Выделить защищённый метод `_call()` — единая точка вызова LLM для всех агентов.
+Существующий `analyze()` рефакторится на его использование (логика не меняется):
 
 ```python
-# В начале каждого game_*.py:
-from app.agents.base import client        # переиспользуем singleton AsyncOpenAI
+# agents/base.py — добавить метод, analyze() переписать через него
+
+async def _call(
+    self,
+    messages: list[dict],
+    model: str | None = None,
+    max_tokens: int | None = None,
+    temperature: float = 0.7,
+) -> tuple[str, dict | None]:
+    """Единая точка вызова LLM. Используется analyze() и игровыми агентами."""
+    _model = model or settings.ZAI_SMALL_MODEL
+    _max_tokens = max_tokens or settings.AGENT_MAX_TOKENS
+    response = await client.chat.completions.create(
+        model=_model,
+        max_tokens=_max_tokens,
+        temperature=temperature,
+        messages=messages,
+    )
+    usage = None
+    if hasattr(response, "usage") and response.usage:
+        usage = {
+            "prompt_tokens": response.usage.prompt_tokens or 0,
+            "completion_tokens": response.usage.completion_tokens or 0,
+            "total_tokens": response.usage.total_tokens or 0,
+        }
+        logger.info("agent_tokens", agent=self.__class__.__name__,
+                    prompt_tokens=usage["prompt_tokens"],
+                    completion_tokens=usage["completion_tokens"])
+    return (response.choices[0].message.content or ""), usage
+
+async def analyze(self, user_message, history, focus="", phase="", memory_summary=""):
+    """Терапевтический интерфейс — строит messages и делегирует в _call()."""
+    messages = [{"role": "system", "content": AGENT_PREAMBLE + "\n\n" + self.system_prompt}]
+    messages.extend(history[-16:])
+    user_content = user_message
+    if focus:         user_content += f"\n\nФокус анализа: {focus}"
+    if phase:         user_content += f"\n\nФаза сессии: {phase}"
+    if memory_summary: user_content += f"\n\nКраткая память о пользователе: {memory_summary}"
+    messages.append({"role": "user", "content": user_content})
+    return await self._call(messages)   # ← делегируем
+```
+
+**Шаг 2.** `_load_prompt()` остаётся как есть. Игровые агенты хранят промпты **inline**
+(строки в коде), а не в `prompts/*.txt` — промпты короткие и специфичны для игры.
+
+> Это весь объём изменений в `base.py`. Публичный контракт `analyze()` не меняется —
+> терапевтические агенты и `Orchestrator` не требуют правок.
+
+---
+
+### Фабрика агентов — `agents/registry.py` (новый файл)
+
+Заменяет ручное создание агентов в `Orchestrator.__init__()`. Гарантирует singleton
+для каждого класса через lazy init:
+
+```python
+# agents/registry.py
+from __future__ import annotations
+from typing import Type, TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.agents.base import BaseAgent
+
+class AgentFactory:
+    _registry:  dict[str, Type[BaseAgent]] = {}
+    _instances: dict[str, BaseAgent]       = {}
+
+    @classmethod
+    def register(cls, agent_class: Type[BaseAgent]) -> Type[BaseAgent]:
+        """Декоратор: @AgentFactory.register регистрирует класс по agent.name."""
+        cls._registry[agent_class.name] = agent_class
+        return agent_class
+
+    @classmethod
+    def get(cls, name: str) -> BaseAgent:
+        """Lazy-singleton: создаёт экземпляр при первом обращении, затем кеширует."""
+        if name not in cls._instances:
+            if name not in cls._registry:
+                raise KeyError(f"Agent '{name}' not registered")
+            cls._instances[name] = cls._registry[name]()
+        return cls._instances[name]
+
+    @classmethod
+    def therapy_agents(cls) -> dict[str, BaseAgent]:
+        """Все терапевтические агенты по имени."""
+        names = ["cbt", "jungian", "act", "ifs", "narrative", "somatic"]
+        return {n: cls.get(n) for n in names}
+```
+
+**Регистрация существующих агентов** — добавить декоратор к каждому классу:
+```python
+# agents/cbt.py (и аналогично для остальных 5)
+from app.agents.registry import AgentFactory
+
+@AgentFactory.register
+class CBTAgent(BaseAgent):
+    name = "cbt"
+    ...
+```
+
+**`Orchestrator.__init__()` — заменить ручное создание:**
+```python
+# Было:
+self.agents = {
+    "cbt": CBTAgent(), "jungian": JungianAgent(), ...
+}
+
+# Станет:
+from app.agents.registry import AgentFactory
+self.agents = AgentFactory.therapy_agents()
+```
+
+Функциональность `Orchestrator` не меняется. Выигрыш: агенты создаются один раз на весь
+процесс, даже если `Orchestrator` будет инстанциирован несколько раз (тесты, hot reload).
+
+---
+
+### Игровые агенты как подклассы BaseAgent
+
+Игровые агенты **наследуют** BaseAgent (получают `_call()` и singleton `client`) и
+регистрируются в той же фабрике. Они НЕ переопределяют `analyze()` — вместо этого
+реализуют собственный публичный метод с игровым интерфейсом:
+
+```python
+# agents/game_analyzer.py
+from app.agents.base import BaseAgent, AGENT_PREAMBLE
+from app.agents.registry import AgentFactory
 from app.config import get_settings
+
 settings = get_settings()
+
+@AgentFactory.register
+class GameAnalyzer(BaseAgent):
+    name = "game_analyzer"
+
+    # Промпт inline — короткий, не требует txt-файла
+    system_prompt = """...(см. раздел 2.3)..."""
+
+    # Собственный публичный метод вместо analyze():
+    async def analyze_answers(self, answers: list[dict]) -> dict:
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user",   "content": json.dumps(answers, ensure_ascii=False)},
+        ]
+        text, usage = await self._call(
+            messages,
+            model=settings.ZAI_SMALL_MODEL,
+            max_tokens=settings.GAME_ANALYZER_MAX_TOKENS,
+        )
+        return json.loads(text), usage
+```
+
+Использование в `game_orchestrator.py`:
+```python
+from app.agents.registry import AgentFactory
+
+analyzer = AgentFactory.get("game_analyzer")   # singleton
+result, usage = await analyzer.analyze_answers(session.answers_list)
 ```
 
 ---

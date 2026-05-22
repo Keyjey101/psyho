@@ -29,25 +29,32 @@
 ```
 backend/app/
   agents/
-    game_orchestrator.py   ← РО: управление игровым циклом (НЕ наследует BaseAgent)
-    game_analyzer.py       ← АА: оценка уверенности (НЕ наследует BaseAgent)
-    game_designer.py       ← АГД: генерация игровых ходов (НЕ наследует BaseAgent)
-    game_host.py           ← Ника: финальный вывод (НЕ наследует BaseAgent)
-    game_fallback.py       ← статические фразы при недоступности LLM
+    base.py               ← добавить _call(); analyze() рефакторится через него
+    registry.py           ← AgentFactory с @register-декоратором (новый файл)
+    cbt.py, jungian.py,
+    act.py, ifs.py,
+    narrative.py,
+    somatic.py            ← добавить @AgentFactory.register к каждому классу
+    game_orchestrator.py  ← РО: управление игровым циклом (наследует BaseAgent)
+    game_analyzer.py      ← АА: оценка уверенности (наследует BaseAgent)
+    game_designer.py      ← АГД: генерация игровых ходов (наследует BaseAgent)
+    game_host.py          ← Ника: финальный вывод (наследует BaseAgent)
+    game_fallback.py      ← статические фразы при недоступности LLM (не агент)
   routers/
-    game.py                ← REST + WS эндпоинты мини-игры
+    game.py               ← REST + WS эндпоинты мини-игры
   models/
-    game_models.py         ← GameSession, LeaderboardEntry, UserPseudonym, BudgetTracker
+    game_models.py        ← GameSession, LeaderboardEntry, UserPseudonym, BudgetTracker
   services/
-    pseudonym_service.py   ← генерация псевдонима (встроенные словари, не файлы)
+    pseudonym_service.py  ← генерация псевдонима (встроенные словари, не файлы)
     leaderboard_service.py ← запись и чтение лидерборда
-    budget_service.py      ← учёт токенов и переключение на fallback
+    budget_service.py     ← учёт токенов и переключение на fallback
 ```
 
-> **Важно:** Игровые агенты — это обычные async-функции/классы, **не** подклассы `BaseAgent`.
-> `BaseAgent` и `AGENT_PREAMBLE` из `agents/base.py` предназначены для терапевтических агентов
-> (CBT, Jungian и т.д.) с другим интерфейсом и смыслом. Игровые агенты используют тот же
-> module-level `client` из `agents/base.py`, но реализуют собственный интерфейс.
+**Изменения в существующих файлах сведены к минимуму:**
+- `base.py` — добавить `_call()`, рефакторинг `analyze()` (публичный контракт не меняется).
+- `cbt.py` … `somatic.py` — добавить по одной строке `@AgentFactory.register`.
+- `orchestrator.py` — заменить `Orchestrator.__init__()` (6 строк) на вызов фабрики.
+- Всё остальное в проекте — без изменений.
 
 ### Frontend
 
