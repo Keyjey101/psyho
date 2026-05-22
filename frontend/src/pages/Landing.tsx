@@ -12,6 +12,7 @@ import AgentSystem from "@/components/landing/AgentSystem";
 import InsightsFeed from "@/components/landing/InsightsFeed";
 import TestsCTA from "@/components/landing/TestsCTA";
 import Footer from "@/components/landing/Footer";
+import { LandingGameBlock } from "@/components/game/LandingGameBlock";
 
 export default function Landing() {
   useUtm();
@@ -149,6 +150,7 @@ export default function Landing() {
         <UserGuide />
         <TestsCTA />
         <AgentSystem />
+        <LandingGameBlock />
         <InsightsFeed />
       </main>
       <Footer />

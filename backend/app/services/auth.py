@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+from fastapi import Request
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 from sqlalchemy import select
@@ -40,6 +41,26 @@ def decode_token(token: str) -> Optional[dict]:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload
     except JWTError:
+        return None
+
+
+async def get_current_user_optional(request: Request, db: AsyncSession) -> Optional[User]:
+    """Return the current user from token if present, else None."""
+    try:
+        token = request.cookies.get("access_token") or (
+            request.headers.get("Authorization", "").replace("Bearer ", "") or None
+        )
+        if not token:
+            return None
+        payload = decode_token(token)
+        if not payload or payload.get("type") != "access":
+            return None
+        user_id = payload.get("sub")
+        if not user_id:
+            return None
+        result = await db.execute(select(User).where(User.id == user_id))
+        return result.scalar_one_or_none()
+    except Exception:
         return None
 
 

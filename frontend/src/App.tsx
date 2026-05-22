@@ -16,6 +16,7 @@ import DiaryPage from "@/pages/DiaryPage";
 import TimeCapsulePage from "@/pages/TimeCapsulePage";
 import TestsPage from "@/pages/TestsPage";
 import TestRunnerPage from "@/pages/TestRunnerPage";
+import GamePage from "@/pages/GamePage";
 import Pricing from "@/pages/Pricing";
 import Subscription from "@/pages/Subscription";
 import Offer from "@/pages/legal/Offer";
@@ -145,6 +146,10 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+      {/* Game — public, no auth required */}
+      <Route path="/game" element={<GamePage />} />
+      <Route path="/leaderboard" element={<GamePage />} />
+
       {/* Tests are intentionally public — anonymous users can take them
           (results are kept in localStorage) and are nudged to sign in afterwards. */}
       <Route path="/tests" element={<TestsPage />} />

@@ -78,6 +78,10 @@ app.include_router(export_router.router, prefix="/api/export", tags=["Export"])
 app.include_router(tests_router.router, prefix="/api/tests", tags=["Tests"])
 app.include_router(billing_router.router)
 
+from app.routers import game as game_router_module  # noqa: E402
+app.include_router(game_router_module.router, prefix="/api/game", tags=["Game"])
+app.include_router(game_router_module.ws_router, prefix="/ws/game", tags=["Game WS"])
+
 
 @app.get("/health")
 async def health():

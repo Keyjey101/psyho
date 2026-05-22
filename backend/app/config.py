@@ -76,6 +76,17 @@ class Settings(BaseSettings):
     SUBSCRIPTION_GRACE_DAYS: int = 3
     SUBSCRIPTION_RENEW_LOOKAHEAD_HOURS: int = 24
 
+    # ── Mini-game ─────────────────────────────────────────────────────────
+    GAME_MAX_MOVES: int = 12
+    GAME_CONFIDENCE_THRESHOLD: float = 0.80
+    GAME_LLM_TIMEOUT: float = 5.0
+    GAME_BUDGET_LIMIT_USD: float = 50.0
+    GAME_HOST_MAX_TOKENS: int = 80
+    GAME_ANALYZER_MAX_TOKENS: int = 200
+    GAME_DESIGNER_MAX_TOKENS: int = 150
+    GAME_CANARY_TOKEN: str = ""
+    GAME_SESSION_TTL_HOURS: int = 2
+
     model_config = {"env_file": (".env", "../.env"), "env_file_encoding": "utf-8", "extra": "ignore"}
 
     @field_validator("TELEGRAM_BOT_USERNAME")
