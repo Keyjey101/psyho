@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { useGameStore } from '@/store/game';
 
 const WS_BASE = window.location.protocol === 'https:'
@@ -69,6 +69,13 @@ export function useGame() {
   const disconnect = useCallback(() => {
     wsRef.current?.close();
     wsRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      wsRef.current?.close();
+      wsRef.current = null;
+    };
   }, []);
 
   return { connect, sendAnswer, disconnect };
