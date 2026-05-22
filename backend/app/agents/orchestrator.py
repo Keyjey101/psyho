@@ -9,12 +9,13 @@ from enum import Enum
 from pathlib import Path
 
 from app.agents.base import BaseAgent, client
-from app.agents.cbt import CBTAgent
-from app.agents.jungian import JungianAgent
-from app.agents.act import ACTAgent
-from app.agents.ifs import IFSAgent
-from app.agents.narrative import NarrativeAgent
-from app.agents.somatic import SomaticAgent
+from app.agents.cbt import CBTAgent  # noqa: F401 — registers agent
+from app.agents.jungian import JungianAgent  # noqa: F401 — registers agent
+from app.agents.act import ACTAgent  # noqa: F401 — registers agent
+from app.agents.ifs import IFSAgent  # noqa: F401 — registers agent
+from app.agents.narrative import NarrativeAgent  # noqa: F401 — registers agent
+from app.agents.somatic import SomaticAgent  # noqa: F401 — registers agent
+from app.agents.registry import AgentFactory
 from app.config import get_settings
 
 settings = get_settings()
@@ -183,14 +184,7 @@ def _sanitize_memory(memory: str) -> str:
 
 class Orchestrator:
     def __init__(self):
-        self.agents: dict[str, BaseAgent] = {
-            "cbt": CBTAgent(),
-            "jungian": JungianAgent(),
-            "act": ACTAgent(),
-            "ifs": IFSAgent(),
-            "narrative": NarrativeAgent(),
-            "somatic": SomaticAgent(),
-        }
+        self.agents: dict[str, BaseAgent] = AgentFactory.therapy_agents()
         self._session_topic_cache: _TTLCache = _TTLCache(maxsize=1000, ttl=1800)
         self._load_orchestrator_prompt()
 

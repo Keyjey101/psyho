@@ -1,6 +1,8 @@
 from app.agents.base import BaseAgent
+from app.agents.registry import AgentFactory
 
 
+@AgentFactory.register
 class CBTAgent(BaseAgent):
     @property
     def name(self) -> str:

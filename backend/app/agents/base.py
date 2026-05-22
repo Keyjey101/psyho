@@ -37,30 +37,20 @@ class BaseAgent(ABC):
         path = Path(__file__).parent / "prompts" / filename
         return path.read_text(encoding="utf-8")
 
-    async def analyze(
+    async def _call(
         self,
-        user_message: str,
-        history: list[dict],
-        focus: str = "",
-        phase: str = "",
-        memory_summary: str = "",
+        messages: list[dict],
+        model: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float = 0.7,
     ) -> tuple[str, dict | None]:
-        messages = [{"role": "system", "content": AGENT_PREAMBLE + "\n\n" + self.system_prompt}]
-        messages.extend(history[-16:])
-        user_content = user_message
-        if focus:
-            user_content += f"\n\nФокус анализа: {focus}"
-        if phase:
-            user_content += f"\n\nФаза сессии: {phase}"
-        if memory_summary:
-            user_content += f"\n\nКраткая память о пользователе: {memory_summary}"
-
-        messages.append({"role": "user", "content": user_content})
-
+        """Single LLM call point used by analyze() and game agents."""
+        _model = model or settings.ZAI_SMALL_MODEL
+        _max_tokens = max_tokens or settings.AGENT_MAX_TOKENS
         response = await client.chat.completions.create(
-            model=settings.ZAI_SMALL_MODEL,
-            max_tokens=settings.AGENT_MAX_TOKENS,
-            temperature=0.7,
+            model=_model,
+            max_tokens=_max_tokens,
+            temperature=temperature,
             messages=messages,
         )
         usage = None
@@ -73,9 +63,29 @@ class BaseAgent(ABC):
             logger.info(
                 "agent_tokens",
                 agent=self.__class__.__name__,
-                prompt_tokens=response.usage.prompt_tokens,
-                completion_tokens=response.usage.completion_tokens,
-                total_tokens=response.usage.total_tokens,
+                prompt_tokens=usage["prompt_tokens"],
+                completion_tokens=usage["completion_tokens"],
             )
-        content = response.choices[0].message.content
-        return (content if content else ""), usage
+        return (response.choices[0].message.content or ""), usage
+
+    async def analyze(
+        self,
+        user_message: str,
+        history: list[dict],
+        focus: str = "",
+        phase: str = "",
+        memory_summary: str = "",
+    ) -> tuple[str, dict | None]:
+        """Therapeutic interface — builds messages and delegates to _call()."""
+        messages = [{"role": "system", "content": AGENT_PREAMBLE + "\n\n" + self.system_prompt}]
+        messages.extend(history[-16:])
+        user_content = user_message
+        if focus:
+            user_content += f"\n\nФокус анализа: {focus}"
+        if phase:
+            user_content += f"\n\nФаза сессии: {phase}"
+        if memory_summary:
+            user_content += f"\n\nКраткая память о пользователе: {memory_summary}"
+
+        messages.append({"role": "user", "content": user_content})
+        return await self._call(messages)
