@@ -12,16 +12,27 @@
 
 ## 9.2 Клиент и конфигурация
 
-Переиспользуется существующий OpenAI-клиент из `agents/base.py`.
+Переиспользуется **module-level singleton** `client: AsyncOpenAI` из `agents/base.py`.
+Он уже настроен на ZAI API (`ZAI_API_KEY`, `ZAI_BASE_URL`) через `get_settings()`.
+Создавать новый клиент не нужно:
 
-Новые параметры в `config.py`:
 ```python
-GAME_LLM_TIMEOUT: float = 5.0          # секунды
-GAME_BUDGET_LIMIT_USD: float = 50.0    # месячный лимит
+# В каждом game_*.py:
+from app.agents.base import client   # ← singleton AsyncOpenAI
+```
+
+Новые параметры добавляются в класс `Settings` в `config.py` (pydantic BaseSettings):
+```python
+GAME_LLM_TIMEOUT: float = 5.0
+GAME_BUDGET_LIMIT_USD: float = 50.0
 GAME_HOST_MAX_TOKENS: int = 80         # ≈300 символов
 GAME_ANALYZER_MAX_TOKENS: int = 200
 GAME_DESIGNER_MAX_TOKENS: int = 150
 ```
+
+> Существующие поля `ZAI_MODEL` (`glm-5`) и `ZAI_SMALL_MODEL` (`glm-4-flash`)
+> уже есть в `Settings` — игровые агенты используют их напрямую:
+> `model=settings.ZAI_SMALL_MODEL` для АА/АГД, `model=settings.ZAI_MODEL` для АВ.
 
 ---
 
@@ -29,16 +40,21 @@ GAME_DESIGNER_MAX_TOKENS: int = 150
 
 ```python
 import asyncio
-import httpx
+import structlog
+from app.agents.base import client    # singleton
+from app.config import get_settings
+
+logger = structlog.get_logger()       # используем structlog как везде в проекте
+settings = get_settings()
 
 async def call_llm_with_retry(
-    client: AsyncOpenAI,
     messages: list,
     model: str,
     max_tokens: int,
     retries: int = 2,
-    timeout: float = 5.0,
+    timeout: float | None = None,
 ) -> str | None:
+    timeout = timeout or settings.GAME_LLM_TIMEOUT
     for attempt in range(retries + 1):
         try:
             response = await asyncio.wait_for(
@@ -46,17 +62,26 @@ async def call_llm_with_retry(
                     model=model,
                     messages=messages,
                     max_tokens=max_tokens,
+                    temperature=0.7,
                 ),
                 timeout=timeout,
             )
-            # учёт бюджета
-            await budget_service.record_usage(response.usage)
-            return response.choices[0].message.content
-        except (asyncio.TimeoutError, httpx.HTTPStatusError) as e:
+            if response.usage:
+                # логируем как в base.py, дополнительно в budget_service
+                logger.info(
+                    "game_agent_tokens",
+                    model=model,
+                    prompt_tokens=response.usage.prompt_tokens,
+                    completion_tokens=response.usage.completion_tokens,
+                )
+                await budget_service.record_usage(response.usage, model=model)
+            return response.choices[0].message.content or ""
+        except (asyncio.TimeoutError, Exception) as e:
+            logger.warning("game_llm_retry", attempt=attempt, error=str(e))
             if attempt < retries:
-                await asyncio.sleep(2 ** attempt)  # 1s, 2s
+                await asyncio.sleep(2 ** attempt)   # 1s → 2s
             else:
-                return None  # fallback
+                return None   # вызывающий переходит на fallback
 ```
 
 - Максимум 2 повторные попытки с задержкой 1s / 2s.

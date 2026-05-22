@@ -29,20 +29,25 @@
 ```
 backend/app/
   agents/
-    game_orchestrator.py   ← РО: управление игровым циклом
-    analyzer.py            ← АА: оценка уверенности
-    game_designer.py       ← АГД: генерация игровых ходов
-    game_host.py           ← Ника: финальный вывод (≤300 символов)
-    fallback_phrases.py    ← статические фразы при недоступности LLM
+    game_orchestrator.py   ← РО: управление игровым циклом (НЕ наследует BaseAgent)
+    game_analyzer.py       ← АА: оценка уверенности (НЕ наследует BaseAgent)
+    game_designer.py       ← АГД: генерация игровых ходов (НЕ наследует BaseAgent)
+    game_host.py           ← Ника: финальный вывод (НЕ наследует BaseAgent)
+    game_fallback.py       ← статические фразы при недоступности LLM
   routers/
     game.py                ← REST + WS эндпоинты мини-игры
   models/
-    game_models.py         ← GameSession, GameAnswer, LeaderboardEntry, UserPseudonym
+    game_models.py         ← GameSession, LeaderboardEntry, UserPseudonym, BudgetTracker
   services/
-    pseudonym_service.py   ← генерация псевдонима
+    pseudonym_service.py   ← генерация псевдонима (встроенные словари, не файлы)
     leaderboard_service.py ← запись и чтение лидерборда
     budget_service.py      ← учёт токенов и переключение на fallback
 ```
+
+> **Важно:** Игровые агенты — это обычные async-функции/классы, **не** подклассы `BaseAgent`.
+> `BaseAgent` и `AGENT_PREAMBLE` из `agents/base.py` предназначены для терапевтических агентов
+> (CBT, Jungian и т.д.) с другим интерфейсом и смыслом. Игровые агенты используют тот же
+> module-level `client` из `agents/base.py`, но реализуют собственный интерфейс.
 
 ### Frontend
 
@@ -95,18 +100,32 @@ WS  /ws/game/{session_id}       ← основной канал
 
 Добавляются новые переменные:
 
-```env
-# Мини-игра
-GAME_MAX_MOVES=12                 # макс. ходов пользователя
-GAME_CONFIDENCE_THRESHOLD=0.80   # порог уверенности АА
-GAME_LLM_TIMEOUT=5               # таймаут LLM в секундах
-GAME_BUDGET_LIMIT_USD=50.0       # лимит бюджета LLM в месяц
-GAME_HOST_MAX_CHARS=300          # лимит символов ответа Ники
+Новые переменные добавляются в класс `Settings` в `config.py` (pydantic BaseSettings):
 
-# Псевдонимы
-PSEUDONYM_ADJECTIVES_PATH=data/pseudonym_adj.txt
-PSEUDONYM_NOUNS_PATH=data/pseudonym_nouns.txt
+```python
+# в классе Settings:
+GAME_MAX_MOVES: int = 12
+GAME_CONFIDENCE_THRESHOLD: float = 0.80
+GAME_LLM_TIMEOUT: float = 5.0
+GAME_BUDGET_LIMIT_USD: float = 50.0
+GAME_HOST_MAX_TOKENS: int = 80        # ≈300 символов
+GAME_ANALYZER_MAX_TOKENS: int = 200
+GAME_DESIGNER_MAX_TOKENS: int = 150
+GAME_CANARY_TOKEN: str = ""           # обязательно заполнить в .env
+GAME_SESSION_TTL_HOURS: int = 2
 ```
+
+Соответствующие строки в `.env`:
+```env
+GAME_MAX_MOVES=12
+GAME_CONFIDENCE_THRESHOLD=0.80
+GAME_LLM_TIMEOUT=5.0
+GAME_BUDGET_LIMIT_USD=50.0
+GAME_CANARY_TOKEN=<secrets.token_hex(24)>
+```
+
+> Словари псевдонимов — **встроенные Python-списки** в `pseudonym_service.py`, а не внешние
+> файлы. Это проще для Docker-образа и не требует монтирования volume.
 
 ---
 
@@ -114,8 +133,8 @@ PSEUDONYM_NOUNS_PATH=data/pseudonym_nouns.txt
 
 Изменения деплоятся стандартным путём:
 1. `git pull` на сервере
-2. `docker-compose build && docker-compose up -d`
-3. `alembic upgrade head` (новые таблицы игры)
+2. Добавить `GAME_CANARY_TOKEN` в `.env` (если не было)
+3. `docker-compose build && docker-compose up -d`
+4. `alembic upgrade head` (новые таблицы игры, запускается в `start.sh` автоматически)
 
-Статические файлы псевдонимов (`pseudonym_adj.txt`, `pseudonym_nouns.txt`) монтируются
-через volume или копируются в образ backend'а.
+Словари псевдонимов встроены в код — отдельных файлов и volume не требуется.

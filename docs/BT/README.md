@@ -13,6 +13,7 @@
 | [07-backend-api.md](./07-backend-api.md) | REST/WS API, эндпоинты, схемы запросов |
 | [08-database.md](./08-database.md) | Схема БД, миграции |
 | [09-llm-integration.md](./09-llm-integration.md) | Интеграция LLM API, бюджет, фолбэки |
+| [10-codebase-integration.md](./10-codebase-integration.md) | Точки подключения к существующему коду (main.py, App.tsx, auth, Alembic и др.) |
 
 ---
 
