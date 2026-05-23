@@ -57,7 +57,10 @@ class LandingAnswerIn(BaseModel):
 
 
 class PseudonymIn(BaseModel):
-    name: str
+    session_id: Optional[str] = None
+    type: str = "generated"  # generated | ironic | custom
+    custom_name: Optional[str] = None
+    show_in_leaderboard: bool = True
 
 
 class ResetSessionIn(BaseModel):
@@ -193,25 +196,75 @@ async def set_pseudonym(
     if not anon_id:
         raise HTTPException(status_code=400, detail="No game session cookie found")
 
-    # Check uniqueness
-    if await pseudonym_service.pseudonym_exists(db, body.name):
-        raise HTTPException(status_code=409, detail="Pseudonym already taken")
+    # --- Resolve name based on type ---
+    if body.type == "custom":
+        raw = (body.custom_name or "").strip()
+        if not raw:
+            raise HTTPException(status_code=400, detail="custom_name required")
+        if len(raw) > 40:
+            raise HTTPException(status_code=400, detail="Pseudonym too long")
+        if await pseudonym_service.pseudonym_exists(db, raw):
+            raise HTTPException(status_code=409, detail="Pseudonym already taken")
+        name = raw
+    elif body.type == "ironic":
+        name = await pseudonym_service.generate_ironic_pseudonym(db)
+    else:  # "generated" or anything else
+        name = await pseudonym_service.generate_pseudonym(db)
 
     user_id = _get_user_id_from_request(request)
-    pseudonym = UserPseudonym(name=body.name, user_id=user_id)
+    pseudonym = UserPseudonym(name=name, user_id=user_id)
     db.add(pseudonym)
     await db.flush()
 
-    # Attach pseudonym to all active sessions for this anon_id
+    # --- Attach pseudonym to sessions for this anon_id ---
+    target_session: Optional[GameSession] = None
+    if body.session_id:
+        res = await db.execute(
+            select(GameSession).where(
+                GameSession.id == body.session_id,
+                GameSession.anon_id == anon_id,
+            )
+        )
+        target_session = res.scalar_one_or_none()
+        if target_session is not None:
+            target_session.pseudonym_id = pseudonym.id
+
+    # Also attach to any other sessions of this anon (best-effort)
     result = await db.execute(
         select(GameSession).where(GameSession.anon_id == anon_id)
     )
-    sessions = result.scalars().all()
-    for s in sessions:
+    for s in result.scalars().all():
         s.pseudonym_id = pseudonym.id
+        if target_session is None:
+            target_session = s
+
+    # --- Leaderboard entry (only if requested and session finished) ---
+    if (
+        body.show_in_leaderboard
+        and target_session is not None
+        and target_session.scenario
+        and target_session.status in ("finished", "finished_a", "finished_b")
+    ):
+        try:
+            score = leaderboard_service._compute_score(
+                target_session.move_count,
+                target_session.time_seconds or 0,
+                target_session.scenario,
+            )
+            await leaderboard_service.add_entry(
+                db=db,
+                pseudonym_id=pseudonym.id,
+                score=score,
+                moves_count=target_session.move_count,
+                time_seconds=target_session.time_seconds or 0,
+                scenario=target_session.scenario,
+                topic=target_session.dominant_topic,
+            )
+        except Exception as exc:
+            logger.warning("game_leaderboard_save_failed", error=str(exc))
 
     await db.commit()
-    return {"pseudonym_id": pseudonym.id, "name": pseudonym.name}
+    return {"id": pseudonym.id, "pseudonym_id": pseudonym.id, "name": name, "pseudonym": name}
 
 
 @router.post("/pseudonym/generate")
