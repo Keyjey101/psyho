@@ -118,7 +118,7 @@ def _get_user_id_from_request(request: Request) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/")
+@router.get("/session")
 async def get_or_create_session(
     request: Request,
     response: Response,
@@ -145,6 +145,7 @@ async def get_or_create_session(
         "anon_id": anon_id,
         "status": session.status,
         "move_count": session.move_count,
+        "max_moves": settings.GAME_MAX_MOVES,
         "scenario": session.scenario,
         "dominant_topic": session.dominant_topic,
     }

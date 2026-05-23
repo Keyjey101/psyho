@@ -110,7 +110,7 @@ export function LandingGameBlock() {
               className="btn-primary px-8 py-3 rounded-2xl text-base font-semibold"
               style={{ minHeight: '48px' }}
             >
-              Начать игру с Никой
+              🎲 Сыграть в угадайку с Никой
             </button>
           </div>
         ) : (
@@ -183,7 +183,7 @@ export function LandingGameBlock() {
                 className="btn-primary px-8 py-3 rounded-2xl text-base font-semibold"
                 style={{ minHeight: '48px' }}
               >
-                Поговорить с Никой
+                🎲 Ника угадывает
               </button>
             </div>
           </>
