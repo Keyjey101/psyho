@@ -258,7 +258,10 @@ class GameOrchestrator:
 
         # Compute time
         now = datetime.now(timezone.utc)
-        time_seconds = int((now - session.started_at).total_seconds()) if session.started_at else 0
+        started_at = session.started_at
+        if started_at and started_at.tzinfo is None:
+            started_at = started_at.replace(tzinfo=timezone.utc)
+        time_seconds = int((now - started_at).total_seconds()) if started_at else 0
 
         # Persist game result
         session.status = "finished"
