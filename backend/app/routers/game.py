@@ -314,6 +314,8 @@ async def game_ws_endpoint(
 
                 if msg_type == "answer":
                     choice_index = data.get("choice_index")
+                    if choice_index is None:
+                        choice_index = data.get("choice")
                     choice_text = data.get("choice_text", "")
 
                     if choice_index is None:

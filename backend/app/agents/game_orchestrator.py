@@ -129,7 +129,8 @@ class GameOrchestrator:
         return {
             "type": "question",
             "move": 1,
-            "question": question_data,
+            "text": question_data.get("host_text", ""),
+            "choices": question_data.get("choices", []),
         }
 
     async def process_move(
@@ -214,7 +215,8 @@ class GameOrchestrator:
             "type": "question",
             "move": session.move_count + 1,
             "confidence": round(confidence, 2),
-            "question": question_data,
+            "text": question_data.get("host_text", ""),
+            "choices": question_data.get("choices", []),
         }
 
     # ------------------------------------------------------------------
@@ -273,6 +275,7 @@ class GameOrchestrator:
         return {
             "type": "result",
             "scenario": scenario,
+            "topic": dominant_topic,
             "dominant_topic": dominant_topic,
             "topic_label": topic_label,
             "confidence": round(confidence, 2),
