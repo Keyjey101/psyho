@@ -79,11 +79,11 @@ class Settings(BaseSettings):
     # ── Mini-game ─────────────────────────────────────────────────────────
     GAME_MAX_MOVES: int = 12
     GAME_CONFIDENCE_THRESHOLD: float = 0.80
-    GAME_LLM_TIMEOUT: float = 5.0
+    GAME_LLM_TIMEOUT: float = 15.0
     GAME_BUDGET_LIMIT_USD: float = 50.0
-    GAME_HOST_MAX_TOKENS: int = 80
+    GAME_HOST_MAX_TOKENS: int = 120
     GAME_ANALYZER_MAX_TOKENS: int = 200
-    GAME_DESIGNER_MAX_TOKENS: int = 150
+    GAME_DESIGNER_MAX_TOKENS: int = 400
     GAME_CANARY_TOKEN: str = ""
     GAME_SESSION_TTL_HOURS: int = 2
 

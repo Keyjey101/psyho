@@ -78,7 +78,6 @@ FORBIDDEN_PATTERNS: list[re.Pattern] = [
     re.compile(r"архитектур", re.IGNORECASE),
     re.compile(r"диагноз", re.IGNORECASE),
     re.compile(r"клинич", re.IGNORECASE),
-    re.compile(r"[А-ЯЁA-Z][а-яёa-z]*\?.*[А-ЯЁA-Z][а-яёa-z]*\?", re.DOTALL),  # multiple questions
 ]
 
 _MAX_HOST_CHARS = 400  # strict limit; prompt says 300 but give some slack
