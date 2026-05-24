@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/auth";
-import { isTMA, initTelegramApp } from "@/utils/telegram";
+import { isTMA, initTelegramApp, waitForTelegramSdk } from "@/utils/telegram";
 import AuthTelegram from "@/pages/AuthTelegram";
 import Chat from "@/pages/Chat";
 import Admin from "@/pages/Admin";
@@ -17,6 +17,7 @@ import TimeCapsulePage from "@/pages/TimeCapsulePage";
 import TestsPage from "@/pages/TestsPage";
 import TestRunnerPage from "@/pages/TestRunnerPage";
 import GamePage from "@/pages/GamePage";
+import { GAME_ON } from "@/utils/features";
 import Pricing from "@/pages/Pricing";
 import Subscription from "@/pages/Subscription";
 import Offer from "@/pages/legal/Offer";
@@ -49,20 +50,18 @@ export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
 
   useEffect(() => {
-    // Telegram Web App SDK is loaded async. Try immediately and again once
-    // the script has had a chance to attach window.Telegram (it's small and
-    // usually arrives within a second).
-    const tryInitTma = () => {
-      if (isTMA()) initTelegramApp();
-    };
-    tryInitTma();
-    const tmaTimer = setTimeout(tryInitTma, 1500);
+    // Telegram Web App SDK is loaded async. Try immediately, then poll up
+    // to 3s for the script to attach window.Telegram — on slow Android
+    // builds the SDK can take 1-2s to inject the bridge.
+    if (isTMA()) initTelegramApp();
+    void waitForTelegramSdk(3000).then((ok) => {
+      if (ok) initTelegramApp();
+    });
 
     checkAuth();
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
-    return () => clearTimeout(tmaTimer);
   }, [checkAuth]);
 
   return (
@@ -146,9 +145,9 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      {/* Game — public, no auth required */}
-      <Route path="/game" element={<GamePage />} />
-      <Route path="/leaderboard" element={<GamePage />} />
+      {/* Game — public, no auth required. Gated behind VITE_GAME_ON. */}
+      {GAME_ON && <Route path="/game" element={<GamePage />} />}
+      {GAME_ON && <Route path="/leaderboard" element={<GamePage />} />}
 
       {/* Tests are intentionally public — anonymous users can take them
           (results are kept in localStorage) and are nudged to sign in afterwards. */}

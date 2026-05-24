@@ -60,6 +60,7 @@ services:
       args:
         - VITE_TG_BOT_USERNAME=${VITE_TG_BOT_USERNAME:-}
         - SESSION_MAX_EXCHANGES=${SESSION_MAX_EXCHANGES}
+        - VITE_GAME_ON=${VITE_GAME_ON:-false}
     restart: unless-stopped
     ports:
       - "${APP_PORT:-8080}:80"

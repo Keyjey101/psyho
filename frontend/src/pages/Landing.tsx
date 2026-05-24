@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/auth";
-import { getInitData, getTelegramUser } from "@/utils/telegram";
+import { getInitData, getTelegramUser, isTMA, waitForTelegramSdk } from "@/utils/telegram";
 import { useUtm } from "@/hooks/useUtm";
 import Hero from "@/components/landing/Hero";
 import StatsTicker from "@/components/landing/StatsTicker";
@@ -13,6 +13,7 @@ import InsightsFeed from "@/components/landing/InsightsFeed";
 import TestsCTA from "@/components/landing/TestsCTA";
 import Footer from "@/components/landing/Footer";
 import { LandingGameBlock } from "@/components/game/LandingGameBlock";
+import { GAME_ON } from "@/utils/features";
 
 export default function Landing() {
   useUtm();
@@ -31,66 +32,75 @@ export default function Landing() {
     }
   }, []);
 
-  const handleStart = async () => {
+  // Try Telegram auth using whatever signal we have: SDK initData → hash
+  // initData → SDK initDataUnsafe.user → hash-parsed user. Returns the
+  // auth response (with is_new_user) on success, null if no path worked.
+  // Waits up to 3s for the WebApp SDK before falling back to OTP — on
+  // some Android builds the SDK script is slow to attach.
+  const tryTelegramAuth = async () => {
+    if (!isTMA()) return null;
+    await waitForTelegramSdk(3000);
+
     const initData = getInitData();
     if (initData) {
-      setLoading(true);
       try {
-        const data = await telegramAuth(initData);
-        navigate(data.is_new_user ? "/onboarding" : "/chat", { replace: true });
-        return;
+        return await telegramAuth(initData);
       } catch {
-        // fall through to initDataUnsafe fallback
-      } finally {
-        setLoading(false);
+        // signature rejected or transient — try the user-only fallback below
       }
     }
 
     const tgUser = getTelegramUser();
     if (tgUser?.id) {
+      try {
+        return await telegramMiniAppAuth(String(tgUser.id), tgUser.first_name, tgUser.username);
+      } catch {
+        // fall through
+      }
+    }
+    return null;
+  };
+
+  // Auto-attempt TMA auth on mount so the user is signed in by the time
+  // they reach for a button. Skip when already authenticated or when there
+  // is no Mini App context at all.
+  const autoAuthAttempted = useRef(false);
+  useEffect(() => {
+    if (autoAuthAttempted.current) return;
+    if (isAuthenticated) return;
+    if (!isTMA()) return;
+    autoAuthAttempted.current = true;
+    void tryTelegramAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
+
+  const handleStart = async () => {
+    if (isTMA()) {
       setLoading(true);
       try {
-        const data = await telegramMiniAppAuth(String(tgUser.id), tgUser.first_name, tgUser.username);
-        navigate(data.is_new_user ? "/onboarding" : "/chat", { replace: true });
-        return;
-      } catch {
-        // fall through to OTP
+        const data = await tryTelegramAuth();
+        if (data) {
+          navigate(data.is_new_user ? "/onboarding" : "/chat", { replace: true });
+          return;
+        }
       } finally {
         setLoading(false);
       }
     }
-
     navigate("/auth");
   };
 
   // Same auth logic as handleStart but stays on the landing page after login
   const handleLogin = async () => {
-    const initData = getInitData();
-    if (initData) {
+    if (isTMA()) {
       setLoginLoading(true);
       try {
-        await telegramAuth(initData);
-        return;
-      } catch {
-        // fall through to initDataUnsafe fallback
+        const data = await tryTelegramAuth();
+        if (data) return;
       } finally {
         setLoginLoading(false);
       }
     }
-
-    const tgUser = getTelegramUser();
-    if (tgUser?.id) {
-      setLoginLoading(true);
-      try {
-        await telegramMiniAppAuth(String(tgUser.id), tgUser.first_name, tgUser.username);
-        return;
-      } catch {
-        // fall through to OTP
-      } finally {
-        setLoginLoading(false);
-      }
-    }
-
     navigate("/auth?next=/");
   };
 
@@ -150,7 +160,7 @@ export default function Landing() {
         <UserGuide />
         <TestsCTA />
         <AgentSystem />
-        <LandingGameBlock />
+        {GAME_ON && <LandingGameBlock />}
         <InsightsFeed />
       </main>
       <Footer />

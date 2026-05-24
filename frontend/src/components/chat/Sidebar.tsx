@@ -7,6 +7,7 @@ import { useThemeStore } from "@/store/theme";
 import { useRenameSession } from "@/hooks/useSessions";
 import { useSubscriptionMe } from "@/hooks/useSubscription";
 import ProBadge from "@/components/billing/ProBadge";
+import api from "@/api/client";
 
 const PAGE_SIZE = 20;
 
@@ -70,6 +71,26 @@ export default function Sidebar({
 
   const visibleSessions = sessions.slice(0, visibleCount);
   const hasMore = visibleCount < sessions.length;
+
+  // Download via axios so the Bearer token from localStorage is attached.
+  // The previous `<a href="/api/sessions/.../messages">` skipped the
+  // interceptor entirely, so Telegram-auth users (who only have
+  // localStorage tokens, no cookies) hit a 401 "Not authenticated".
+  const handleExport = async (sessionId: string) => {
+    try {
+      const response = await api.get(`/export/session/${sessionId}`, { responseType: "blob" });
+      const url = URL.createObjectURL(response.data as Blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `nika-session-${sessionId.slice(0, 8)}.md`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silent — interceptor handles auth refresh; nothing useful to show
+    }
+  };
 
   const sidebar = (
     <div className="flex h-full flex-col bg-white dark:bg-[#352E2A]">
@@ -152,16 +173,16 @@ export default function Sidebar({
                 )}
                 <div className="flex shrink-0 items-center gap-0.5">
                   {activeSessionId === session.id && (
-                    <a
-                      href={`/api/sessions/${session.id}/messages?limit=999&offset=0`}
-                      onClick={(e) => e.stopPropagation()}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleExport(session.id);
+                      }}
                       className="rounded-md p-1 text-[#B8A898] hover:bg-[#F5EDE4] hover:text-[#B8785A]"
                       title="Экспорт"
-                      target="_blank"
-                      rel="noreferrer"
                     >
                       <Download className="h-3.5 w-3.5" />
-                    </a>
+                    </button>
                   )}
                   {hoveredId === session.id && (
                     <button
