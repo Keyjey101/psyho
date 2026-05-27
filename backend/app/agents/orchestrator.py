@@ -23,19 +23,14 @@ logger = structlog.get_logger()
 
 
 class _TTLCache:
-    """LRU cache with TTL. Thread-safe for asyncio (single-threaded).
+    """LRU cache with TTL. Thread-safe for asyncio (single-threaded)."""
 
-    Stores (topics, msg_count_at_set, expires_at). Validity is decided by the
-    caller — see `_classify_topics` which combines a 5-minute time window with
-    a soft 6-message drift threshold.
-    """
     def __init__(self, maxsize: int = 1000, ttl: int = 1800):
         self._maxsize = maxsize
         self._ttl = ttl
         self._cache: OrderedDict[str, tuple[list[str], int, float, float]] = OrderedDict()
 
     def get(self, key: str) -> tuple[list[str], int, float] | None:
-        """Return (topics, msg_count_at_set, set_at_monotonic) or None."""
         entry = self._cache.get(key)
         if entry is None:
             return None
@@ -55,10 +50,7 @@ class _TTLCache:
             self._cache.popitem(last=False)
 
 
-# Window during which we trust a cached classification without re-asking the
-# small model — even if a few new messages arrived. After this many seconds
-# OR _MSG_DRIFT messages, we re-classify.
-_TOPIC_CACHE_TIME_WINDOW_S = 300       # 5 minutes
+_TOPIC_CACHE_TIME_WINDOW_S = 300
 _TOPIC_CACHE_MSG_DRIFT = 4
 
 
@@ -92,10 +84,55 @@ PHASE_INSTRUCTIONS = {
     ),
 }
 
-# Each topic has a *primary* (first item) and a list of candidate secondaries
-# in priority order. We always pick the primary; the secondary is rotated based
-# on which agents have already been used in this session, so a returning user
-# sees different therapeutic perspectives across visits to the same theme.
+STANCE_INSTRUCTIONS: dict[str, str] = {
+    "quick_help": (
+        "## Стойка: Быстрая помощь\n"
+        "Пользователь прямо просит технику/ответ. Отвечай сразу, конкретно, без расспросов. "
+        "Дай то, что просят, минимум предисловий. После — мягко продолжи."
+    ),
+    "anamnesis": (
+        "## Стойка: Анамнез\n"
+        "Данных мало или началась новая нить. Задай 1-2 точечных вопроса, чтобы понять ситуацию. "
+        "Не перегружай — слушай и собирай."
+    ),
+    "presence": (
+        "## Стойка: Присутствие\n"
+        "Человек выговаривается или затоплен. Никакой структуры, техник и заданий — просто будь рядом. "
+        "Не предлагай решений. Минимум отражения эмоций — просто спокойное присутствие."
+    ),
+    "socratic": (
+        "## Стойка: Сократический вопрос\n"
+        "Человек застрял в жёстком убеждении. Задай один открытый вопрос, который мягко ставит рамку под сомнение. "
+        "Не объясняй, не давай альтернатив — пусть сам увидит. Не одобряй и не оспаривай прямо."
+    ),
+    "challenge": (
+        "## Стойка: Мягкий вызов\n"
+        "Человек рационализирует или избегает, и выдержит прямое замечание. "
+        "Уважительно назови противоречие или избегание. НЕ отражай эмоции и НЕ одобряй автоматически. "
+        "Один прямой уважительный вопрос."
+    ),
+    "consolidate": (
+        "## Стойка: Закрепление\n"
+        "Естественная точка закрепления. Отрази, что прояснилось, и предложи 1 конкретную практику. "
+        "Без навязывания — как приглашение."
+    ),
+    "crisis": (
+        "## Стойка: Кризис\n"
+        "Сигнал безопасности. Откликнись с глубоким сочувствием, дай контакты экстренной помощи. "
+        "Не минимизируй боль. Мягко продолжи разговор."
+    ),
+}
+
+_VALIDATE_INSTRUCTIONS: dict[int, str] = {
+    0: "Эмоциональное отражение: минимально. Не начинай с «понимаю» или «слышу».",
+    1: "Эмоциональное отражение: умеренно. Признай чувство, но не растягивай.",
+    2: "Эмоциональное отражение: много. Человеку нужно почувствовать, что его слышат.",
+}
+
+VALID_STANCES = set(STANCE_INSTRUCTIONS.keys())
+_NO_AGENT_STANCES = {"presence", "quick_help", "crisis"}
+_ANAMNESIS_SKIP_AGENTS_THRESHOLD = 1
+
 TOPIC_AGENT_MAP: dict[str, list[str]] = {
     "anxiety":         ["cbt",       "somatic", "act",       "ifs"],
     "depression":      ["cbt",       "act",     "narrative", "ifs"],
@@ -128,29 +165,20 @@ _INJECTION_PATTERNS = re.compile(
 )
 _MAX_MEMORY_LENGTH = 1500
 
-# Drops codepoints we never want in user-facing answers — most often this is
-# Chinese / Japanese / Korean characters that the model occasionally hallucinates
-# when its context drifts. We *keep* Cyrillic, Latin, digits, whitespace and any
-# punctuation / symbol / mark category. Anything else (CJK, Devanagari, Arabic,
-# private-use, etc.) is silently stripped before it reaches the user.
 _ALLOWED_LETTER_RANGES = (
-    (0x0030, 0x0039),  # digits
-    (0x0041, 0x005A),  # A-Z
-    (0x0061, 0x007A),  # a-z
-    (0x00C0, 0x024F),  # Latin extended (umlauts, etc.)
-    (0x0400, 0x04FF),  # Cyrillic
-    (0x0500, 0x052F),  # Cyrillic Supplement
+    (0x0030, 0x0039),
+    (0x0041, 0x005A),
+    (0x0061, 0x007A),
+    (0x00C0, 0x024F),
+    (0x0400, 0x04FF),
+    (0x0500, 0x052F),
 )
 
 
 def _is_allowed_char(ch: str) -> bool:
     cp = ord(ch)
     if cp < 0x0080:
-        # ASCII — keep all printable / whitespace
         return True
-    # Allow common Unicode punctuation, symbols, marks, separators (em-dash,
-    # curly quotes, NBSP, emoji modifiers, etc.). Categories starting with
-    # P (punctuation), S (symbol), Z (separator), M (mark), N (number) are kept.
     cat = unicodedata.category(ch)
     if cat[0] in ("P", "S", "Z", "M", "N"):
         return True
@@ -159,14 +187,12 @@ def _is_allowed_char(ch: str) -> bool:
             if lo <= cp <= hi:
                 return True
         return False
-    # Control / format / surrogate / private use — strip
     return False
 
 
 def _filter_foreign_chars(text: str) -> str:
     if not text:
         return text
-    # Fast path: pure ASCII
     if text.isascii():
         return text
     return "".join(ch for ch in text if _is_allowed_char(ch))
@@ -186,11 +212,18 @@ class Orchestrator:
     def __init__(self):
         self.agents: dict[str, BaseAgent] = AgentFactory.therapy_agents()
         self._session_topic_cache: _TTLCache = _TTLCache(maxsize=1000, ttl=1800)
+        self._turn_assessment_prompt: str | None = None
         self._load_orchestrator_prompt()
 
     def _load_orchestrator_prompt(self):
         path = Path(__file__).parent / "prompts" / "orchestrator.txt"
         self.system_prompt = path.read_text(encoding="utf-8")
+
+    def _get_turn_assessment_prompt(self) -> str:
+        if self._turn_assessment_prompt is None:
+            path = Path(__file__).parent / "prompts" / "turn_assessment.txt"
+            self._turn_assessment_prompt = path.read_text(encoding="utf-8")
+        return self._turn_assessment_prompt
 
     @staticmethod
     def _get_phase(exchange_number: int, max_exchanges: int) -> SessionPhase:
@@ -207,8 +240,6 @@ class Orchestrator:
             return SessionPhase.INTEGRATION
         return SessionPhase.CLOSE
 
-    # Farewell markers (lowercase substring match). Triggers an early CLOSE
-    # phase regardless of the % progress.
     _FAREWELL_MARKERS = (
         "пока, спасибо",
         "спасибо, пока",
@@ -230,15 +261,6 @@ class Orchestrator:
         history: list[dict] | None,
         current_message: str = "",
     ) -> SessionPhase:
-        """Wrap the count-based phase with content-driven adjustments.
-
-        - Stay in INTAKE while the user is still giving short, terse answers
-          (avg < 80 chars over last 3 user messages) — they haven't opened up
-          yet, no point pushing toward FOCUS.
-        - Jump straight to CLOSE if the latest user message contains a
-          farewell marker, regardless of how far we are in the session.
-        Other phases pass through unchanged.
-        """
         nominal = cls._get_phase(exchange_number, max_exchanges)
 
         text = (current_message or "").lower()
@@ -246,7 +268,6 @@ class Orchestrator:
             return SessionPhase.CLOSE
 
         if nominal == SessionPhase.FOCUS and history:
-            # Are user messages still very short? Stay in INTAKE.
             user_msgs = [m for m in history if m.get("role") == "user"]
             tail = user_msgs[-3:]
             if tail:
@@ -255,6 +276,89 @@ class Orchestrator:
                     return SessionPhase.INTAKE
 
         return nominal
+
+    async def _assess_turn(
+        self,
+        message: str,
+        history: list[dict],
+        active_focus_title: str = "",
+        session_id: str = "",
+    ) -> tuple[dict, dict | None]:
+        topics_list = ", ".join(TOPIC_AGENT_MAP.keys())
+        history_text = self._format_history_for_classify(history[-6:])
+
+        active_focus_section = ""
+        if active_focus_title:
+            active_focus_section = f"Активный фокус плана: «{active_focus_title}»"
+
+        prompt = self._get_turn_assessment_prompt().format(
+            message=message,
+            history=history_text,
+            active_focus_section=active_focus_section,
+            topics_list=topics_list,
+        )
+
+        classify_usage = None
+        try:
+            response = await client.chat.completions.create(
+                model=settings.ZAI_SMALL_MODEL,
+                max_tokens=300,
+                temperature=0.1,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            if hasattr(response, "usage") and response.usage:
+                classify_usage = {
+                    "prompt_tokens": response.usage.prompt_tokens or 0,
+                    "completion_tokens": response.usage.completion_tokens or 0,
+                    "total_tokens": response.usage.total_tokens or 0,
+                }
+                logger.info(
+                    "assess_turn_tokens",
+                    prompt_tokens=response.usage.prompt_tokens,
+                    completion_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
+                )
+
+            raw = response.choices[0].message.content
+            if raw:
+                raw = raw.strip()
+                if raw.startswith("```"):
+                    raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+                parsed = json.loads(raw)
+                if isinstance(parsed, dict):
+                    stance = parsed.get("stance", "presence")
+                    if stance not in VALID_STANCES:
+                        stance = "presence"
+                    parsed["stance"] = stance
+                    parsed.setdefault("topics", [])
+                    parsed.setdefault("validate_level", 1)
+                    parsed.setdefault("requesting_help", False)
+                    parsed.setdefault("venting", False)
+                    parsed.setdefault("terse", False)
+                    parsed.setdefault("crisis", False)
+                    parsed.setdefault("focus_alignment", "on")
+                    parsed.setdefault("redirect_signal", False)
+                    parsed["topics"] = [
+                        t for t in parsed["topics"]
+                        if isinstance(t, str) and t in TOPIC_AGENT_MAP
+                    ]
+                    return parsed, classify_usage
+        except (json.JSONDecodeError, IndexError, AttributeError) as e:
+            logger.warning("assess_turn_parse_error", error=str(e))
+        except Exception as e:
+            logger.warning("assess_turn_error", error=str(e))
+
+        return {
+            "topics": [],
+            "stance": "presence",
+            "validate_level": 1,
+            "requesting_help": False,
+            "venting": False,
+            "terse": False,
+            "crisis": False,
+            "focus_alignment": "on",
+            "redirect_signal": False,
+        }, classify_usage
 
     async def _classify_topics(self, message: str, history: list[dict], session_id: str = "") -> tuple[list[str], dict | None]:
         msg_count = len(history)
@@ -320,15 +424,6 @@ class Orchestrator:
         topics: list[str],
         history: list[dict] | None = None,
     ) -> list[tuple[str, BaseAgent]]:
-        """Pick up to 2 agents for the given topics.
-
-        - Primary (first in TOPIC_AGENT_MAP entry) is always taken — it's the
-          most-fitting school for the topic and we want consistency.
-        - Secondary is rotated: among the candidate secondaries we pick the
-          one **least recently used** in this session's `history`. This way a
-          returning user with recurring "anxiety" sees CBT+somatic the first
-          time, CBT+ACT the second, CBT+IFS the third, etc.
-        """
         if not topics:
             return []
 
@@ -340,8 +435,6 @@ class Orchestrator:
         primary = candidates[0]
         secondary_pool = candidates[1:]
 
-        # Build a "last seen index" per agent from history (lower = older).
-        # If never seen → -1, treated as the freshest pick.
         last_seen: dict[str, int] = {}
         for idx, msg in enumerate(history or []):
             agents_used = msg.get("agents_used")
@@ -356,7 +449,6 @@ class Orchestrator:
 
         secondary: str | None = None
         if secondary_pool:
-            # Sort: agents never used first, then by oldest usage.
             secondary = min(
                 secondary_pool,
                 key=lambda a: last_seen.get(a, -1),
@@ -388,14 +480,31 @@ class Orchestrator:
         exchange_number: int = 0,
         max_exchanges: int = 20,
         session_id: str = "",
+        plan_formulation: str = "",
+        active_focus: str = "",
+        agenda: str = "",
+        challenge_tolerance: str = "balanced",
     ):
         token_accumulator = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
-        topics, classify_usage = await self._classify_topics(message, history, session_id)
-        if classify_usage:
-            token_accumulator["prompt_tokens"] += classify_usage["prompt_tokens"]
-            token_accumulator["completion_tokens"] += classify_usage["completion_tokens"]
-            token_accumulator["total_tokens"] += classify_usage["total_tokens"]
+        turn_meta, assess_usage = await self._assess_turn(
+            message, history,
+            active_focus_title=active_focus,
+            session_id=session_id,
+        )
+        if assess_usage:
+            token_accumulator["prompt_tokens"] += assess_usage["prompt_tokens"]
+            token_accumulator["completion_tokens"] += assess_usage["completion_tokens"]
+            token_accumulator["total_tokens"] += assess_usage["total_tokens"]
+
+        stance = turn_meta["stance"]
+        topics = turn_meta["topics"]
+        validate_level = turn_meta["validate_level"]
+        requesting_help = turn_meta["requesting_help"]
+        redirect_signal = turn_meta["redirect_signal"]
+        crisis = turn_meta["crisis"]
+
+        yield {"type": "turn_meta", "redirect_signal": redirect_signal, "stance": stance}
 
         if exchange_number <= 1:
             phase = SessionPhase.INTAKE
@@ -405,7 +514,10 @@ class Orchestrator:
             )
         else:
             phase = SessionPhase.WORK
-        if phase == SessionPhase.INTAKE and exchange_number <= 1 and len(message.strip()) < 40:
+
+        if stance in _NO_AGENT_STANCES or crisis:
+            selected = []
+        elif stance == "anamnesis" and exchange_number <= _ANAMNESIS_SKIP_AGENTS_THRESHOLD:
             selected = []
         else:
             selected = self._select_agents(topics, history)
@@ -454,6 +566,10 @@ class Orchestrator:
             message, history, perspectives, session_summary,
             preferred_style, long_term_memory, therapy_goals, address_form, gender,
             exchange_number, max_exchanges, phase,
+            stance=stance, validate_level=validate_level,
+            plan_formulation=plan_formulation, active_focus=active_focus,
+            agenda=agenda, redirect_signal=redirect_signal,
+            requesting_help=requesting_help,
         ):
             if token.get("type") == "synthesis_usage":
                 token_accumulator["prompt_tokens"] += token.get("prompt_tokens", 0)
@@ -492,6 +608,13 @@ class Orchestrator:
         exchange_number: int = 0,
         max_exchanges: int = 20,
         phase: SessionPhase | None = None,
+        stance: str = "",
+        validate_level: int = 1,
+        plan_formulation: str = "",
+        active_focus: str = "",
+        agenda: str = "",
+        redirect_signal: bool = False,
+        requesting_help: bool = False,
     ):
         perspectives_text = ""
         if perspectives:
@@ -525,10 +648,28 @@ class Orchestrator:
                 exchange_number, max_exchanges, history, message
             )
             remaining = max_exchanges - exchange_number
-            phase_instruction = PHASE_INSTRUCTIONS.get(effective_phase, "")
             user_content += f"""
-[ПРОГРЕСС СЕССИИ: обмен {exchange_number} из {max_exchanges}. Фаза: {effective_phase.value}. Осталось ~{remaining} обменов]
-{phase_instruction}"""
+[ПРОГРЕСС СЕССИИ: обмен {exchange_number} из {max_exchanges}. Осталось ~{remaining} обменов]
+"""
+            if effective_phase in (SessionPhase.INTEGRATION, SessionPhase.CLOSE):
+                phase_instruction = PHASE_INSTRUCTIONS.get(effective_phase, "")
+                user_content += f"\n{phase_instruction}"
+
+        if stance and stance in STANCE_INSTRUCTIONS:
+            user_content += f"\n\n{STANCE_INSTRUCTIONS[stance]}"
+        if validate_level in _VALIDATE_INSTRUCTIONS:
+            user_content += f"\n{_VALIDATE_INSTRUCTIONS[validate_level]}"
+
+        if redirect_signal:
+            user_content += (
+                "\n\n[СИГНАЛ: Пользователь просит не обсуждать текущую тему. "
+                "Следуй за человеком, не возвращай к фокусу.]"
+            )
+
+        if requesting_help:
+            user_content += (
+                "\n\n[Пользователь прямо просит помощь/ответ. Отвечай прямо и конкретно, независимо от стойки.]"
+            )
 
         messages = [{"role": "system", "content": self.system_prompt}]
 
@@ -539,6 +680,21 @@ class Orchestrator:
 
         if therapy_goals:
             messages[0]["content"] += f"\n\n## Цели пользователя в терапии\n{therapy_goals}"
+
+        if plan_formulation:
+            messages[0]["content"] += (
+                f"\n\n## Рабочая гипотеза (для тебя, не озвучивать)\n{plan_formulation}"
+            )
+
+        if active_focus:
+            messages[0]["content"] += (
+                f"\n\n## Фокус этой сессии (внутреннее, не озвучивать)\n{active_focus}"
+            )
+
+        if agenda and exchange_number <= 2:
+            messages[0]["content"] += (
+                f"\n\n## Повестка сессии (внутреннее, не озвучивать)\n{agenda}"
+            )
 
         style_instructions = {
             "direct": (

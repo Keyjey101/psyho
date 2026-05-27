@@ -1,4 +1,5 @@
 import json
+import asyncio
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -6,11 +7,16 @@ from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.database import get_db
-from app.models.models import ChatSession, Message, User
+from app.database import get_db, async_session
+from app.models.models import ChatSession, Message, User, TreatmentPlan
 from app.schemas.session import SessionCreate, SessionUpdate, SessionResponse, SessionListResponse, SessionDetailResponse
 from app.middleware.auth import get_current_user
 from app.services import billing
+from app.services.plan_service import (
+    get_or_none as get_plan,
+    update_plan,
+    build_initial_plan,
+)
 
 settings = get_settings()
 
@@ -231,11 +237,59 @@ async def continue_session(
     await db.commit()
     await db.refresh(new_session)
 
+    history_dicts = [
+        {"role": "user" if m.role == "user" else "assistant", "content": m.content}
+        for m in all_messages
+    ]
+    from app.models.models import UserProfile
+    profile_result = await db.execute(select(UserProfile).where(UserProfile.user_id == user.id))
+    profile = profile_result.scalar_one_or_none()
+    ltm = profile.long_term_memory if profile else ""
+
+    plan_obj = await get_plan(user.id, db)
+    if plan_obj:
+        plan_dict = {"formulation": plan_obj.formulation, "focus_areas": plan_obj.focus_areas}
+        asyncio.create_task(
+            _background_plan_update(
+                user.id, history_dicts, ltm, plan_dict, session_id,
+            )
+        )
+    else:
+        sessions_count = await db.execute(
+            select(func.count()).where(ChatSession.user_id == user.id)
+        )
+        if (sessions_count.scalar() or 0) >= 1:
+            asyncio.create_task(
+                _background_plan_build(user.id, history_dicts, ltm, session_id)
+            )
+
     return {
         "new_session_id": new_session.id,
         "previous_title": prev_session.title or "Без названия",
         "insights_preview": insights[:100] if insights else "",
     }
+
+
+async def _background_plan_update(
+    user_id: str, history: list[dict], memory: str, plan_dict: dict, session_id: str
+):
+    try:
+        async with async_session() as p_db:
+            await update_plan(user_id, history, memory, plan_dict, p_db, session_id=session_id)
+    except Exception as e:
+        import structlog
+        structlog.get_logger().error("Background plan update (continue_session) error", error=str(e))
+
+
+async def _background_plan_build(
+    user_id: str, history: list[dict], memory: str, session_id: str
+):
+    try:
+        async with async_session() as p_db:
+            await build_initial_plan(user_id, history, memory, p_db, session_id=session_id)
+    except Exception as e:
+        import structlog
+        structlog.get_logger().error("Background plan build (continue_session) error", error=str(e))
 
 
 @router.get("/{session_id}/insights")
@@ -284,3 +338,40 @@ async def get_session_insights(
         insights = "Не удалось сгенерировать инсайты."
 
     return {"insights": insights, "session_title": session.title}
+
+
+@router.get("/{session_id}/plan-progress")
+async def get_plan_progress(
+    session_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ChatSession).where(ChatSession.id == session_id, ChatSession.user_id == user.id)
+    )
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    plan = await get_plan(user.id, db)
+    if not plan:
+        return {"has_plan": False, "plan_summary": None, "active_focus_title": None, "active_focus_progress": None}
+
+    active_focus_title = None
+    active_focus_progress = None
+    try:
+        areas = json.loads(plan.focus_areas)
+        for a in areas:
+            if a.get("id") == plan.active_focus_id:
+                active_focus_title = a.get("title", "")
+                active_focus_progress = a.get("progress", 0)
+                break
+    except Exception:
+        pass
+
+    return {
+        "has_plan": True,
+        "plan_summary": plan.plan_summary,
+        "active_focus_title": active_focus_title,
+        "active_focus_progress": active_focus_progress,
+    }

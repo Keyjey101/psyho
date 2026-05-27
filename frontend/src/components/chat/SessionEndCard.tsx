@@ -15,6 +15,12 @@ interface SessionEndCardProps {
   pendingTaskId?: string | null;
   pendingTaskText?: string | null;
   onCompleteTask?: (taskId: string) => void;
+  planProgress?: {
+    has_plan: boolean;
+    plan_summary: string | null;
+    active_focus_title: string | null;
+    active_focus_progress: number | null;
+  } | null;
 }
 
 const MOOD_EMOJIS = [
@@ -33,6 +39,7 @@ export default function SessionEndCard({
   pendingTaskId,
   pendingTaskText,
   onCompleteTask,
+  planProgress,
 }: SessionEndCardProps) {
   const [moodValue, setMoodValue] = useState<number | null>(null);
   const [exerciseCompleted, setExerciseCompleted] = useState<boolean | null>(null);
@@ -155,6 +162,26 @@ export default function SessionEndCard({
           </p>
         )}
       </div>
+
+      {/* Plan progress */}
+      {planProgress?.has_plan && planProgress.active_focus_title && (
+        <div className="mt-3 rounded-xl border border-[#E8DDD0] bg-[#FAF6F1] px-4 py-3 dark:border-[#4A4038] dark:bg-[#2A2420]">
+          <p className="mb-1.5 text-[12px] font-medium text-[#8A7A6A] dark:text-[#B8A898]">
+            Текущий фокус
+          </p>
+          <p className="mb-2 text-[13px] text-[#5A5048] dark:text-[#F5EDE4]">
+            {planProgress.active_focus_title}
+          </p>
+          {planProgress.active_focus_progress != null && (
+            <div className="h-1.5 overflow-hidden rounded-full bg-[#E8DDD0] dark:bg-[#4A4038]">
+              <div
+                className="h-full rounded-full bg-[#B8785A] transition-all duration-500"
+                style={{ width: `${Math.min(100, Math.max(0, planProgress.active_focus_progress))}%` }}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="mt-5 flex gap-3">
         <button

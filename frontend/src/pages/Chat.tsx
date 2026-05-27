@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscriptionMe } from "@/hooks/useSubscription";
-import { useSessions, useSession, useCreateSession, useDeleteSession, useContinueSession } from "@/hooks/useSessions";
+import { useSessions, useSession, useCreateSession, useDeleteSession, useContinueSession, usePlanProgress } from "@/hooks/useSessions";
 import { useChat } from "@/hooks/useChat";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import Sidebar from "@/components/chat/Sidebar";
@@ -39,6 +39,7 @@ export default function Chat() {
   const queryClient = useQueryClient();
   const { data: sessions } = useSessions();
   const { data: currentSession, isError } = useSession(sessionId);
+  const { data: planProgress } = usePlanProgress(sessionId);
   const createSession = useCreateSession();
   const deleteSession = useDeleteSession();
   const continueSession = useContinueSession();
@@ -483,6 +484,7 @@ export default function Chat() {
             pendingTaskId={pendingTask?.id ?? null}
             pendingTaskText={pendingTask?.text ?? null}
             onCompleteTask={handleCompleteTask}
+            planProgress={planProgress}
           />
         </div>
       )}

@@ -97,9 +97,27 @@ class UserProfile(Base):
     pop_score: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     address_form: Mapped[str] = mapped_column(String(10), default="ты", server_default="ты")
     gender: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    challenge_tolerance: Mapped[str] = mapped_column(String(10), default="balanced", server_default="balanced")
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
     user = relationship("User", back_populates="profile")
+
+
+class TreatmentPlan(Base):
+    __tablename__ = "treatment_plans"
+
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    formulation: Mapped[str] = mapped_column(Text, nullable=False)
+    focus_areas: Mapped[str] = mapped_column(Text, nullable=False)
+    active_focus_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    plan_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    plan_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    last_session_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+    user = relationship("User")
 
 
 class TelegramVerificationCode(Base):

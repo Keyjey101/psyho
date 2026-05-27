@@ -78,3 +78,22 @@ export function useContinueSession() {
     },
   });
 }
+
+interface PlanProgress {
+  has_plan: boolean;
+  plan_summary: string | null;
+  active_focus_title: string | null;
+  active_focus_progress: number | null;
+}
+
+export function usePlanProgress(sessionId: string | undefined) {
+  return useQuery({
+    queryKey: ["plan-progress", sessionId],
+    queryFn: async () => {
+      if (!sessionId) return null;
+      const { data } = await api.get<PlanProgress>(`/sessions/${sessionId}/plan-progress`);
+      return data;
+    },
+    enabled: !!sessionId,
+  });
+}

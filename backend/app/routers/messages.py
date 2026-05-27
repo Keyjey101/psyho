@@ -10,7 +10,7 @@ from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db, async_session
-from app.models.models import ChatSession, Message, User, UserProfile
+from app.models.models import ChatSession, Message, User, UserProfile, TreatmentPlan
 from app.schemas.message import MessageResponse, MessageListResponse
 from app.middleware.auth import get_current_user
 from app.services.auth import decode_token
@@ -19,6 +19,13 @@ from app.agents.base import client as ai_client
 from app.services.context import maybe_compress_context, generate_session_title
 from app.services.memory_service import extract_and_update_memory
 from app.services.personality_service import compute_personality_snapshot, should_compute_snapshot
+from app.services.plan_service import (
+    get_or_none as get_plan,
+    build_initial_plan,
+    update_plan,
+    compute_agenda,
+    maybe_lower_challenge_tolerance,
+)
 from app.services import billing
 
 from app.config import get_settings
@@ -58,6 +65,7 @@ def _is_farewell(message: str, exchange_count: int) -> bool:
     return any(kw in msg for kw in FAREWELL_KEYWORDS) and len(msg) < 80
 
 _memory_counters: dict[str, int] = {}
+_plan_counters: dict[str, int] = {}
 
 TASK_EXTRACT_PROMPT = """Из ответа терапевта ниже извлеки конкретную домашнюю задачу / практику, которую предложили пользователю.
 Верни только текст задачи, 1 предложение. Если задачи нет — верни пустую строку.
@@ -81,6 +89,35 @@ async def _background_personality_update(user_id: str):
                 await compute_personality_snapshot(user_id, p_db)
     except Exception as e:
         structlog.get_logger().error("Background personality update error", error=str(e))
+
+
+async def _background_plan_build(user_id: str, history: list[dict], long_term_memory: str, session_id: str):
+    try:
+        async with async_session() as p_db:
+            await build_initial_plan(user_id, history, long_term_memory, p_db, session_id=session_id)
+    except Exception as e:
+        structlog.get_logger().error("Background plan build error", error=str(e))
+
+
+async def _background_plan_update(
+    user_id: str,
+    history: list[dict],
+    long_term_memory: str,
+    current_plan_dict: dict,
+    session_id: str,
+    redirect_signal: bool = False,
+    challenge_tolerance_hit: bool = False,
+):
+    try:
+        async with async_session() as p_db:
+            await update_plan(
+                user_id, history, long_term_memory, current_plan_dict, p_db,
+                redirect_signal=redirect_signal, session_id=session_id,
+            )
+            if challenge_tolerance_hit:
+                await maybe_lower_challenge_tolerance(user_id, p_db)
+    except Exception as e:
+        structlog.get_logger().error("Background plan update error", error=str(e))
 
 
 async def _extract_and_save_task(user_id: str, session_id: str, response_text: str):
@@ -195,12 +232,35 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
         therapy_goals = profile.therapy_goals or "" if profile else ""
         address_form = getattr(profile, "address_form", "ты") if profile else "ты"
         gender = getattr(profile, "gender", "") if profile else ""
+        challenge_tolerance = getattr(profile, "challenge_tolerance", "balanced") if profile else "balanced"
+
+        plan_obj = await get_plan(user_id, db)
+        agenda = compute_agenda(plan_obj)
+        plan_formulation = plan_obj.formulation if plan_obj else ""
+        active_focus = ""
+        if plan_obj and plan_obj.active_focus_id:
+            try:
+                import json as _json
+                areas = _json.loads(plan_obj.focus_areas)
+                for a in areas:
+                    if a.get("id") == plan_obj.active_focus_id:
+                        active_focus = a.get("title", "")
+                        break
+            except Exception:
+                pass
 
         continuation_context = session.continuation_context
         existing_msg_result = await db.execute(
             select(func.count()).where(Message.session_id == session_id)
         )
         existing_count = existing_msg_result.scalar() or 0
+
+        plan_dict_for_background = None
+        if plan_obj:
+            plan_dict_for_background = {
+                "formulation": plan_obj.formulation,
+                "focus_areas": plan_obj.focus_areas,
+            }
 
     await websocket.accept()
 
@@ -226,11 +286,15 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                 key_insights = []
                 homework = ""
 
+            focus_hint = ""
+            if active_focus:
+                focus_hint = f"\nТекущий фокус долгосрочной работы (не озвучивать): «{active_focus}»"
+
             continuation_prompt = f"""КОНТЕКСТ ДЛЯ НИКА (не показывать пользователю):
 Это продолжение предыдущей сессии «{prev_title}».
 Главная тема: {main_theme}
 Ключевые инсайты: {', '.join(key_insights) if key_insights else 'нет'}
-{'Домашняя практика: ' + homework if homework else ''}
+{'Домашняя практика: ' + homework if homework else ''}{focus_hint}
 
 ЗАДАЧА: Начни новую сессию естественно. {continue_from or 'Поприветствуй пользователя и спроси как он/она себя чувствует.'}
 Говори как Ника — тепло, без официоза. НЕ перечисляй всё подряд — выбери главное."""
@@ -239,12 +303,18 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
             try:
                 from app.agents.base import client as ai_client
 
+                system_prompt = orchestrator.system_prompt
+                if plan_formulation:
+                    system_prompt += f"\n\n## Рабочая гипотеза (для тебя, не озвучивать)\n{plan_formulation}"
+                if active_focus:
+                    system_prompt += f"\n\n## Фокус этой сессии (внутреннее, не озвучивать)\n{active_focus}"
+
                 stream = await ai_client.chat.completions.create(
                     model=settings.ZAI_MODEL,
                     max_tokens=settings.SYNTHESIS_MAX_TOKENS,
                     temperature=0.7,
                     messages=[
-                        {"role": "system", "content": orchestrator.system_prompt},
+                        {"role": "system", "content": system_prompt},
                         {"role": "user", "content": continuation_prompt},
                     ],
                     stream=True,
@@ -285,10 +355,6 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                 continue
 
             if is_regenerate:
-                # Drop the last assistant message and re-run synthesis using
-                # the same user message that came before it. Idempotent: if
-                # the last message in the session is *not* an assistant
-                # message, we simply ignore the request.
                 async with async_session() as db:
                     last_msg_q = await db.execute(
                         select(Message)
@@ -304,8 +370,6 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                         })
                         continue
 
-                    # Find the last user message to use as the seed for the
-                    # rerun.
                     last_user_q = await db.execute(
                         select(Message)
                         .where(
@@ -324,8 +388,6 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                         continue
 
                     content = last_user.content
-                    # Delete the last assistant message; we'll write a fresh
-                    # one below.
                     await db.execute(delete(Message).where(Message.id == last_msg.id))
                     await db.commit()
             else:
@@ -377,6 +439,7 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
             agents_used_list = []
             full_response = ""
             token_usage_data = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+            turn_redirect_signal = False
 
             try:
                 async for event in orchestrator.process(
@@ -385,7 +448,14 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                     exchange_number=exchange_count,
                     max_exchanges=max_exchanges,
                     session_id=session_id,
+                    plan_formulation=plan_formulation,
+                    active_focus=active_focus,
+                    agenda=agenda,
+                    challenge_tolerance=challenge_tolerance,
                 ):
+                    if event["type"] == "turn_meta":
+                        turn_redirect_signal = event.get("redirect_signal", False)
+                        continue
                     if event["type"] == "token":
                         await websocket.send_json({"type": "token", "content": event["content"]})
                         full_response += event["content"]
@@ -443,9 +513,6 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
 
             if profile and profile.memory_enabled and memory_allowed and full_response:
                 _memory_counters[session_id] = _memory_counters.get(session_id, 0) + 1
-                # Every 3 exchanges: balance between freshness and API cost.
-                # The dedup hash in extract_and_update_memory
-                # additionally short-circuits no-op writes.
                 if _memory_counters[session_id] % 3 == 0:
                     memory_task_mem = profile.long_term_memory
                     memory_task_history = list(history_dicts)
@@ -468,11 +535,54 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                         _extract_and_save_task(user_id, session_id, full_response)
                     )
 
+            session_ending = False
             if exchange_count >= max_exchanges:
+                session_ending = True
                 await websocket.send_json({"type": "session_limit_reached"})
 
             if _is_farewell(content, exchange_count) and exchange_count < max_exchanges:
+                session_ending = True
                 await websocket.send_json({"type": "session_limit_reached"})
+
+            if session_ending and full_response:
+                if not plan_dict_for_background:
+                    completed_sessions_count = 0
+                    try:
+                        async with async_session() as cnt_db:
+                            cnt_result = await cnt_db.execute(
+                                select(func.count()).where(ChatSession.user_id == user_id)
+                            )
+                            completed_sessions_count = cnt_result.scalar() or 0
+                    except Exception:
+                        pass
+                    if completed_sessions_count >= 1:
+                        asyncio.create_task(
+                            _background_plan_build(
+                                user_id, list(history_dicts), long_term_memory, session_id
+                            )
+                        )
+                else:
+                    challenge_hit = turn_redirect_signal
+                    asyncio.create_task(
+                        _background_plan_update(
+                            user_id, list(history_dicts), long_term_memory,
+                            plan_dict_for_background, session_id,
+                            redirect_signal=turn_redirect_signal,
+                            challenge_tolerance_hit=challenge_hit,
+                        )
+                    )
+
+            if plan_dict_for_background and not session_ending:
+                _plan_counters[session_id] = _plan_counters.get(session_id, 0) + 1
+                if turn_redirect_signal or (_plan_counters[session_id] % 9 == 0):
+                    asyncio.create_task(
+                        _background_plan_update(
+                            user_id, list(history_dicts), long_term_memory,
+                            plan_dict_for_background, session_id,
+                            redirect_signal=turn_redirect_signal,
+                            challenge_tolerance_hit=turn_redirect_signal,
+                        )
+                    )
 
     except WebSocketDisconnect:
         pass
