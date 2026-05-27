@@ -70,7 +70,14 @@ export default function Landing() {
     if (isAuthenticated) return;
     if (!isTMA()) return;
     autoAuthAttempted.current = true;
-    void tryTelegramAuth();
+    (async () => {
+      try {
+        const data = await tryTelegramAuth();
+        if (data) {
+          navigate(data.is_new_user ? "/onboarding" : "/chat", { replace: true });
+        }
+      } catch {}
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 

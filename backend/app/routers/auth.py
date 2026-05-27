@@ -254,6 +254,8 @@ async def tg_mini_app_auth(body: TgMiniAppRequest, response: Response, db: Async
     user = result.scalar_one_or_none()
     is_new_user = user is None
 
+    normalized_username = body.username.strip().lstrip("@").lower() if body.username else None
+
     if is_new_user:
         synthetic_email = f"tg_{body.telegram_id}@tg.local"
         user = User(
@@ -261,7 +263,7 @@ async def tg_mini_app_auth(body: TgMiniAppRequest, response: Response, db: Async
             name=body.first_name,
             password=_hash_code(secrets.token_hex(32)),
             telegram_id=body.telegram_id,
-            telegram_username=body.username,
+            telegram_username=normalized_username,
             notify_telegram_id=body.telegram_id,
         )
         _apply_utm(user, body.utm)
@@ -274,8 +276,8 @@ async def tg_mini_app_auth(body: TgMiniAppRequest, response: Response, db: Async
     else:
         if body.first_name and not user.name:
             user.name = body.first_name
-        if body.username and not user.telegram_username:
-            user.telegram_username = body.username
+        if normalized_username and not user.telegram_username:
+            user.telegram_username = normalized_username
         if not user.notify_telegram_id:
             user.notify_telegram_id = body.telegram_id
         _apply_utm(user, body.utm)
@@ -409,6 +411,7 @@ async def link_telegram(
         tg_only_user.is_active = False
 
     user.telegram_id = telegram_id
-    user.telegram_username = tg_user.get("username")
+    raw_username = tg_user.get("username")
+    user.telegram_username = raw_username.strip().lstrip("@").lower() if raw_username else None
     await db.commit()
     return {"ok": True, "merged": tg_only_user is not None}
