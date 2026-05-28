@@ -90,6 +90,14 @@ STANCE_INSTRUCTIONS: dict[str, str] = {
         "Пользователь прямо просит технику/ответ. Отвечай сразу, конкретно, без расспросов. "
         "Дай то, что просят, минимум предисловий. После — мягко продолжи."
     ),
+    "explore": (
+        "## Стойка: Бережное углубление\n"
+        "Человек делится, раскрывается или исследует проблему. Это основной режим. "
+        "Конкретно отрази то, что услышала — чувство или смысл, а не общими словами, — "
+        "и задай ОДИН открытый вопрос, ведущий глубже: к чувству, его источнику, к тому, "
+        "что за этим стоит. Веди разговор вперёд, не закрывай его. "
+        "Не торопись с техниками и решениями — сначала понять."
+    ),
     "anamnesis": (
         "## Стойка: Анамнез\n"
         "Данных мало или началась новая нить. Задай 1-2 точечных вопроса, чтобы понять ситуацию. "
@@ -97,8 +105,9 @@ STANCE_INSTRUCTIONS: dict[str, str] = {
     ),
     "presence": (
         "## Стойка: Присутствие\n"
-        "Человек выговаривается или затоплен. Никакой структуры, техник и заданий — просто будь рядом. "
-        "Не предлагай решений. Минимум отражения эмоций — просто спокойное присутствие."
+        "Человек в остром аффекте или прямо просит просто выслушать. Не давай техник и решений. "
+        "Тепло и точно отрази, что он переживает — он должен почувствовать, что его услышали. "
+        "Заверши мягким открытым приглашением (не давящим вопросом), чтобы он мог продолжить, если захочет."
     ),
     "socratic": (
         "## Стойка: Сократический вопрос\n"
@@ -130,7 +139,7 @@ _VALIDATE_INSTRUCTIONS: dict[int, str] = {
 }
 
 VALID_STANCES = set(STANCE_INSTRUCTIONS.keys())
-_NO_AGENT_STANCES = {"presence", "quick_help", "crisis"}
+_NO_AGENT_STANCES = {"quick_help", "crisis"}
 _ANAMNESIS_SKIP_AGENTS_THRESHOLD = 1
 
 TOPIC_AGENT_MAP: dict[str, list[str]] = {
@@ -326,9 +335,9 @@ class Orchestrator:
                     raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
                 parsed = json.loads(raw)
                 if isinstance(parsed, dict):
-                    stance = parsed.get("stance", "presence")
+                    stance = parsed.get("stance", "explore")
                     if stance not in VALID_STANCES:
-                        stance = "presence"
+                        stance = "explore"
                     parsed["stance"] = stance
                     parsed.setdefault("topics", [])
                     parsed.setdefault("validate_level", 1)
@@ -350,7 +359,7 @@ class Orchestrator:
 
         return {
             "topics": [],
-            "stance": "presence",
+            "stance": "explore",
             "validate_level": 1,
             "requesting_help": False,
             "venting": False,
@@ -659,6 +668,16 @@ class Orchestrator:
             user_content += f"\n\n{STANCE_INSTRUCTIONS[stance]}"
         if validate_level in _VALIDATE_INSTRUCTIONS:
             user_content += f"\n{_VALIDATE_INSTRUCTIONS[validate_level]}"
+
+        # Open-question backbone: keep Nika moving the conversation toward
+        # feelings/roots on every turn EXCEPT a pure crisis or an explicit
+        # request for a direct answer (where probing would be intrusive).
+        if stance not in ("crisis", "quick_help") and not requesting_help:
+            user_content += (
+                "\n\nЗаверши ответ живым открытым вопросом, который ведёт к чувствам, "
+                "смыслам или корням — продвигай разговор глубже, не закрывай его. "
+                "Это не формальность: твоя задача — помочь человеку дойти до сути."
+            )
 
         if redirect_signal:
             user_content += (
