@@ -1,4 +1,4 @@
-# PsyHo Swarm Audit Report
+# Swarm Audit Report
 
 **Дата:** 2026-05-10
 **Версия проекта:** HEAD (до коммита)

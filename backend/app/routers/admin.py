@@ -813,7 +813,7 @@ async def grant_to_user(
             note=f"+{body.amount}d {full_note}",
         ))
         msg = (
-            f"🎁 Тебе начислено {body.amount} дн. PsyHo Pro. "
+            f"🎁 Тебе начислено {body.amount} дн. Ника Pro. "
             f"Доступ до {user.subscription_expires_at:%d.%m.%Y}."
         )
     else:  # sessions

@@ -146,9 +146,9 @@ async def _create_payment_for(
         receipt_email = user.email
 
     description = {
-        billing.PURPOSE_PRO_MONTH: "PsyHo Pro · 1 месяц",
-        billing.PURPOSE_PRO_3M: "PsyHo Pro · 3 месяца",
-        billing.PURPOSE_PRO_YEAR: "PsyHo Pro · 1 год",
+        billing.PURPOSE_PRO_MONTH: "Ника Pro · 1 месяц",
+        billing.PURPOSE_PRO_3M: "Ника Pro · 3 месяца",
+        billing.PURPOSE_PRO_YEAR: "Ника Pro · 1 год",
         billing.PURPOSE_PACK_5: "PsyHo · 5 сессий",
         billing.PURPOSE_PACK_15: "PsyHo · 15 сессий",
     }.get(purpose, "PsyHo")
@@ -344,7 +344,7 @@ async def _apply_succeeded_payment(
             payment_id=payment.id,
         ))
         msg = (
-            f"✅ Подписка PsyHo Pro активна. Доступ до "
+            f"✅ Подписка Ника Pro активна. Доступ до "
             f"{user.subscription_expires_at:%d.%m.%Y}."
         )
     elif payment.purpose in billing.PACK_PURPOSES:

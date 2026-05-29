@@ -106,7 +106,7 @@ async def _try_renew_user(db: AsyncSession, user: User) -> None:
         resp = await yookassa_client.charge_recurring(
             payment_method_id=user.saved_payment_method_id,
             amount_kopecks=amount,
-            description=f"Продление PsyHo Pro для {user.email}",
+            description=f"Продление Ника Pro для {user.email}",
             idempotence_key=idem,
             metadata={"user_id": user.id, "purpose": billing.PURPOSE_PRO_RENEWAL},
         )
@@ -162,7 +162,7 @@ async def expire_subscriptions() -> None:
             await db.commit()
             await notify.notify_user(
                 user,
-                "Подписка PsyHo Pro закончилась. Возвращайся, когда будешь готов(а) — мы рядом.",
+                "Подписка Ника Pro закончилась. Возвращайся, когда будешь готов(а) — мы рядом.",
                 manage_url=s.YOOKASSA_RETURN_URL,
             )
 
