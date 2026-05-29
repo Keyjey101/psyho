@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useThemeStore } from "@/store/theme";
 import { useRenameSession } from "@/hooks/useSessions";
 import { useSubscriptionMe } from "@/hooks/useSubscription";
+import { useToast } from "@/components/Toast";
 import ProBadge from "@/components/billing/ProBadge";
 import api from "@/api/client";
 
@@ -68,6 +69,7 @@ export default function Sidebar({
   const renameSession = useRenameSession();
   const { data: sub } = useSubscriptionMe();
   const isPro = sub?.tier === "pro";
+  const { showToast } = useToast();
 
   const visibleSessions = sessions.slice(0, visibleCount);
   const hasMore = visibleCount < sessions.length;
@@ -86,9 +88,9 @@ export default function Sidebar({
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch {
-      // silent — interceptor handles auth refresh; nothing useful to show
+      showToast("Не удалось выгрузить диалог");
     }
   };
 

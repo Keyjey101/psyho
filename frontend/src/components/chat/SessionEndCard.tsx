@@ -64,7 +64,7 @@ export default function SessionEndCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="mx-auto my-6 max-w-md rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-[0_2px_12px_rgba(90,80,72,0.08)] dark:border-[#4A4038] dark:bg-[#352E2A]"
+      className="mx-auto my-3 max-w-md rounded-2xl border border-[#E8DDD0] bg-white p-6 shadow-[0_2px_12px_rgba(90,80,72,0.08)] dark:border-[#4A4038] dark:bg-[#352E2A]"
     >
       <h3 className="mb-1 text-center text-[17px] font-semibold text-[#5A5048] dark:text-[#F5EDE4]">
         Сессия завершена
@@ -188,14 +188,14 @@ export default function SessionEndCard({
           onClick={() => onFinish(moodValue, exerciseCompleted)}
           className="flex-1 rounded-full border border-[#D8CDC0] px-4 py-2.5 text-sm font-medium text-[#8A7A6A] transition-colors hover:bg-[#FAF6F1] dark:border-[#4A4038] dark:text-[#B8A898] dark:hover:bg-[#2A2420]"
         >
-          Завершить
+          Закрыть
         </button>
         <button
           onClick={onContinue}
           disabled={isContinuing}
-          className="flex-1 rounded-full bg-[#B8785A] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#9E6349] disabled:opacity-50"
-        >
-          Продолжить
+            className="flex-1 rounded-full bg-[#B8785A] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#9E6349] disabled:opacity-50"
+          >
+            Продолжить работу
         </button>
       </div>
     </motion.div>

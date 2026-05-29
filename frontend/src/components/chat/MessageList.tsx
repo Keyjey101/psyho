@@ -23,6 +23,7 @@ interface MessageListProps {
   /** When defined and the last message is an assistant reply, that message
    *  shows a "Regenerate" affordance. Disabled while streaming. */
   onRegenerate?: () => void;
+  endCard?: React.ReactNode;
 }
 
 interface PendingTask {
@@ -54,6 +55,7 @@ export default function MessageList({
   onContinueSession,
   isContinuing,
   onRegenerate,
+  endCard,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -106,7 +108,7 @@ export default function MessageList({
         onScroll={checkAtBottom}
         className="flex-1 overflow-y-auto bg-[#FAF6F1] px-4 py-6 dark:bg-[#2A2420]"
       >
-        <div className="mx-auto max-w-3xl space-y-6">
+        <div className="mx-auto max-w-3xl space-y-3">
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -171,7 +173,7 @@ export default function MessageList({
         onScroll={checkAtBottom}
         className="h-full overflow-y-auto bg-[#FAF6F1] px-4 py-6 lg:px-6 dark:bg-[#2A2420]"
       >
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="mx-auto max-w-3xl space-y-3">
         {messages.map((msg, idx) => {
           const isLast = idx === messages.length - 1;
           const canRegenerate =
@@ -200,6 +202,7 @@ export default function MessageList({
         )}
 
         {isStreaming && !streamingContent && <ThinkingIndicator agents={agentsUsed} />}
+        {endCard}
         <div ref={bottomRef} />
       </div>
       </div>

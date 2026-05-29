@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSubscriptionMe } from "@/hooks/useSubscription";
 import { useSessions, useSession, useCreateSession, useDeleteSession, useContinueSession, usePlanProgress } from "@/hooks/useSessions";
 import { useChat } from "@/hooks/useChat";
+import { useToast } from "@/components/Toast";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import Sidebar from "@/components/chat/Sidebar";
 import MessageList from "@/components/chat/MessageList";
@@ -108,6 +109,8 @@ export default function Chat() {
   const handleSessionLimitReached = useCallback(() => {
     setShowLimitModal(true);
   }, []);
+
+  const { showToast } = useToast();
 
   const { streamingContent, agentsUsed, isStreaming, sendMessage, regenerate, isConnected, exchangeCount, maxExchanges } = useChat({
     sessionId: sessionId || "",
@@ -299,11 +302,13 @@ export default function Chat() {
       const url = URL.createObjectURL(response.data as Blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `nika-session-${sessionId}.txt`;
+      a.download = `nika-session-${sessionId.slice(0, 8)}.md`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch {
-      // ignore export error
+      showToast("Не удалось выгрузить диалог");
     }
   };
 
@@ -455,6 +460,20 @@ export default function Chat() {
           onContinueSession={previousSession ? handleContinueSession : undefined}
           isContinuing={continueSession.isPending}
           onRegenerate={isStreaming || awaitingGreeting ? undefined : handleRegenerate}
+          endCard={showLimitModal ? (
+            <SessionEndCard
+              exchangeCount={displayExchangeCount}
+              messages={localMessages}
+              onContinue={handleContinueFromLimit}
+              onFinish={handleFinishFromLimit}
+              isContinuing={continueSession.isPending}
+              completedSessions={completedSessions}
+              pendingTaskId={pendingTask?.id ?? null}
+              pendingTaskText={pendingTask?.text ?? null}
+              onCompleteTask={handleCompleteTask}
+              planProgress={planProgress}
+            />
+          ) : undefined}
         />
 
         <ActionPanel
@@ -471,23 +490,6 @@ export default function Chat() {
           onToggleActions={() => setIsActionsOpen((prev) => !prev)}
         />
       </div>
-
-      {showLimitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <SessionEndCard
-            exchangeCount={displayExchangeCount}
-            messages={localMessages}
-            onContinue={handleContinueFromLimit}
-            onFinish={handleFinishFromLimit}
-            isContinuing={continueSession.isPending}
-            completedSessions={completedSessions}
-            pendingTaskId={pendingTask?.id ?? null}
-            pendingTaskText={pendingTask?.text ?? null}
-            onCompleteTask={handleCompleteTask}
-            planProgress={planProgress}
-          />
-        </div>
-      )}
 
       {showMoodTracker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
