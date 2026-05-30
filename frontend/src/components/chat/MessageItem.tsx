@@ -34,7 +34,7 @@ export default function MessageItem({ message, isStreaming, onRegenerate }: Mess
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
-        className="flex justify-end"
+        className="flex justify-end pb-5"
       >
         <div className="max-w-[80%] rounded-[18px] rounded-br-[4px] bg-[#B8785A] dark:bg-[#7A5040] px-[18px] py-[14px] shadow-sm">
           <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-white">

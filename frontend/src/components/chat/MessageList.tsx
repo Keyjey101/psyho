@@ -108,7 +108,7 @@ export default function MessageList({
         onScroll={checkAtBottom}
         className="flex-1 overflow-y-auto bg-[#FAF6F1] px-4 py-6 dark:bg-[#2A2420]"
       >
-        <div className="mx-auto max-w-3xl space-y-3">
+        <div className="mx-auto max-w-3xl space-y-1">
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -173,7 +173,7 @@ export default function MessageList({
         onScroll={checkAtBottom}
         className="h-full overflow-y-auto bg-[#FAF6F1] px-4 py-6 lg:px-6 dark:bg-[#2A2420]"
       >
-      <div className="mx-auto max-w-3xl space-y-3">
+      <div className="mx-auto max-w-3xl space-y-1">
         {messages.map((msg, idx) => {
           const isLast = idx === messages.length - 1;
           const canRegenerate =
