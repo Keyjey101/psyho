@@ -100,20 +100,16 @@ export default function MessageItem({ message, isStreaming, onRegenerate }: Mess
             <span className="inline-block h-4 w-0.5 animate-pulse bg-[#B8785A]" />
           )}
         </div>
-        <p className="mt-1 text-[11px] text-[#B8A898]">
+        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[#B8A898]">
           {(() => {
             const ts = message.created_at.endsWith("Z") ? message.created_at : message.created_at + "Z";
             return new Date(ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
           })()}
-        </p>
-        {agents.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {agents.map((agentId) => {
-              const info = getAgentInfo(agentId);
-              return <AgentBadge key={agentId} agent={info} />;
-            })}
-          </div>
-        )}
+          {agents.length > 0 && agents.map((agentId) => {
+            const info = getAgentInfo(agentId);
+            return <AgentBadge key={agentId} agent={info} />;
+          })}
+        </div>
       </div>
     </motion.div>
   );
