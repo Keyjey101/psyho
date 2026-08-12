@@ -20,6 +20,11 @@ async def get_db() -> AsyncSession:
 
 
 async def init_db():
+    # Import for the side effect of registering every table on Base.metadata
+    # before create_all runs — without this the new tables silently never appear.
+    from app.models import models as _models  # noqa: F401
+    from app.models import analytics_models as _analytics_models  # noqa: F401
+
     async with engine.begin() as conn:
         await conn.execute(sqlalchemy.text("PRAGMA journal_mode=WAL"))
         await conn.run_sync(Base.metadata.create_all)
@@ -64,6 +69,10 @@ async def init_db():
             "ALTER TABLE users ADD COLUMN referrer_host VARCHAR(128)",
             "ALTER TABLE users ADD COLUMN notify_telegram_id VARCHAR(20)",
             "ALTER TABLE users ADD COLUMN notify_link_token VARCHAR(64)",
+            # Acquisition analytics — additive, idempotent
+            "ALTER TABLE users ADD COLUMN campaign_code VARCHAR(32)",
+            "ALTER TABLE users ADD COLUMN consent_accepted_at DATETIME",
+            "ALTER TABLE sessions ADD COLUMN crisis_flagged BOOLEAN DEFAULT 0",
         ):
             try:
                 await conn.execute(sqlalchemy.text(ddl))

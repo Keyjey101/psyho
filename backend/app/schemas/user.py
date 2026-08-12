@@ -41,5 +41,7 @@ class UserMeResponse(BaseModel):
     telegram_username: str | None = None
     has_real_email: bool = True
     is_admin: bool = False
+    # 152-ФЗ: null means the consent screen must be shown before the dialog.
+    consent_accepted_at: datetime | None = None
 
     model_config = {"from_attributes": True}

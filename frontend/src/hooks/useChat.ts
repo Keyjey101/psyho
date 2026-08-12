@@ -18,6 +18,7 @@ export function useChat({ sessionId, onMessageComplete, onSessionLimitReached }:
   const [isStreaming, setIsStreaming] = useState(false);
   const [exchangeCount, setExchangeCount] = useState(0);
   const [maxExchanges, setMaxExchanges] = useState(0);
+  const [crisisInSession, setCrisisInSession] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const agentsUsedRef = useRef<string[]>([]);
@@ -129,6 +130,11 @@ export function useChat({ sessionId, onMessageComplete, onSessionLimitReached }:
           if (data.max_exchanges !== undefined) {
             setMaxExchanges(data.max_exchanges);
           }
+          // Sticky for the session: once the crisis detector has fired, no
+          // paywall is shown for the rest of it.
+          if (data.crisis_in_session) {
+            setCrisisInSession(true);
+          }
           if (document.hidden && Notification.permission === "granted") {
             try {
               new Notification("Ника ответила", { icon: "/icons/pwa-192.svg" });
@@ -201,5 +207,5 @@ export function useChat({ sessionId, onMessageComplete, onSessionLimitReached }:
     return () => cleanup();
   }, [connect, cleanup]);
 
-  return { isConnected, streamingContent, agentsUsed, isStreaming, sendMessage, regenerate, exchangeCount, maxExchanges };
+  return { isConnected, streamingContent, agentsUsed, isStreaming, sendMessage, regenerate, exchangeCount, maxExchanges, crisisInSession };
 }

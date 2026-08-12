@@ -5,7 +5,7 @@ const techniques = [
   {
     img: "/illustrations/opt/method_cbt.webp",
     fallback: "/illustrations/method_cbt.png",
-    name: "Когнитивно-поведенческая терапия",
+    name: "Когнитивно-поведенческий подход",
     shortName: "КПТ",
     description: "Работа с мыслями, которые мешают жить",
     examples: ["Я катастрофизирую", "Мысли по кругу", "Прокрастинация"],
@@ -21,7 +21,7 @@ const techniques = [
   {
     img: "/illustrations/opt/method_act.webp",
     fallback: "/illustrations/method_act.png",
-    name: "Терапия принятия и ответственности",
+    name: "Подход принятия и ответственности",
     shortName: "ACT",
     description: "Действовать по ценностям, не убегая от чувств",
     examples: ["Не знаю зачем это всё", "Откладываю важное", "Борюсь сам с собой"],
@@ -29,7 +29,7 @@ const techniques = [
   {
     img: "/illustrations/opt/method_ifs.webp",
     fallback: "/illustrations/method_ifs.png",
-    name: "Системная семейная терапия",
+    name: "Системный семейный подход",
     shortName: "IFS",
     description: "Примирение внутренних частей личности",
     examples: ["Внутренний критик", "Злюсь на себя", "Чувствую раздробленность"],
@@ -37,7 +37,7 @@ const techniques = [
   {
     img: "/illustrations/opt/method_narrative.webp",
     fallback: "/illustrations/method_narrative.png",
-    name: "Нарративная терапия",
+    name: "Нарративный подход",
     shortName: "Нарратив",
     description: "Переписать историю о себе по-новому",
     examples: ["Чувствую себя неудачником", "Прошлое давит", "Хочу переосмыслить себя"],
@@ -45,7 +45,7 @@ const techniques = [
   {
     img: "/illustrations/opt/method_somatic.webp",
     fallback: "/illustrations/method_somatic.png",
-    name: "Соматическая терапия",
+    name: "Соматический подход",
     shortName: "Соматика",
     description: "Телесное осознание и работа с напряжением",
     examples: ["Тревога в теле", "Сжимается грудь", "Не могу расслабиться"],

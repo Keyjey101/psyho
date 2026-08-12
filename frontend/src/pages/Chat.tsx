@@ -14,6 +14,8 @@ import SessionProgress from "@/components/chat/SessionProgress";
 import SessionEndCard from "@/components/chat/SessionEndCard";
 import MoodTracker from "@/components/chat/MoodTracker";
 import SoftPaywallModal from "@/components/billing/SoftPaywallModal";
+import FakeDoorModal from "@/components/billing/FakeDoorModal";
+import ConsentGate from "@/components/chat/ConsentGate";
 import type { PaywallDetail } from "@/types";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Message } from "@/types";
@@ -56,6 +58,10 @@ export default function Chat() {
   const [taskDismissed, setTaskDismissed] = useState(false);
   const [paywall, setPaywall] = useState<PaywallDetail | null>(null);
   const [showTour, setShowTour] = useState(() => !localStorage.getItem("nika_tour_done"));
+  // 152-ФЗ + AI disclosure, shown before the first dialog turn. Server-recorded,
+  // so it survives a cleared browser and can be produced as evidence.
+  const [consentGiven, setConsentGiven] = useState(false);
+  const needsConsent = !!user && !user.consent_accepted_at && !consentGiven;
 
   useEffect(() => {
     if (user && user.name === "") {
@@ -112,7 +118,7 @@ export default function Chat() {
 
   const { showToast } = useToast();
 
-  const { streamingContent, agentsUsed, isStreaming, sendMessage, regenerate, isConnected, exchangeCount, maxExchanges } = useChat({
+  const { streamingContent, agentsUsed, isStreaming, sendMessage, regenerate, isConnected, exchangeCount, maxExchanges, crisisInSession } = useChat({
     sessionId: sessionId || "",
     onMessageComplete: handleMessageComplete,
     onSessionLimitReached: handleSessionLimitReached,
@@ -500,13 +506,34 @@ export default function Chat() {
         </div>
       )}
 
-      <SoftPaywallModal
-        open={!!paywall}
-        onClose={() => setPaywall(null)}
-        reason={paywall?.reason}
-        freeSessionsLeft={paywall?.free_sessions_left}
-        paidSessionsLeft={paywall?.paid_sessions_left}
+      <ConsentGate
+        open={needsConsent}
+        onAccepted={() => {
+          setConsentGiven(true);
+          refreshUser?.();
+        }}
       />
+
+      {/* A session that tripped the crisis detector never sees a paywall of any
+          kind — not the fake door, not the real one. Someone in an acute state
+          must not run into a "your credits ran out" wall. */}
+      {paywall?.fake_door ? (
+        <FakeDoorModal
+          open={!!paywall && !crisisInSession}
+          onClose={() => setPaywall(null)}
+          priceRub={paywall?.price_rub}
+          freeSessionsLeft={paywall?.free_sessions_left}
+          paidSessionsLeft={paywall?.paid_sessions_left}
+        />
+      ) : (
+        <SoftPaywallModal
+          open={!!paywall && !crisisInSession}
+          onClose={() => setPaywall(null)}
+          reason={paywall?.reason}
+          freeSessionsLeft={paywall?.free_sessions_left}
+          paidSessionsLeft={paywall?.paid_sessions_left}
+        />
+      )}
 
       {showTour && (
         <ChatTour

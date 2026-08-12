@@ -76,6 +76,29 @@ class Settings(BaseSettings):
     SUBSCRIPTION_GRACE_DAYS: int = 3
     SUBSCRIPTION_RENEW_LOOKAHEAD_HOURS: int = 24
 
+    # ── Spend guard ───────────────────────────────────────────────────────
+    # Hard ceilings on LLM cost, independent of user credits. Must be on before
+    # any paid traffic — see services/spend_guard.py.
+    SPEND_GUARD_ENABLED: bool = True
+    # Total tokens one user may consume per UTC day. 0 disables the check.
+    DAILY_USER_TOKEN_LIMIT: int = 120000
+    # Global LLM spend ceiling per UTC day, USD. On reaching it, registration of
+    # new users stops; existing users are unaffected. 0 disables the ceiling.
+    DAILY_GLOBAL_SPEND_LIMIT_USD: float = 20.0
+    # Telegram chat ids that receive 50/80/100% spend alerts. Comma-separated.
+    ADMIN_ALERT_CHAT_IDS: str = ""
+
+    # ── Acquisition / fake door ───────────────────────────────────────────
+    # Public origin used to build shareable web links in the admin generator.
+    PUBLIC_BASE_URL: str = "https://psyho.app"
+    # Fake door: show a real price screen, collect contacts, take no money.
+    # Never enable together with a live YooKassa checkout.
+    FAKE_DOOR_ENABLED: bool = True
+    FAKE_DOOR_PRICE_RUB: int = 390
+    # Emergency credits granted when a crisis session runs out — a person in an
+    # acute state must never hit a wall. See routers/billing.py.
+    CRISIS_EMERGENCY_SESSIONS: int = 1
+
     # ── Mini-game ─────────────────────────────────────────────────────────
     GAME_MAX_MOVES: int = 12
     GAME_CONFIDENCE_THRESHOLD: float = 0.80
@@ -115,6 +138,10 @@ class Settings(BaseSettings):
     @property
     def admin_emails_list(self) -> list[str]:
         return [e.strip().lower() for e in self.ADMIN_EMAILS.split(",") if e.strip()]
+
+    @property
+    def admin_alert_chat_ids(self) -> list[str]:
+        return [c.strip() for c in self.ADMIN_ALERT_CHAT_IDS.split(",") if c.strip()]
 
     @property
     def admin_telegram_usernames_list(self) -> list[str]:

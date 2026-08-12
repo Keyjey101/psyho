@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/auth";
+import { useUtm } from "@/hooks/useUtm";
 import { isTMA, initTelegramApp, waitForTelegramSdk } from "@/utils/telegram";
 import AuthTelegram from "@/pages/AuthTelegram";
 import Chat from "@/pages/Chat";
@@ -16,6 +17,7 @@ import DiaryPage from "@/pages/DiaryPage";
 import TimeCapsulePage from "@/pages/TimeCapsulePage";
 import TestsPage from "@/pages/TestsPage";
 import TestRunnerPage from "@/pages/TestRunnerPage";
+import TestLandingPage from "@/pages/TestLandingPage";
 import GamePage from "@/pages/GamePage";
 import { GAME_ON } from "@/utils/features";
 import Pricing from "@/pages/Pricing";
@@ -48,6 +50,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
+
+  // App-wide, not landing-only: ads point straight at /test/<slug>, so
+  // attribution has to be captured wherever the visitor first arrives.
+  useUtm();
 
   useEffect(() => {
     // Telegram Web App SDK is loaded async. Try immediately, then poll up
@@ -153,6 +159,8 @@ export default function App() {
           (results are kept in localStorage) and are nudged to sign in afterwards. */}
       <Route path="/tests" element={<TestsPage />} />
       <Route path="/tests/:testId" element={<TestRunnerPage />} />
+      {/* Ad landing per test — the main paid entry point. Public, UTM-aware. */}
+      <Route path="/test/:slug" element={<TestLandingPage />} />
 
       {/* Billing */}
       <Route path="/pricing" element={<Pricing />} />

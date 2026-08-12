@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from app.database import Base
 from app.models.models import User, ChatSession, Message, UserProfile
+from app.models import analytics_models  # noqa: F401  — registers analytics tables
 from app.config import get_settings
 
 config = context.config

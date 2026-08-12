@@ -11,7 +11,7 @@ const features = [
   {
     icon: Users,
     title: "Мультиагентная система",
-    description: "6 специалистов работают вместе — КПТ, Юнг, ACT, IFS, нарративная и соматическая терапия",
+    description: "6 подходов работают вместе — КПТ, Юнг, ACT, IFS, нарративный и соматический",
     color: "from-purple-500 to-purple-600",
   },
   {
@@ -42,7 +42,7 @@ export default function Features() {
             Почему Ника?
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-surface-500">
-            Технологии, которые делают терапию доступнее, бережнее и умнее
+            Технологии, которые делают поддержку и самоанализ доступнее и бережнее
           </p>
         </motion.div>
 

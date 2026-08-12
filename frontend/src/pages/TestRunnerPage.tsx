@@ -1,15 +1,33 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, Home, MessageSquare } from "lucide-react";
 import { getTest, getInterpretation, maxPossibleScore, type PsyTest } from "@/data/tests";
+import { slugForTestId } from "@/data/testLandings";
 import { appendLocalHistory, type TestHistoryEntry } from "@/utils/testHistory";
 import { pluralizeRu, QUESTIONS_PLURAL, POINTS_PLURAL } from "@/utils/pluralize";
 import { useAuthStore } from "@/store/auth";
 import { useCreateSession } from "@/hooks/useSessions";
+import { getCampaignCode, resolveBotLink, track } from "@/lib/analytics";
+import CrisisResources, { type CrisisInfo } from "@/components/tests/CrisisResources";
+import ShareCard from "@/components/tests/ShareCard";
 import api from "@/api/client";
 
 type Phase = "intro" | "questions" | "result";
+
+/**
+ * Server verdict on how the result screen must behave. The safety decision is
+ * deliberately not computed here — a stale or modified client must not be able
+ * to hide crisis contacts or slip a paywall onto a heavy result.
+ */
+interface Interpretation {
+  interpretation: string;
+  is_severe: boolean;
+  show_crisis_resources: boolean;
+  allow_monetization: boolean;
+  crisis: CrisisInfo | null;
+  disclaimer: string;
+}
 
 interface TestDraft {
   answers: number[];
@@ -53,13 +71,22 @@ function clearDraft(testId: string) {
 
 export default function TestRunnerPage() {
   const { testId } = useParams<{ testId: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
   const test = useMemo(() => (testId ? getTest(testId) : undefined), [testId]);
+  // Marketing slug this run belongs to, so every funnel event for a campaign
+  // lands under the same name whichever URL the user entered by.
+  const slug = useMemo(
+    () => searchParams.get("from") || (testId ? slugForTestId(testId) : ""),
+    [searchParams, testId],
+  );
   const [phase, setPhase] = useState<Phase>("intro");
   const [answers, setAnswers] = useState<number[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [interpretation, setInterpretation] = useState<Interpretation | null>(null);
+  const [interpreting, setInterpreting] = useState(false);
   const [draft, setDraft] = useState<TestDraft | null>(() =>
     testId ? loadDraft(testId) : null,
   );
@@ -119,13 +146,19 @@ export default function TestRunnerPage() {
     );
   }
 
-  const startTest = () => {
+  const startTest = useCallback(() => {
     setAnswers(new Array(test.questions.length).fill(-1));
     setCurrentIdx(0);
     setDraft(null);
+    setInterpretation(null);
     if (testId) clearDraft(testId);
     setPhase("questions");
-  };
+    track("test_started", {
+      test_slug: slug,
+      test_id: test.id,
+      question_count: test.questions.length,
+    });
+  }, [test, testId, slug]);
 
   const resumeFromDraft = () => {
     if (!draft) return;
@@ -150,6 +183,7 @@ export default function TestRunnerPage() {
     if (submitting) return;
     setSubmitting(true);
     const interp = getInterpretation(test, totalScore);
+    const maxScore = maxPossibleScore(test);
     const entry = {
       testId: test.id,
       score: totalScore,
@@ -172,9 +206,51 @@ export default function TestRunnerPage() {
       appendLocalHistory(entry);
     }
 
+    track("test_completed", {
+      test_slug: slug,
+      test_id: test.id,
+      score_band: interp.level,
+      question_count: test.questions.length,
+    });
+
     setPhase("result");
     setSubmitting(false);
     if (testId) clearDraft(testId);
+
+    // Per-answer scores go to the interpreter so the backend can check the
+    // self-harm item, but they are never persisted as analytics.
+    const perItemScores = answers.map(
+      (optIdx, qi) => test.questions[qi]?.options[optIdx]?.score ?? 0,
+    );
+
+    setInterpreting(true);
+    try {
+      const { data } = await api.post<Interpretation>("/tests/interpret", {
+        test_id: test.id,
+        test_title: test.title,
+        score: totalScore,
+        max_score: maxScore,
+        level: interp.level,
+        answers: perItemScores,
+        campaign_code: getCampaignCode(),
+      });
+      setInterpretation(data);
+      track("test_result_viewed", {
+        test_slug: slug,
+        test_id: test.id,
+        score_band: interp.level,
+        is_severe: data.is_severe,
+      });
+    } catch {
+      // Result screen still renders from the static catalogue interpretation.
+      track("test_result_viewed", {
+        test_slug: slug,
+        test_id: test.id,
+        score_band: interp.level,
+      });
+    } finally {
+      setInterpreting(false);
+    }
   };
 
   const autoAdvanceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -198,6 +274,16 @@ export default function TestRunnerPage() {
   useEffect(() => {
     return () => { if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current); };
   }, []);
+
+  // Arriving from a `/test/<slug>` landing, the user already pressed "start" —
+  // don't make them press it twice.
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (autoStartedRef.current) return;
+    if (searchParams.get("autostart") !== "1") return;
+    autoStartedRef.current = true;
+    startTest();
+  }, [searchParams, startTest]);
 
   return (
     <div className="min-h-screen bg-[#FAF6F1] dark:bg-[#2A2420]">
@@ -245,6 +331,9 @@ export default function TestRunnerPage() {
             score={totalScore}
             previousAttempt={previousAttempt}
             isAuthenticated={isAuthenticated}
+            slug={slug}
+            interpretation={interpretation}
+            interpreting={interpreting}
           />
         )}
       </div>
@@ -441,12 +530,15 @@ function QuestionsView({
 
 // ── Result ───────────────────────────────────────────────────────────────────
 function ResultView({
-  test, score, previousAttempt, isAuthenticated,
+  test, score, previousAttempt, isAuthenticated, slug, interpretation, interpreting,
 }: {
   test: PsyTest;
   score: number;
   previousAttempt: TestHistoryEntry | null;
   isAuthenticated: boolean;
+  slug: string;
+  interpretation: Interpretation | null;
+  interpreting: boolean;
 }) {
   const interp = getInterpretation(test, score);
   const max = maxPossibleScore(test);
@@ -454,6 +546,23 @@ function ResultView({
   const navigate = useNavigate();
   const createSession = useCreateSession();
   const [creatingSession, setCreatingSession] = useState(false);
+
+  // Heavy result: crisis contacts lead the screen, and nothing on it may offer
+  // to spend money or credits (ТЗ §2.4). Until the verdict arrives we assume
+  // the safe branch is possible and simply hold back monetisation.
+  const showCrisis = !!interpretation?.show_crisis_resources;
+  const allowMonetization = interpretation?.allow_monetization ?? true;
+
+  // Deep link into the bot that carries this visit's campaign through the
+  // web → Telegram hop; resolved server-side because only a short code fits.
+  const [botLink, setBotLink] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    resolveBotLink(import.meta.env.VITE_TG_BOT_USERNAME).then(({ url }) => {
+      if (!cancelled) setBotLink(url);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   // Pre-filled message that gets sent on the user's behalf when they tap
   // "Discuss with Nika" — we want Nika to start with full context, not an
@@ -512,6 +621,11 @@ function ResultView({
       animate={{ opacity: 1, y: 0 }}
       className="rounded-3xl border border-[#E8DDD0] bg-white p-7 shadow-sm dark:border-[#4A4038] dark:bg-[#352E2A]"
     >
+      {/* Above everything else, by design — louder and earlier than any CTA. */}
+      {showCrisis && interpretation?.crisis && (
+        <CrisisResources info={interpretation.crisis} />
+      )}
+
       <div className="mb-3 text-center">
         <span className="text-5xl">{interp.marker}</span>
       </div>
@@ -539,10 +653,44 @@ function ResultView({
         <p className="mb-2 text-[14px] leading-relaxed text-[#4A4038] dark:text-[#F5EDE4]">
           {interp.description}
         </p>
-        <p className="text-[13px] leading-relaxed text-[#8A7A6A] dark:text-[#B8A898]">
-          💡 {interp.advice}
-        </p>
+        {/* On a heavy result the static "advice" line is withheld — the only
+            next step we offer there is a live human on the phone. */}
+        {!showCrisis && (
+          <p className="text-[13px] leading-relaxed text-[#8A7A6A] dark:text-[#B8A898]">
+            💡 {interp.advice}
+          </p>
+        )}
       </div>
+
+      {/* Personal reading of the result rather than a bare score. */}
+      {(interpreting || interpretation) && (
+        <div className="mb-5 rounded-2xl border border-[#E8DDD0] bg-white p-4 dark:border-[#4A4038] dark:bg-[#352E2A]">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#B8A898] dark:text-[#8A7A6A]">
+            Что это может значить
+          </p>
+          {interpreting ? (
+            <div className="space-y-2" aria-live="polite">
+              <div className="h-3 w-full animate-pulse rounded bg-[#F0E7DC] dark:bg-[#4A4038]" />
+              <div className="h-3 w-[92%] animate-pulse rounded bg-[#F0E7DC] dark:bg-[#4A4038]" />
+              <div className="h-3 w-[78%] animate-pulse rounded bg-[#F0E7DC] dark:bg-[#4A4038]" />
+            </div>
+          ) : (
+            <>
+              {interpretation!.interpretation.split("\n").filter(Boolean).map((para, i) => (
+                <p
+                  key={i}
+                  className="mb-2 text-[14px] leading-relaxed text-[#4A4038] last:mb-0 dark:text-[#F5EDE4]"
+                >
+                  {para}
+                </p>
+              ))}
+              <p className="mt-3 text-[11.5px] leading-relaxed text-[#B8A898] dark:text-[#8A7A6A]">
+                {interpretation!.disclaimer}
+              </p>
+            </>
+          )}
+        </div>
+      )}
 
       {showComparison && previousAttempt && (
         <div
@@ -594,25 +742,55 @@ function ResultView({
         </div>
       )}
 
-      <p className="mb-5 rounded-xl bg-[#FDF5EE] px-4 py-3 text-center text-[12.5px] leading-relaxed text-[#8A7A6A] dark:bg-[#3A302A] dark:text-[#B8A898]">
-        Этот тест можно пройти ещё раз через месяц или после двух завершённых сессий с Никой —
-        чтобы увидеть динамику.
-      </p>
+      {!showCrisis && (
+        <p className="mb-5 rounded-xl bg-[#FDF5EE] px-4 py-3 text-center text-[12.5px] leading-relaxed text-[#8A7A6A] dark:bg-[#3A302A] dark:text-[#B8A898]">
+          Этот тест можно пройти ещё раз через месяц или после двух завершённых сессий с Никой —
+          чтобы увидеть динамику.
+        </p>
+      )}
 
       <div className="space-y-2">
         <button
           onClick={handleDiscuss}
           disabled={creatingSession}
-          className="flex w-full items-center justify-center gap-2 rounded-pill bg-[#B8785A] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#9E6349] disabled:opacity-50"
+          className={`flex w-full items-center justify-center gap-2 rounded-pill px-6 py-3 text-sm font-semibold transition-colors disabled:opacity-50 ${
+            showCrisis
+              // Deliberately quieter than the helplines above it.
+              ? "border border-[#D8CDC0] text-[#5A5048] hover:bg-[#F5EDE4] dark:border-[#4A4038] dark:text-[#E8DDD0] dark:hover:bg-[#4A4038]"
+              : "bg-[#B8785A] text-white hover:bg-[#9E6349]"
+          }`}
         >
           <MessageSquare className="h-4 w-4" />
           {creatingSession
             ? "Открываю чат..."
-            : isAuthenticated
-              ? "Обсудить с Никой"
-              : "Войти и обсудить с Никой"}
+            : showCrisis
+              ? "Или напиши Нике — она рядом"
+              : isAuthenticated
+                ? "Обсудить с Никой"
+                : "Войти и обсудить с Никой"}
         </button>
-        {!isAuthenticated && (
+
+        {botLink && (
+          <a
+            href={botLink}
+            onClick={() => track("test_result_viewed", { test_slug: slug, source: "bot_cta" })}
+            className="flex w-full items-center justify-center gap-2 rounded-pill border border-[#D8CDC0] px-6 py-3 text-sm font-medium text-[#5A5048] transition-colors hover:bg-[#F5EDE4] dark:border-[#4A4038] dark:text-[#E8DDD0] dark:hover:bg-[#4A4038]"
+          >
+            Продолжить в Telegram
+          </a>
+        )}
+
+        {/* No purchase or credit-spend offer is rendered on a heavy result. */}
+        {allowMonetization && (
+          <ShareCard
+            testSlug={slug}
+            testTitle={test.title}
+            emoji={test.emoji}
+            accent={test.accent}
+          />
+        )}
+
+        {!isAuthenticated && !showCrisis && (
           <p className="text-center text-[11.5px] text-[#B8A898] dark:text-[#8A7A6A]">
             Без регистрации тоже можно — Ника отвечает всем.{" "}
             <Link to="/auth" className="underline-offset-2 hover:underline">
@@ -620,6 +798,11 @@ function ResultView({
             </Link>
           </p>
         )}
+
+        <p className="pt-1 text-center text-[11px] leading-relaxed text-[#B8A898] dark:text-[#8A7A6A]">
+          Ника — программа на основе ИИ. Это поддержка и самоанализ, а не
+          медицинская помощь и не замена специалисту.
+        </p>
       </div>
     </motion.div>
   );

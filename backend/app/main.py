@@ -14,6 +14,8 @@ from app.routers import admin as admin_router
 from app.routers import billing as billing_router
 from app.routers import diary, capsules, achievements, insights, export as export_router
 from app.routers import tests as tests_router
+from app.routers import track as track_router
+from app.routers import analytics_admin as analytics_admin_router
 from app.services.telegram_bot import start_bot, stop_bot
 from app.services.subscription_renewal import start_scheduler, stop_scheduler
 
@@ -66,6 +68,7 @@ app.include_router(sessions.router, prefix="/api/sessions", tags=["Sessions"])
 app.include_router(messages.router, prefix="/api/sessions", tags=["Messages"])
 app.include_router(users.router, prefix="/api/user", tags=["User"])
 app.include_router(admin_router.router)
+app.include_router(analytics_admin_router.router)
 app.include_router(mood.router, prefix="/api/mood", tags=["Mood"])
 app.include_router(actions.router, prefix="/api/sessions", tags=["Actions"])
 app.include_router(personality.router, prefix="/api/user", tags=["Personality"])
@@ -76,6 +79,7 @@ app.include_router(achievements.router, prefix="/api/achievements", tags=["Achie
 app.include_router(insights.router, prefix="/api/insights", tags=["Insights"])
 app.include_router(export_router.router, prefix="/api/export", tags=["Export"])
 app.include_router(tests_router.router, prefix="/api/tests", tags=["Tests"])
+app.include_router(track_router.router, prefix="/api", tags=["Tracking"])
 app.include_router(billing_router.router)
 
 from app.routers import game as game_router_module  # noqa: E402

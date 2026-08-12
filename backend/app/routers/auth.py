@@ -11,12 +11,15 @@ from datetime import datetime, timedelta, timezone
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from passlib.context import CryptContext
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
+from app.models.analytics_models import Event
 from app.models.models import User, UserProfile, TelegramVerificationCode
+from app.services import attribution, events, spend_guard
+from app.services import telegram_bot
 from app.schemas.auth import (
     RefreshRequest,
     TokenResponse,
@@ -93,6 +96,72 @@ def _apply_utm(user: User, utm: UtmInfo | None) -> None:
     user.utm_content = utm.utm_content
     user.utm_term = utm.utm_term
     user.referrer_host = utm.referrer_host
+
+
+async def _attribute_new_user(
+    db: AsyncSession,
+    user: User,
+    *,
+    telegram_id: str | None = None,
+    utm: UtmInfo | None = None,
+) -> None:
+    """Assign first-touch attribution to a freshly created user.
+
+    Priority order matters: a Telegram deep-link ``/start`` is the earliest real
+    touch we have, so it wins over UTM carried by the web client. Falls back to
+    ``organic``. Runs once per user — ``apply_first_touch`` refuses to overwrite.
+    """
+    try:
+        code = await attribution.claim_pending(db, telegram_id)
+        campaign = None
+
+        if code:
+            campaign = await attribution.get_campaign(db, code)
+        elif utm and (utm.utm_source or utm.utm_campaign):
+            campaign = await attribution.resolve_campaign_for_utm(
+                db,
+                utm_source=utm.utm_source,
+                utm_medium=utm.utm_medium,
+                utm_campaign=utm.utm_campaign,
+                utm_content=utm.utm_content,
+            )
+            code = campaign.code
+        else:
+            campaign = await attribution.ensure_organic(db)
+            code = campaign.code
+
+        attribution.apply_first_touch(user, code, campaign)
+
+        # Stitch the pre-registration bot_start to the account it became, so the
+        # funnel joins up without ever storing a telegram_id in the events table.
+        if telegram_id:
+            anon = telegram_bot.anon_id_for(str(telegram_id))
+            await db.execute(
+                sa_update(Event)
+                .where(Event.anon_id == anon, Event.user_id.is_(None))
+                .values(user_id=user.id)
+            )
+        else:
+            await events.log_event(
+                events.EVENT_BOT_START, user_id=user.id, campaign_code=code, db=db,
+                payload={"source": "web"},
+            )
+    except Exception as e:
+        logger.warning("attribution_failed", error=str(e))
+
+
+async def _guard_new_signups() -> None:
+    """Stop creating accounts once the daily LLM budget is spent.
+
+    Existing users keep working — only acquisition pauses, which is exactly the
+    lever that matters while buying traffic.
+    """
+    if await spend_guard.new_users_blocked():
+        logger.warning("signup_blocked_daily_budget")
+        raise HTTPException(
+            status_code=503,
+            detail="Мы временно приостановили регистрацию новых пользователей. Загляни завтра — всё вернётся.",
+        )
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -207,7 +276,12 @@ async def tg_check(
     is_new_user = user is None
 
     if is_new_user:
+        await _guard_new_signups()
         synthetic_email = f"tg_{record.telegram_id}@tg.local"
+        utm_info = UtmInfo(
+            utm_source=utm_source, utm_medium=utm_medium, utm_campaign=utm_campaign,
+            utm_content=utm_content, utm_term=utm_term, referrer_host=referrer_host,
+        )
         user = User(
             email=synthetic_email,
             name="",
@@ -216,14 +290,12 @@ async def tg_check(
             telegram_username=record.telegram_username,
             notify_telegram_id=record.telegram_id,
         )
-        _apply_utm(user, UtmInfo(
-            utm_source=utm_source, utm_medium=utm_medium, utm_campaign=utm_campaign,
-            utm_content=utm_content, utm_term=utm_term, referrer_host=referrer_host,
-        ))
+        _apply_utm(user, utm_info)
         db.add(user)
         await db.flush()
         profile = UserProfile(user_id=user.id)
         db.add(profile)
+        await _attribute_new_user(db, user, telegram_id=record.telegram_id, utm=utm_info)
     elif not user.notify_telegram_id:
         user.notify_telegram_id = record.telegram_id
 
@@ -257,6 +329,7 @@ async def tg_mini_app_auth(body: TgMiniAppRequest, response: Response, db: Async
     normalized_username = body.username.strip().lstrip("@").lower() if body.username else None
 
     if is_new_user:
+        await _guard_new_signups()
         synthetic_email = f"tg_{body.telegram_id}@tg.local"
         user = User(
             email=synthetic_email,
@@ -271,6 +344,7 @@ async def tg_mini_app_auth(body: TgMiniAppRequest, response: Response, db: Async
         await db.flush()
         profile = UserProfile(user_id=user.id)
         db.add(profile)
+        await _attribute_new_user(db, user, telegram_id=body.telegram_id, utm=body.utm)
         await db.commit()
         await db.refresh(user)
     else:
@@ -346,6 +420,7 @@ async def telegram_auth(body: TelegramAuthRequest, response: Response, db: Async
     is_new_user = user is None
 
     if is_new_user:
+        await _guard_new_signups()
         synthetic_email = f"tg_{telegram_id}@tg.local"
         user = User(
             email=synthetic_email,
@@ -360,6 +435,7 @@ async def telegram_auth(body: TelegramAuthRequest, response: Response, db: Async
         await db.flush()
         profile = UserProfile(user_id=user.id)
         db.add(profile)
+        await _attribute_new_user(db, user, telegram_id=telegram_id, utm=body.utm)
         await db.commit()
         await db.refresh(user)
     else:

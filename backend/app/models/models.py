@@ -43,6 +43,12 @@ class User(Base):
     utm_content: Mapped[str | None] = mapped_column(String(128), nullable=True)
     utm_term: Mapped[str | None] = mapped_column(String(128), nullable=True)
     referrer_host: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # First-touch campaign code. Written once at user creation, never rewritten —
+    # a user who arrived from channel X stays attributed to X forever.
+    campaign_code: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    # 152-ФЗ: when the user accepted personal-data processing and acknowledged
+    # that they are talking to an AI. Recorded before the first dialog turn.
+    consent_accepted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Telegram-bot delivery channel for billing notifications
     notify_telegram_id: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)
@@ -63,6 +69,9 @@ class ChatSession(Base):
     summary: Mapped[str | None] = mapped_column(Text)
     continuation_context: Mapped[str | None] = mapped_column(Text)
     max_exchanges: Mapped[int] = mapped_column(Integer, default=20, server_default="20")
+    # Sticky for the whole session: once the crisis detector fires we never show
+    # this person a paywall (see services/spend_guard.py and routers/billing.py).
+    crisis_flagged: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
     user = relationship("User", back_populates="sessions")
     messages = relationship("Message", back_populates="session", cascade="all, delete-orphan", order_by="Message.created_at")

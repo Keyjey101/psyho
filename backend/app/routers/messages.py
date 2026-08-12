@@ -26,7 +26,7 @@ from app.services.plan_service import (
     compute_agenda,
     maybe_lower_challenge_tolerance,
 )
-from app.services import billing
+from app.services import billing, events, spend_guard
 
 from app.config import get_settings
 
@@ -218,6 +218,10 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
             return
         ws_limit = billing.ws_rate_limit_per_minute(user_obj)
         memory_allowed = billing.memory_enabled_for(user_obj)
+        # First-touch campaign, stamped on every event this connection emits.
+        campaign_code = user_obj.campaign_code
+        # Sticky per session: once set, no paywall is shown for the rest of it.
+        crisis_in_session = bool(session.crisis_flagged)
 
         profile_result = await db.execute(
             select(UserProfile).where(UserProfile.user_id == user_id)
@@ -354,6 +358,20 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                 await websocket.send_json({"type": "error", "message": "Слишком много сообщений. Подожди немного."})
                 continue
 
+            # Hard daily token ceiling, independent of credits — a single
+            # runaway account must not be able to drain the LLM budget.
+            allowed, used_tokens, token_limit = await spend_guard.check_user_allowance(user_id)
+            if not allowed:
+                await websocket.send_json({
+                    "type": "error",
+                    "message": "На сегодня достаточно — ты исчерпал(а) дневной лимит. Возвращайся завтра, я буду здесь.",
+                })
+                asyncio.create_task(events.log_event_for_user(
+                    user_id, events.EVENT_USER_LIMIT_HIT,
+                    payload={"tokens": used_tokens, "session_id": session_id},
+                ))
+                continue
+
             if is_regenerate:
                 async with async_session() as db:
                     last_msg_q = await db.execute(
@@ -436,10 +454,35 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                 summary_text = fresh_session.summary if fresh_session else ""
                 max_exchanges = fresh_session.max_exchanges if fresh_session else settings.SESSION_MAX_EXCHANGES
 
+            # Activation funnel. Metadata only — the message text never leaves
+            # this function. Fire-and-forget so streaming isn't delayed.
+            if not is_regenerate:
+                if exchange_count == 1:
+                    asyncio.create_task(events.log_event_for_user(
+                        user_id, events.EVENT_FIRST_MESSAGE,
+                        campaign_code=campaign_code,
+                        payload={
+                            "session_id": session_id,
+                            "message_length": len(content),
+                            "message_index": exchange_count,
+                        },
+                    ))
+                elif exchange_count == 3:
+                    asyncio.create_task(events.log_event_for_user(
+                        user_id, events.EVENT_MESSAGE_3,
+                        campaign_code=campaign_code,
+                        payload={
+                            "session_id": session_id,
+                            "message_length": len(content),
+                            "message_index": exchange_count,
+                        },
+                    ))
+
             agents_used_list = []
             full_response = ""
             token_usage_data = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
             turn_redirect_signal = False
+            turn_crisis = False
 
             try:
                 async for event in orchestrator.process(
@@ -455,6 +498,7 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                 ):
                     if event["type"] == "turn_meta":
                         turn_redirect_signal = event.get("redirect_signal", False)
+                        turn_crisis = bool(event.get("crisis"))
                         continue
                     if event["type"] == "token":
                         await websocket.send_json({"type": "token", "content": event["content"]})
@@ -496,6 +540,10 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                     if not sess.title:
                         title = await generate_session_title(content)
                         sess.title = title
+                    if turn_crisis and not sess.crisis_flagged:
+                        # Sticky for the rest of the session: a person in an
+                        # acute state must never hit a "credits ran out" wall.
+                        sess.crisis_flagged = True
 
                 await db.commit()
                 await db.refresh(assistant_msg)
@@ -509,7 +557,33 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                     "message_id": assistant_msg.id,
                     "exchange_count": exchange_count,
                     "max_exchanges": max_exchanges,
+                    # The client uses this to suppress the fake-door paywall.
+                    "crisis_in_session": crisis_in_session or turn_crisis,
                 })
+
+            # Book the spend against today's global + per-user ceilings.
+            asyncio.create_task(spend_guard.record_usage(
+                user_id,
+                token_usage_data.get("prompt_tokens", 0),
+                token_usage_data.get("completion_tokens", 0),
+            ))
+
+            if turn_crisis:
+                if not crisis_in_session:
+                    crisis_in_session = True
+                # Two separate events: the detector fired, and the resources
+                # actually reached the screen (the response was streamed).
+                asyncio.create_task(events.log_event_for_user(
+                    user_id, events.EVENT_CRISIS_DETECTED,
+                    campaign_code=campaign_code,
+                    payload={"session_id": session_id, "exchange_count": exchange_count},
+                ))
+                if full_response:
+                    asyncio.create_task(events.log_event_for_user(
+                        user_id, events.EVENT_CRISIS_RESOURCES_SHOWN,
+                        campaign_code=campaign_code,
+                        payload={"session_id": session_id},
+                    ))
 
             if profile and profile.memory_enabled and memory_allowed and full_response:
                 _memory_counters[session_id] = _memory_counters.get(session_id, 0) + 1
@@ -543,6 +617,17 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
             if _is_farewell(content, exchange_count) and exchange_count < max_exchanges:
                 session_ending = True
                 await websocket.send_json({"type": "session_limit_reached"})
+
+            if session_ending:
+                asyncio.create_task(events.log_event_for_user(
+                    user_id, events.EVENT_SESSION_COMPLETED,
+                    campaign_code=campaign_code,
+                    payload={
+                        "session_id": session_id,
+                        "exchange_count": exchange_count,
+                        "max_exchanges": max_exchanges,
+                    },
+                ))
 
             if session_ending and full_response:
                 if not plan_dict_for_background:

@@ -253,7 +253,7 @@ export default function Profile() {
           </div>
 
           <div className="rounded-2xl border border-[#E8DDD0] dark:border-[#4A4038] bg-white dark:bg-[#352E2A] p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-[#5A5048] dark:text-[#F5EDE4]">Цели терапии</h2>
+            <h2 className="mb-4 text-lg font-semibold text-[#5A5048] dark:text-[#F5EDE4]">Над чем хочешь поработать</h2>
             <textarea
               value={profile.therapy_goals}
               onChange={(e) => setProfile((p) => ({ ...p, therapy_goals: e.target.value }))}

@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { AGENTS } from "@/types";
+import AnalyticsTab from "@/components/admin/AnalyticsTab";
 
 interface AdminStats {
   users: number;
@@ -138,7 +139,7 @@ interface AdminInsight {
   is_approved: boolean;
 }
 
-type TabType = "dashboard" | "users" | "content" | "settings";
+type TabType = "dashboard" | "analytics" | "users" | "content" | "settings";
 
 function MiniChart({ data, dataKey, color = "#B8785A", height = 60 }: { data: { date: string; [k: string]: any }[]; dataKey: string; color?: string; height?: number }) {
   if (data.length === 0) return <p className="text-sm text-surface-400">Нет данных</p>;
@@ -386,6 +387,7 @@ export default function Admin() {
 
   const tabs: { id: TabType; label: string; icon: any }[] = [
     { id: "dashboard", label: "Дашборд", icon: BarChart3 },
+    { id: "analytics", label: "Аналитика", icon: TrendingUp },
     { id: "users", label: "Пользователи", icon: Users },
     { id: "content", label: "Контент", icon: MessageSquare },
     { id: "settings", label: "Настройки", icon: Settings },
@@ -621,6 +623,8 @@ export default function Admin() {
             </div>
           </div>
         )}
+
+        {tab === "analytics" && <AnalyticsTab />}
 
         {tab === "users" && (
           <div className="space-y-4">

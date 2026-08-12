@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +27,24 @@ async def get_me(user: User = Depends(get_current_user), db: AsyncSession = Depe
         telegram_username=user.telegram_username,
         has_real_email=not user.email.endswith("@tg.local"),
         is_admin=_is_admin(user),
+        consent_accepted_at=user.consent_accepted_at,
     )
+
+
+@router.post("/me/consent")
+async def accept_consent(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Record consent to personal-data processing and the AI disclosure (152-ФЗ).
+
+    Written once and never cleared — this is the legal record of when the user
+    agreed, so re-accepting does not move the timestamp.
+    """
+    if user.consent_accepted_at is None:
+        user.consent_accepted_at = datetime.now(timezone.utc)
+        await db.commit()
+    return {"consent_accepted_at": user.consent_accepted_at}
 
 
 @router.patch("/me", response_model=UserMeResponse)

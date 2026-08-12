@@ -73,3 +73,19 @@ async def get_current_user(
             del _token_cache[k]
 
     return user
+
+
+async def get_current_user_optional(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    db: AsyncSession = Depends(get_db),
+) -> User | None:
+    """Resolve the user when a valid token is present, otherwise ``None``.
+
+    For public funnel endpoints that are reachable both before and after signup —
+    an anonymous visitor must get a normal response, not a 401.
+    """
+    try:
+        return await get_current_user(request, credentials, db)
+    except HTTPException:
+        return None

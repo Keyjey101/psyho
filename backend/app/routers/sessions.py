@@ -2,6 +2,7 @@ import json
 import asyncio
 from datetime import datetime, timezone
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +12,7 @@ from app.database import get_db, async_session
 from app.models.models import ChatSession, Message, User, TreatmentPlan
 from app.schemas.session import SessionCreate, SessionUpdate, SessionResponse, SessionListResponse, SessionDetailResponse
 from app.middleware.auth import get_current_user
-from app.services import billing
+from app.services import billing, events
 from app.services.plan_service import (
     get_or_none as get_plan,
     update_plan,
@@ -19,6 +20,7 @@ from app.services.plan_service import (
 )
 
 settings = get_settings()
+logger = structlog.get_logger()
 
 router = APIRouter()
 
@@ -30,7 +32,61 @@ def _paywall_payload(user: User) -> dict:
         "tier": quota["tier"],
         "free_sessions_left": quota["free_sessions_left"],
         "paid_sessions_left": quota["paid_sessions_left"],
+        # Fake door: a real price screen that takes no money and collects a
+        # contact instead. Never shown to someone in an acute state.
+        "fake_door": settings.FAKE_DOOR_ENABLED,
+        "price_rub": settings.FAKE_DOOR_PRICE_RUB,
     }
+
+
+async def _had_recent_crisis(db: AsyncSession, user_id: str) -> bool:
+    """True if the user's most recent session tripped the crisis detector.
+
+    Gates the fake door: per spec, a person who just disclosed a crisis must not
+    be met with a wall saying their credits ran out.
+    """
+    result = await db.execute(
+        select(ChatSession.crisis_flagged)
+        .where(ChatSession.user_id == user_id)
+        .order_by(ChatSession.updated_at.desc())
+        .limit(1)
+    )
+    return bool(result.scalar_one_or_none())
+
+
+async def _consume_or_paywall(db: AsyncSession, user: User) -> None:
+    """Spend one session credit, or raise 402 with the paywall payload.
+
+    Crisis exception: instead of the paywall, grant a small emergency reserve so
+    the conversation can continue. Logged so the cost is visible in the admin.
+    """
+    if billing.consume_session_quota(user) is not None:
+        return
+
+    if await _had_recent_crisis(db, user.id):
+        reserve = settings.CRISIS_EMERGENCY_SESSIONS
+        if reserve > 0:
+            user.sessions_quota_balance = (user.sessions_quota_balance or 0) + reserve
+            billing.consume_session_quota(user)
+            await events.log_event(
+                events.EVENT_CRISIS_RESOURCES_SHOWN,
+                user_id=user.id,
+                campaign_code=user.campaign_code,
+                payload={"reason": "emergency_session_granted"},
+                db=db,
+            )
+            logger.info("crisis_emergency_session_granted", user_id=user.id)
+            return
+
+    await events.log_event(
+        events.EVENT_CREDITS_EXHAUSTED,
+        user_id=user.id,
+        campaign_code=user.campaign_code,
+        payload={"tier": billing.get_user_quota(user)["tier"]},
+        db=db,
+    )
+    await db.commit()
+    raise HTTPException(status_code=402, detail=_paywall_payload(user))
 
 
 @router.get("")
@@ -66,9 +122,7 @@ async def list_sessions(
 
 @router.post("", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)
 async def create_session(body: SessionCreate, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    quota_source = billing.consume_session_quota(user)
-    if quota_source is None:
-        raise HTTPException(status_code=402, detail=_paywall_payload(user))
+    await _consume_or_paywall(db, user)
     session = ChatSession(user_id=user.id, title=body.title, max_exchanges=settings.SESSION_MAX_EXCHANGES)
     db.add(session)
     await db.commit()
@@ -164,9 +218,7 @@ async def continue_session(
     if not prev_session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    quota_source = billing.consume_session_quota(user)
-    if quota_source is None:
-        raise HTTPException(status_code=402, detail=_paywall_payload(user))
+    await _consume_or_paywall(db, user)
 
     use_continuation = billing.continuation_enabled_for(user)
 

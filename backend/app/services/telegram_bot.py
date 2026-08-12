@@ -9,6 +9,7 @@ from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, fil
 from app.config import get_settings
 from app.database import async_session
 from app.models.models import TelegramVerificationCode, User
+from app.services import attribution, events
 
 from sqlalchemy import select
 
@@ -101,11 +102,99 @@ async def _handle_start(update: Update, context):
         )
         return
 
+    await _record_start_attribution(update, deep_link)
+
     await update.message.reply_text(
-        "Привет! Я бот Ники — ИИ-психолога 🐻\n\n"
+        "Привет! Я Ника — ИИ-собеседник для самоанализа и поддержки 🐻\n\n"
+        "Сразу честно: с тобой общается искусственный интеллект, а не живой человек. "
+        "Это не медицинская помощь и не замена специалисту.\n\n"
         "Нажми кнопку ниже, чтобы открыть приложение 👇\n\n"
         "⬇️ ⬇️ ⬇️"
     )
+
+
+async def _record_start_attribution(update: Update, deep_link: str) -> None:
+    """Resolve the /start payload to a campaign and log bot_start / repeat_start.
+
+    Four cases, per spec:
+      1. Payload is a known/new campaign code → resolve it.
+      2. User is new (no account yet) → park attribution against telegram_id.
+      3. User already exists → attribution is never touched; if they arrived via
+         a *different* code, that's a ``repeat_start``.
+      4. Payload missing or unparseable → ``organic``.
+    """
+    tg_user = update.effective_user
+    if not tg_user:
+        return
+    telegram_id = str(tg_user.id)
+
+    code = attribution.normalize_code(deep_link)
+    if code is None and deep_link and not deep_link.startswith("link_"):
+        logger.info("tg_start_unparseable_payload", telegram_id=telegram_id)
+
+    try:
+        async with async_session() as db:
+            if code:
+                campaign = await attribution.get_or_create_campaign(
+                    db, code, channel_name=code, origin="auto_created"
+                )
+                resolved_code = campaign.code
+            else:
+                resolved_code = attribution.ORGANIC_CODE
+                await attribution.ensure_organic(db)
+
+            user_q = await db.execute(select(User).where(User.telegram_id == telegram_id))
+            user = user_q.scalar_one_or_none()
+
+            if user is None:
+                # No account yet — park the code so registration can claim it.
+                await attribution.stash_pending(db, telegram_id, resolved_code)
+                await events.log_event(
+                    events.EVENT_BOT_START,
+                    anon_id=anon_id_for(telegram_id),
+                    campaign_code=resolved_code,
+                    db=db,
+                )
+            else:
+                first_touch = user.campaign_code
+                if not first_touch:
+                    # Pre-existing account from before attribution shipped.
+                    attribution.apply_first_touch(user, resolved_code)
+                    await events.log_event(
+                        events.EVENT_BOT_START,
+                        user_id=user.id,
+                        campaign_code=resolved_code,
+                        db=db,
+                    )
+                elif code and resolved_code != first_touch:
+                    # Attribution stays with the original channel — log only.
+                    await events.log_event(
+                        events.EVENT_REPEAT_START,
+                        user_id=user.id,
+                        campaign_code=resolved_code,
+                        db=db,
+                        payload={"source": first_touch},
+                    )
+                else:
+                    await events.log_event(
+                        events.EVENT_REPEAT_START,
+                        user_id=user.id,
+                        campaign_code=first_touch,
+                        db=db,
+                    )
+            await db.commit()
+    except Exception as e:
+        logger.warning("tg_start_attribution_failed", error=str(e))
+
+
+def anon_id_for(telegram_id: str) -> str:
+    """Pseudonymous id for pre-registration events.
+
+    Telegram ids never enter the analytics tables in the clear — a salted hash
+    keeps the event joinable to the later user row without storing the identifier.
+    """
+    salt = _settings.SECRET_KEY
+    return "tg_" + hashlib.sha256(f"{salt}:{telegram_id}".encode()).hexdigest()[:32]
 
 
 async def start_bot():

@@ -547,7 +547,14 @@ class Orchestrator:
         redirect_signal = turn_meta["redirect_signal"]
         crisis = turn_meta["crisis"]
 
-        yield {"type": "turn_meta", "redirect_signal": redirect_signal, "stance": stance}
+        yield {
+            "type": "turn_meta",
+            "redirect_signal": redirect_signal,
+            "stance": stance,
+            # Surfaced so the transport layer can log crisis_detected and
+            # suppress any paywall for this session — see routers/messages.py.
+            "crisis": bool(crisis or stance == "crisis"),
+        }
 
         if exchange_number <= 1:
             phase = SessionPhase.INTAKE

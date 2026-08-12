@@ -8,6 +8,8 @@ export interface User {
   telegram_username?: string | null;
   has_real_email?: boolean;
   is_admin?: boolean;
+  /** 152-ФЗ: null/absent means the consent screen is still owed. */
+  consent_accepted_at?: string | null;
 }
 
 export type BillingTier = "free" | "pro";
@@ -68,6 +70,9 @@ export interface PaywallDetail {
   free_sessions_left?: number;
   paid_sessions_left?: number;
   limit?: number;
+  /** Backend runs the fake door instead of a live checkout. */
+  fake_door?: boolean;
+  price_rub?: number;
 }
 
 export interface UserProfile {
@@ -128,6 +133,8 @@ export interface WSDoneMessage {
   message_id: string;
   exchange_count?: number;
   max_exchanges?: number;
+  /** Crisis detector fired in this session — suppresses the paywall entirely. */
+  crisis_in_session?: boolean;
 }
 
 export interface WSErrorMessage {
